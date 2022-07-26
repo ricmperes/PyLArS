@@ -1,1 +1,1 @@
-from .rawprocessor import *
+from .rawprocessor import simple_processor

@@ -51,11 +51,14 @@ class raw_data():
     def get_available_channels(self):
         '''
         Scans the loaded raw file for branches in tree the tree '''
-        self.channels = self.raw_file[self.tree].keys()
+        keys = self.raw_file[self.tree].keys()
+        if keys[-1] == 'Time':
+            keys.pop(-1)
+        self.channels = keys
 
-    def get_channel_data(self, ch):
+    def get_channel_data(self, ch: str) -> np.ndarray:
         '''
         Return the raw data array of a given channel.
         '''
-
-        return self.raw_file[self.tree][ch].array()
+        data = self.raw_file[self.tree][ch].array()
+        return np.array(data)
