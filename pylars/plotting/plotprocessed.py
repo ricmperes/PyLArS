@@ -6,7 +6,7 @@ def plot_hist_area(df_results, ax=None):
     if ax is None:
         fig, ax = plt.subplots(1, 1)
 
-    ax.hist(df_results['area'], bins=800, histtype = 'step')
+    ax.hist(df_results['area'], bins=800, histtype='step')
     ax.set_xlabel('Area [integrated ADC counts]')
     ax.set_ylabel('# events')
 
