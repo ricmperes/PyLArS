@@ -21,10 +21,10 @@ class simple_processor():
         self.processed_data = dict()
         self.show_loadbar_channel = True
         self.show_tqdm_channel = True
-    
+
     def __hash__(self) -> int:
         return self.hash
-        
+
     def set_tqdm_channel(self, bar: bool, show: bool):
         """Change the tqdm config
 
@@ -36,7 +36,7 @@ class simple_processor():
         self.show_tqdm_channel = show
 
     # General functions for I/O
-    def load_raw_data(self, path_to_raw: str, V: float, T: float,module:int):
+    def load_raw_data(self, path_to_raw: str, V: float, T: float, module: int):
         """Raw data loader to pass to the processing scripts.
 
         Args:
@@ -62,7 +62,7 @@ class simple_processor():
         In files from DAQ_zero/XenoDAQ these will be
 
         Raises:
-            AssertionError: if the requested channel 
+            AssertionError: if the requested channel
         is not availabel on the raw file.
             AssertionError: if the there was a problem
         in the processing of a waveform
@@ -70,10 +70,11 @@ class simple_processor():
         Returns:
             dict: Dictionary of keys module, channel, wf_number
         area, length, position where the values are lists (order
-        matters) of the processed waveforms. 
+        matters) of the processed waveforms.
         """
         if ch not in self.raw_data.channels:
-            raise AssertionError(f'The requested channel is not available. Loaded channels:{self.raw_data.channels}')
+            raise AssertionError(
+                f'The requested channel is not available. Loaded channels:{self.raw_data.channels}')
 
         module = self.raw_data.module
         channel_data = self.raw_data.get_channel_data(ch)
@@ -93,17 +94,17 @@ class simple_processor():
             total = None
 
         for i, _waveform in tqdm(enumerate(
-                channel_data), disable= (not self.show_tqdm_channel), total=total, desc=f'Processing module {module} channel {ch}'):
+                channel_data), disable=(not self.show_tqdm_channel), total=total, desc=f'Processing module {module} channel {ch}'):
             try:
                 areas, lengths, positions = waveform_processing.process_waveform(
                     _waveform, self.baseline_samples, self.sigma_level)
 
                 assert len(areas) == len(positions) == len(lengths)
-                
-                #check if any peaks were found
+
+                # check if any peaks were found
                 if len(areas) == 0:
                     continue
-                
+
                 module_number = [module] * len(areas)
                 ch_name = [ch] * len(areas)
                 wf_number = np.ones(len(areas), dtype=int) * i
@@ -118,7 +119,8 @@ class simple_processor():
                 results['position'] += list(positions)
 
             except Exception:
-                raise AssertionError('Ups! There was a problem on iteration number: ', i)
+                raise AssertionError(
+                    'Ups! There was a problem on iteration number: ', i)
 
         return results
 
@@ -130,7 +132,8 @@ class simple_processor():
             pd.DataFrame: Results for all the channels of a dataset.
         """
         channels_to_process = self.raw_data.channels
-        results_list = [pd.DataFrame(self.process_channel(_channel)) for _channel in channels_to_process]
+        results_list = [pd.DataFrame(self.process_channel(
+            _channel)) for _channel in channels_to_process]
         results_df = pd.concat(results_list, ignore_index=True)
 
         return results_df
@@ -139,25 +142,26 @@ class simple_processor():
         del self.raw_data
 
 
-
 class run_processor(simple_processor):
-    """The 'run_processor' extends the use of the 'simple_processor' 
-    to full run, ie, a set of datasets taken at different operating 
+    """The 'run_processor' extends the use of the 'simple_processor'
+    to full run, ie, a set of datasets taken at different operating
     conditions but with the same setup.
 
     Args:
-        simple_processor (simple_processor): super class with 
+        simple_processor (simple_processor): super class with
     dataset-level processing methods.
     """
-    
-    def __init__(self, run_to_process: run, processor_type: str, sigma_level: float, baseline_samples: int):
-        if not isinstance(run_to_process,run):
+
+    def __init__(self, run_to_process: run, processor_type: str,
+                 sigma_level: float, baseline_samples: int):
+        if not isinstance(run_to_process, run):
             raise TypeError("Needs run type object.")
         if processor_type != 'simple':
-            raise NotImplementedError("Only 'simple' is available. Please make a PR to add more.")
-    
+            raise NotImplementedError(
+                "Only 'simple' is available. Please make a PR to add more.")
+
         self.run = run_to_process
-        
+
         super().__init__(sigma_level, baseline_samples)
 
         self.datasets_df = self.run.get_run_df()
@@ -166,31 +170,30 @@ class run_processor(simple_processor):
         self.show_loadbar_channel = False
         self.show_tqdm_channel = False
 
-        
-    
     def set_tqdm_run(self, bar: bool, show: bool):
         """Define the use of tqdm for run level processing.
 
         Args:
             bar (bool): show tqdm bar
-            show (bool): use tqdm or not 
+            show (bool): use tqdm or not
         """
         self.show_loadbar_run = bar
         self.show_tqdm_run = show
-    
+
     def print_tqdm_options(self):
         print(f'''show bar channel:{self.show_loadbar_channel}
 show tqdm channel:{self.show_tqdm_channel}
 show bar run:{self.show_loadbar_run}
 show tqdm run:{self.show_tqdm_run}''')
 
-    def process_datasets(self, kind:str, vbias:float, temp: float) -> pd.DataFrame:
+    def process_datasets(self, kind: str, vbias: float,
+                         temp: float) -> pd.DataFrame:
         """Runs the loaded processor through a full dataset, ie,
         Processes all the channels of all the boards for a set of
         given operating conditions (kind, vbias, temp).
 
         Args:
-            kind (str): type of data ('BV' for breakdown voltage/LED 
+            kind (str): type of data ('BV' for breakdown voltage/LED
         ON, 'DCR' for dark count rate data/LED OFF.)
             vbias (float): bias voltage applied
             temp (float): temperature of the setup
@@ -208,12 +211,13 @@ show tqdm run:{self.show_tqdm_run}''')
         datasets_to_process = self.datasets_df[selection]
 
         if len(datasets_to_process) == 0:
-            print(f'No datasets found on run with kind = {kind}, voltage = {vbias} and temperature = {temp}.')
+            print(
+                f'No datasets found on run with kind = {kind}, voltage = {vbias} and temperature = {temp}.')
             return None
-        
-        print(f'Found {len(datasets_to_process)} datasets. Ramping up processor!')
-        
-        
+
+        print(
+            f'Found {len(datasets_to_process)} datasets. Ramping up processor!')
+
         if self.show_loadbar_run:
             total = len(datasets_to_process)
         else:
@@ -221,16 +225,17 @@ show tqdm run:{self.show_tqdm_run}''')
 
         results = []
 
-        for dataset in tqdm(datasets_to_process.itertuples(), 'Loading and processing datasets: ',total = total, disable=(not self.show_tqdm_run)):
-            self.load_raw_data(path_to_raw = dataset.path,
-                               V = dataset.vbias, 
-                               T = dataset.temp,
+        for dataset in tqdm(datasets_to_process.itertuples(
+        ), 'Loading and processing datasets: ', total=total, disable=(not self.show_tqdm_run)):
+            self.load_raw_data(path_to_raw=dataset.path,
+                               V=dataset.vbias,
+                               T=dataset.temp,
                                module=dataset.module)
 
-            _results_of_dataset = self.process_all_channels() # this returns a pd.DataFrame
+            _results_of_dataset = self.process_all_channels()  # this returns a pd.DataFrame
             results.append(_results_of_dataset)
             self.purge_processor()
-        
+
         results = pd.concat(results, ignore_index=True)
 
         return results

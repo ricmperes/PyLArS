@@ -24,7 +24,7 @@ class processed_dataset():
         return str(hash((self.process_hash, hash(
             (self.run.run_number, self.kind, self.vbias, self.temp)))))
 
-    def input_data(self, results_df:pd.DataFrame) -> None:
+    def input_data(self, results_df: pd.DataFrame) -> None:
         """Input the data pd.DataFrame to the processed_dataset object
 
         Args:
@@ -33,16 +33,16 @@ class processed_dataset():
         self.data = results_df
 
     def save_data(self, type: str = 'hdf5') -> None:
-        """Saves the data within the processed_dataset object 
+        """Saves the data within the processed_dataset object
         to a file
 
         Args:
-            type (str, optional): type of file to save the data as. Can be 
+            type (str, optional): type of file to save the data as. Can be
             'hdf5' or 'csv'. Defaults to 'hdf5'.
 
         Raises:
             AssertionError: Raises the object has no data attached.
-            NotImplementedError: Raises if the file format is 
+            NotImplementedError: Raises if the file format is
         different from 'hdf5' or 'csv'.
         """
         if not isinstance(self.data, pd.DataFrame):
@@ -53,27 +53,27 @@ class processed_dataset():
             file_name = f'{self.kind}_{self.temp}_{self.vbias}-{self.process_hash}.h5'
             file_path = f'{self.path_processed}run{self.run.run_number}/'
             self.data.to_hdf(
-                file_path+file_name,
+                file_path + file_name,
                 key='data',
                 complevel=5)
-            print('Saved file to:',file_path+file_name)
+            print('Saved file to:', file_path + file_name)
 
         elif type == 'csv':
             file_name = f'{self.kind}_{self.temp}_{self.vbias}-{self.process_hash}.csv'
             file_path = f'{self.path_processed}run{self.run.run_number}/'
-            self.data.to_csv(file_path+file_name)
-            print('Saved file to:',file_path+file_name)
+            self.data.to_csv(file_path + file_name)
+            print('Saved file to:', file_path + file_name)
 
         else:
             raise NotImplementedError(f"The requested type ({type}) is not\
             implemented. Choose 'hdf5', 'csv' or make a PR.")
 
-    def load_data(self, force:bool=False) -> None:
+    def load_data(self, force: bool = False) -> None:
         """Load cached processed data for a given processed data configuration.
 
         Args:
-            force (bool, optional): If True and no cached file found, 
-        processes the raw_data (if found) with default processor 
+            force (bool, optional): If True and no cached file found,
+        processes the raw_data (if found) with default processor
         options. Defaults to False.
 
         Raises:

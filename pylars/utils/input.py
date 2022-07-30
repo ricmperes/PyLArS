@@ -107,10 +107,21 @@ class run():
         pass
 
     def get_all_files_of_run(self) -> list:
+        """Look for all the raw files stored for a given run.
+
+        Returns:
+            list: list of all ROOT files in the run.
+        """
         all_root_files = glob(self.main_run_path + '**/*.root', recursive=True)
         return all_root_files
 
     def fetch_datasets(self) -> list:
+        """Get all the datasets of a given run.
+
+        Returns:
+            list: list of all the datasets of a given run. Elements
+        are type dataset
+        """
         all_root_files = self.root_files
         datasets = []
         for i, file in enumerate(all_root_files):
