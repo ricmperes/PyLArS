@@ -1,8 +1,12 @@
+import base64
+import hashlib
+import json
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from pylars.utils.input import *
+from pylars.utils.input import raw_data, run
+
 from .waveforms import waveform_processing
 
 
@@ -16,14 +20,33 @@ class simple_processor():
     def __init__(self, sigma_level: float, baseline_samples: int):
         self.sigma_level = sigma_level
         self.baseline_samples = baseline_samples
-        self.hash = hash(
-            f"{self.processing_method}{self.sigma_level}{self.baseline_samples}")
+        self.hash = self.get_deterministic_hash(f"{self.processing_method}" +
+                                                f"{self.version}" +
+                                                f"{self.sigma_level}" +
+                                                f"{self.baseline_samples:.2f}")
         self.processed_data = dict()
         self.show_loadbar_channel = True
         self.show_tqdm_channel = True
 
     def __hash__(self) -> int:
         return self.hash
+
+    @staticmethod
+    def get_deterministic_hash(id: str) -> str:
+        """Return a base32 lowercase string of length determined from hashing
+        the configs. Based on https://github.com/AxFoundation/strax/blob/
+        156254287c2037876a7040460b3551d590bf5589/strax/utils.py#L303
+
+        Args:
+            id (str): thing to hash
+
+        Returns:
+            str: hashed version of the thing
+        """
+        jsonned = json.dumps(id)
+        digest = hashlib.sha1(jsonned.encode('ascii')).digest()
+        readable_hash = base64.b32encode(digest)[:7].decode('ascii').lower()
+        return readable_hash
 
     def set_tqdm_channel(self, bar: bool, show: bool):
         """Change the tqdm config
@@ -74,7 +97,8 @@ class simple_processor():
         """
         if ch not in self.raw_data.channels:
             raise AssertionError(
-                f'The requested channel is not available. Loaded channels:{self.raw_data.channels}')
+                f'The requested channel is not available. '
+                f'Loaded channels:{self.raw_data.channels}')
 
         module = self.raw_data.module
         channel_data = self.raw_data.get_channel_data(ch)
@@ -93,8 +117,12 @@ class simple_processor():
         else:
             total = None
 
-        for i, _waveform in tqdm(enumerate(
-                channel_data), disable=(not self.show_tqdm_channel), total=total, desc=f'Processing module {module} channel {ch}'):
+        for i, _waveform in tqdm(enumerate(channel_data),
+                                 disable=(not self.show_tqdm_channel),
+                                 total=total,
+                                 desc=(f'Processing module {module} '
+                                       f'channel {ch}')
+                                 ):
             try:
                 areas, lengths, positions = waveform_processing.process_waveform(
                     _waveform, self.baseline_samples, self.sigma_level)
@@ -167,8 +195,8 @@ class run_processor(simple_processor):
         self.datasets_df = self.run.get_run_df()
         self.show_loadbar_run = True
         self.show_tqdm_run = True
-        self.show_loadbar_channel = False
-        self.show_tqdm_channel = False
+        self.show_loadbar_channel = True
+        self.show_tqdm_channel = True
 
     def set_tqdm_run(self, bar: bool, show: bool):
         """Define the use of tqdm for run level processing.
@@ -181,10 +209,10 @@ class run_processor(simple_processor):
         self.show_tqdm_run = show
 
     def print_tqdm_options(self):
-        print(f'''show bar channel:{self.show_loadbar_channel}
-show tqdm channel:{self.show_tqdm_channel}
-show bar run:{self.show_loadbar_run}
-show tqdm run:{self.show_tqdm_run}''')
+        print(f'show bar channel:{self.show_loadbar_channel}\n' +
+              f'show tqdm channel:{self.show_tqdm_channel}\n' +
+              f'show bar run:{self.show_loadbar_run}\n' +
+              f'show tqdm run:{self.show_tqdm_run}')
 
     def process_datasets(self, kind: str, vbias: float,
                          temp: float) -> pd.DataFrame:
@@ -212,11 +240,13 @@ show tqdm run:{self.show_tqdm_run}''')
 
         if len(datasets_to_process) == 0:
             print(
-                f'No datasets found on run with kind = {kind}, voltage = {vbias} and temperature = {temp}.')
+                f'No datasets found on run with kind = {kind}, '
+                f'voltage = {vbias} and temperature = {temp}.')
             return None
 
         print(
-            f'Found {len(datasets_to_process)} datasets. Ramping up processor!')
+            f'Found {len(datasets_to_process)} datasets. '
+            f'Ramping up processor!')
 
         if self.show_loadbar_run:
             total = len(datasets_to_process)
