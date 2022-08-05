@@ -1,5 +1,6 @@
-from .input import *
-from pylars.processing.rawprocessor import *
+from .input import run
+from pylars.processing.rawprocessor import run_processor
+import pandas as pd
 
 
 class processed_dataset():
@@ -32,6 +33,11 @@ class processed_dataset():
         """
         self.data = results_df
 
+    @staticmethod
+    def format_kind_v_t(kind: str, v: float, t: float) -> str:
+        string = f'{kind}_{t:.2f}_{v:.2f}'
+        return string
+
     def save_data(self, type: str = 'hdf5') -> None:
         """Saves the data within the processed_dataset object
         to a file
@@ -49,8 +55,10 @@ class processed_dataset():
             raise AssertionError(
                 "Data not loaded to object, run input_data() first.")
 
+        file_config = self.format_kind_v_t(self.kind, self.vbias, self.temp)
+
         if type == 'hdf5':
-            file_name = f'{self.kind}_{self.temp}_{self.vbias}-{self.process_hash}.h5'
+            file_name = f'{file_config}-{self.process_hash}.h5'
             file_path = f'{self.path_processed}run{self.run.run_number}/'
             self.data.to_hdf(
                 file_path + file_name,
@@ -59,14 +67,14 @@ class processed_dataset():
             print('Saved file to:', file_path + file_name)
 
         elif type == 'csv':
-            file_name = f'{self.kind}_{self.temp}_{self.vbias}-{self.process_hash}.csv'
+            file_name = f'{file_config}-{self.process_hash}.csv'
             file_path = f'{self.path_processed}run{self.run.run_number}/'
             self.data.to_csv(file_path + file_name)
             print('Saved file to:', file_path + file_name)
 
         else:
-            raise NotImplementedError(f"The requested type ({type}) is not\
-            implemented. Choose 'hdf5', 'csv' or make a PR.")
+            raise NotImplementedError(f"The requested type ({type}) is not" +
+                                      "implemented. Choose 'hdf5', 'csv' or make a PR.")
 
     def load_data(self, force: bool = False) -> None:
         """Load cached processed data for a given processed data configuration.
@@ -79,32 +87,48 @@ class processed_dataset():
         Raises:
             FileNotFoundError: If force=False and file not found.
         """
+        file_path = f'{self.path_processed}run{self.run.run_number}/'
+        file_config = self.format_kind_v_t(self.kind, self.vbias, self.temp)
+        file_name = f'{file_path + file_config}-{self.process_hash}'
+
         if not force:
             try:
                 try:
-                    self.data = pd.read_hdf(
-                        f'{self.path_processed}run{self.run.run_number}/{self.kind}_{self.temp}_{self.vbias}-{self.process_hash}.h5')
+
+                    self.data = pd.read_hdf(file_name + '.h5')
+                    print('Loaded file: ', file_name + '.h5')
+
                 except BaseException:
-                    self.data = pd.read_hdf(
-                        f'{self.path_processed}run{self.run.run_number}/{self.kind}_{self.temp}_{self.vbias}-{self.process_hash}.csv')
+                    self.data = pd.read_csv(file_name + '.csv')
+                    print('Loaded file: ', file_name + '.csv')
+
             except BaseException:
                 raise FileNotFoundError(
-                    "Requested processed data not found. Process and save with load_data(force=True) or process and save with save_data.")
+                    "Requested processed data not found. Process and save" +
+                    "with load_data(force=True) or process and save with" +
+                    "save_data.")
 
         else:
             try:
                 try:
-                    self.data = pd.read_hdf(
-                        f'{self.path_processed}run{self.run.run_number}/{self.kind}_{self.temp}_{self.vbias}-{self.process_hash}.h5')
+                    self.data = pd.read_hdf(file_name + '.h5')
+                    print('Loaded file: ', file_name + '.h5')
+
                 except BaseException:
-                    self.data = pd.read_hdf(
-                        f'{self.path_processed}run{self.run.run_number}/{self.kind}_{self.temp}_{self.vbias}-{self.process_hash}.csv')
+                    self.data = pd.read_csv(file_name + '.csv')
+                    print('Loaded file: ', file_name + '.csv')
+
             except BaseException:
-                process = run_processor(run=self.run, processor_type='simple',
+                process = run_processor(run_to_process=self.run, processor_type='simple',
                                         sigma_level=5, baseline_samples=50)
                 print(
-                    f'Using Default values for sigma ({process.sigma_level}) and baseline samples ({process.baseline_samples})calculation.')
+                    f'Using Default values for sigma ({process.sigma_level})' +
+                    f'and baseline samples ({process.baseline_samples})calculation.')
 
                 data = process.process_datasets(
                     kind=self.kind, vbias=self.vbias, temp=self.temp)
                 self.data = data
+
+                self.save_data()
+
+                print('Processed and saved file: ', file_name + '.h5')
