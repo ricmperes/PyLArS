@@ -81,6 +81,10 @@ class run():
 
         self.root_files = self.get_all_files_of_run()
         self.datasets = self.fetch_datasets()
+    
+    def __repr__(self) -> str:
+        repr = f'Run {self.run_number}'
+        return repr
 
     def read_layout(self):
         """Fetch the SiPM layout from a file.
