@@ -27,5 +27,6 @@ def plot_waveform(waveform_array, full_y=False, full_x=True, ax=None):
             max(waveform_array) +
             std_rough *
             6)
-
+    ax.set_xlabel('Sample number')
+    ax.set_ylabel('ADC counts')
     return ax
