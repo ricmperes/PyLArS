@@ -1,6 +1,7 @@
 from .input import run
 from pylars.processing.rawprocessor import run_processor
 import pandas as pd
+from glob import glob
 
 
 class processed_dataset():
@@ -98,35 +99,35 @@ class processed_dataset():
                     self.data = pd.read_hdf(file_name + '.h5')
                     print('Loaded file: ', file_name + '.h5')
 
-                except BaseException:
+                except:
                     self.data = pd.read_csv(file_name + '.csv')
                     print('Loaded file: ', file_name + '.csv')
 
             except BaseException:
                 raise FileNotFoundError(
-                    "Requested processed data not found. Process and save" +
-                    "with load_data(force=True) or process and save with" +
+                    "Requested processed data not found. Process and save "
+                    "with load_data(force=True) or process and save with "
                     "save_data.")
 
         else:
-            try:
-                try:
-                    self.data = pd.read_hdf(file_name + '.h5')
-                    print('Loaded file: ', file_name + '.h5')
 
-                except BaseException:
-                    self.data = pd.read_csv(file_name + '.csv')
-                    print('Loaded file: ', file_name + '.csv')
+            if len(glob(file_name + '.h5')) > 0:
+                self.data = pd.read_hdf(file_name + '.h5')
+                print('Loaded file: ', file_name + '.h5')
+                
+            else:
+                processor = run_processor(run_to_process=self.run, 
+                                          processor_type='simple',
+                                          sigma_level=5, 
+                                          baseline_samples=50)
+                print((
+                    f'Using Default values for sigma '
+                    f'({processor.sigma_level}) and baseline samples '
+                    f'({processor.baseline_samples}) calculation.'))
 
-            except BaseException:
-                process = run_processor(run_to_process=self.run, processor_type='simple',
-                                        sigma_level=5, baseline_samples=50)
-                print(
-                    f'Using Default values for sigma ({process.sigma_level})' +
-                    f'and baseline samples ({process.baseline_samples})calculation.')
-
-                data = process.process_datasets(
+                data = processor.process_datasets(
                     kind=self.kind, vbias=self.vbias, temp=self.temp)
+                    
                 self.data = data
 
                 self.save_data()
