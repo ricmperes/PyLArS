@@ -82,13 +82,16 @@ if __name__ == '__main__':
                         (datasets_df['temp'] == _temp)]['vbias']
             )
         for _volt in tqdm(_voltages, 'Voltages to process:'):
-            run_process_dataset(
-                run_number=args.run,
-                kind='DCR',
-                vbias=_volt,
-                temp=_temp,
-                main_data_path=args.path_raw,
-                path_processed=args.path_processed)
-
+            try:
+                run_process_dataset(
+                    run_number=args.run,
+                    kind='DCR',
+                    vbias=_volt,
+                    temp=_temp,
+                    main_data_path=args.path_raw,
+                    path_processed=args.path_processed)
+            except:
+                print(f'Could not process file for DCR, {_volt} V, {_temp} K.')
+                
     tf = datetime.datetime.now()
     print('Processing finished at: ', tf)
