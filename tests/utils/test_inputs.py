@@ -19,6 +19,10 @@ class test_raw_data():
 
 
     def test_rawdata_sample(sample_data_raw_data):
+        sample_data_raw_data = raw_data(raw_path = '../data-sample/', 
+            V = ,
+            T = ,
+            module = )
         channels = sample_data_raw_data.channels
         sample_channel_data = sample_data_raw_data.get_channel_data('wf3')
 
@@ -47,6 +51,8 @@ class test_run():
         assert sample_data_run.main_data_path == '../sample_data/'
         assert sample_data_run.main_run_path == '../sample_data/run0/data/'
         assert sample_data_run.root_files == ['fill me with the correct paths']
+        assert isinstance(sample_data_run.datasets, list)
+        assert isinstance(sample_data_run.datasets[0], dataset)
         assert len(sample_data_run.datasets) == 2
         assert isinstance(df, pd.DataFrame)
         #assert test some dataset values here
