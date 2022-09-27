@@ -164,7 +164,10 @@ def _get_amplitude(waveform: np.ndarray, baseline_value: float,
         _type_: _description_
     """
     peak_wf = waveform[peak_start:peak_end]
-    amplitude = min(peak_wf)
+    if len(peak_wf) > 0:
+        amplitude = min(peak_wf)
+    else:
+        amplitude = baseline_value
     return amplitude
 
 
