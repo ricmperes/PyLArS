@@ -110,7 +110,8 @@ class simple_processor():
                    'peak_number': [],
                    'area': [],
                    'length': [],
-                   'position': []
+                   'position': [],
+                   'amplitude': [],
                    }
         if self.show_loadbar_channel:
             total = len(channel_data)
@@ -124,10 +125,10 @@ class simple_processor():
                                        f'channel {ch}')
                                  ):
             try:
-                areas, lengths, positions = waveform_processing.process_waveform(
+                areas, lengths, positions, amplitudes = waveform_processing.process_waveform(
                     _waveform, self.baseline_samples, self.sigma_level)
 
-                assert len(areas) == len(positions) == len(lengths)
+                assert len(areas) == len(positions) == len(lengths) == len(amplitudes)
 
                 # check if any peaks were found
                 if len(areas) == 0:
@@ -145,6 +146,7 @@ class simple_processor():
                 results['area'] += list(areas)
                 results['length'] += list(lengths)
                 results['position'] += list(positions)
+                results['amplitude'] += list(amplitudes)
 
             except Exception:
                 raise AssertionError(

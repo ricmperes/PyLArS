@@ -62,6 +62,39 @@ class peak_processing():
         """
         positions = [_peak[0] for _peak in peaks]
         return positions
+    
+    @classmethod
+    def get_amplitude(cls, waveform: np.ndarray, baseline_value: float,
+                 peak_start: int, peak_end: int, dt: int = 10) -> float:
+        """Get area of a single identified peak in a waveform. Points to
+        the numbafied function _get_area(...).
+        """
+        amplitude = _get_amplitude(
+            waveform,
+            baseline_value,
+            peak_start,
+            peak_end,
+            dt)
+        return amplitude
+
+    @classmethod
+    def get_all_amplitudes(cls, waveform: np.ndarray, peaks: list,
+                      baseline_value: float) -> list:
+        """Calcultes the max amplitude of the identified peak
+        in number of samples.
+        (Faster without numba...?)
+
+        Args:
+            peaks (_type_): array of identified peaks.
+
+        Returns:
+            _type_: list of amplitudes of peaks.
+        """
+        amplitudes = np.zeros(len(peaks))
+        for i, _peak in enumerate(peaks):
+            amplitudes[i] = cls.get_amplitude(
+                waveform, baseline_value, _peak[0], _peak[-1])
+        return amplitudes
 
     @classmethod
     def split_consecutive(cls, array: np.array, stepsize: int = 1):
@@ -72,8 +105,9 @@ class peak_processing():
         return split_array
 
     @classmethod
-    def find_peaks_simple(cls, waveform_array: np.ndarray, baseline_value: float,
-                          std_value: float, sigma_lvl: float = 5):
+    def find_peaks_simple(cls, waveform_array: np.ndarray, 
+                          baseline_value: float,std_value: float,
+                          sigma_lvl: float = 5):
         """Pulse processing to find peaks above sigma times baseline rms.
 
         Args:
@@ -113,6 +147,25 @@ def _get_area(waveform: np.ndarray, baseline_value: float,
     peak_wf = waveform[peak_start:peak_end]
     area_under = np.sum(baseline_value - peak_wf) * dt
     return area_under
+
+@nb.njit
+def _get_amplitude(waveform: np.ndarray, baseline_value: float,
+              peak_start: int, peak_end: int, dt: int = 10) -> float:
+    """Get area of a single identified peak in a waveform. Numbafied.
+
+    Args:
+        waveform (_type_): _description_
+        baseline_value (float): _description_
+        peak_start (int): _description_
+        peak_end (int): _description_
+        dt (int, optional): _description_. Defaults to 10.
+
+    Returns:
+        _type_: _description_
+    """
+    peak_wf = waveform[peak_start:peak_end]
+    amplitude = min(peak_wf)
+    return amplitude
 
 
 @nb.njit
