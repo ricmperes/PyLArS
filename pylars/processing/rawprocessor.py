@@ -82,11 +82,12 @@ class simple_processor():
 
         Args:
             ch (str): channel name as in the ROOT file.
-        In files from DAQ_zero/XenoDAQ these will be
+        In files from DAQ_zero/XenoDAQ these will be 'wf#' with # the 
+        number of the channel [0,7]
 
         Raises:
             AssertionError: if the requested channel
-        is not availabel on the raw file.
+        is not available on the raw file.
             AssertionError: if the there was a problem
         in the processing of a waveform
 
@@ -241,9 +242,10 @@ class run_processor(simple_processor):
         datasets_to_process = self.datasets_df[selection]
 
         if len(datasets_to_process) == 0:
-            print(
-                f'No datasets found on run with kind = {kind}, '
-                f'voltage = {vbias} and temperature = {temp}.')
+            # prints screw up tqdm and are not that useful
+            # #print(
+            #    f'No datasets found on run with kind = {kind}, '
+            #    f'voltage = {vbias} and temperature = {temp}.')
             return None
 
         print(
@@ -257,14 +259,18 @@ class run_processor(simple_processor):
 
         results = []
 
-        for dataset in tqdm(datasets_to_process.itertuples(
-        ), 'Loading and processing datasets: ', total=total, disable=(not self.show_tqdm_run)):
+        for dataset in tqdm(datasets_to_process.itertuples(), 
+                            'Loading and processing datasets: ', 
+                            total=total, 
+                            disable=(not self.show_tqdm_run)):
+
             self.load_raw_data(path_to_raw=dataset.path,
                                V=dataset.vbias,
                                T=dataset.temp,
                                module=dataset.module)
-
-            _results_of_dataset = self.process_all_channels()  # this returns a pd.DataFrame
+                               
+            # this returns a pd.DataFrame
+            _results_of_dataset = self.process_all_channels()  
             results.append(_results_of_dataset)
             self.purge_processor()
 
