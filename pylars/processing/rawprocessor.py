@@ -14,7 +14,7 @@ class simple_processor():
     """Define the atributes and functions for a simple processor.
     """
 
-    version = '0.0.1'
+    version = '0.0.2'
     processing_method = 'simple'
 
     def __init__(self, sigma_level: float, baseline_samples: int):
