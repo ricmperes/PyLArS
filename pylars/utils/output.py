@@ -77,7 +77,7 @@ class processed_dataset():
             raise NotImplementedError(f"The requested type ({type}) is not" +
                                       "implemented. Choose 'hdf5', 'csv' or make a PR.")
 
-    def load_data(self, force: bool = False) -> None:
+    def load_data(self, verbose: int = 0, force: bool = False) -> None:
         """Load cached processed data for a given processed data configuration.
 
         Args:
@@ -97,11 +97,13 @@ class processed_dataset():
                 try:
 
                     self.data = pd.read_hdf(file_name + '.h5')
-                    print('Loaded file: ', file_name + '.h5')
+                    if verbose > 0:
+                        print('Loaded file: ', file_name + '.h5')
 
-                except:
+                except BaseException:
                     self.data = pd.read_csv(file_name + '.csv')
-                    print('Loaded file: ', file_name + '.csv')
+                    if verbose > 0:
+                        print('Loaded file: ', file_name + '.csv')
 
             except BaseException:
                 raise FileNotFoundError(
@@ -113,23 +115,25 @@ class processed_dataset():
 
             if len(glob(file_name + '.h5')) > 0:
                 self.data = pd.read_hdf(file_name + '.h5')
-                print('Loaded file: ', file_name + '.h5')
-                
+                if verbose > 0:
+                    print('Loaded file: ', file_name + '.h5')
+
             else:
-                processor = run_processor(run_to_process=self.run, 
+                processor = run_processor(run_to_process=self.run,
                                           processor_type='simple',
-                                          sigma_level=5, 
+                                          sigma_level=5,
                                           baseline_samples=50)
-                print((
-                    f'Using Default values for sigma '
-                    f'({processor.sigma_level}) and baseline samples '
-                    f'({processor.baseline_samples}) calculation.'))
+                if verbose > 0:
+                    print((
+                        f'Using Default values for sigma '
+                        f'({processor.sigma_level}) and baseline samples '
+                        f'({processor.baseline_samples}) calculation.'))
 
                 data = processor.process_datasets(
                     kind=self.kind, vbias=self.vbias, temp=self.temp)
-                    
+
                 self.data = data
 
                 self.save_data()
-
-                print('Processed and saved file: ', file_name + '.h5')
+                if verbose > 0:
+                    print('Processed and saved file: ', file_name + '.h5')
