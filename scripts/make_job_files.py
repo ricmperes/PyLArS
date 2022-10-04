@@ -1,15 +1,29 @@
+import argparse
+
+parser = argparse.ArgumentParser(
+    description=('Script to create ALL the batch jobs to process a run ' 
+                 '(no conditions on temperature, voltage or kind).')
+)
+parser.add_argument('-r', '--run',
+                    help='Run to consider.',
+                    type=int,
+                    required=True)
+
+args = parser.parse_args()
+
 import datetime
 import os
 import pylars
 
 def make_batch_script(job_name, run, kind, temp, vbias):
     main_str = f"""#!/bin/bash
-#SBATCH --partition=atp
+#SBATCH --partition=express
 #SBATCH --job-name={job_name}
 #SBATCH --output=/home/atp/rperes/logs/jobs/{job_name}.out
 #SBATCH --error=/home/atp/rperes/logs/jobs/{job_name}.err
+#SBATCH --mem=32G
 
-source /home/atp/peres/.bashrc
+source /home/atp/rperes/.bashrc
 conda activate sipms
 cd /home/atp/rperes/software/PyLArS/scripts
 python process_dataset.py -t {temp} -v {vbias} -tp {kind} -r {run}
@@ -29,12 +43,12 @@ def make_launch_file(ID_list):
         for _ID in ID_list:
             F.write(f'sbatch jobs/job_{_ID}.job\n')
     print('Generated launch script file with %d IDs.' %len(ID_list))
-    os.system('chmod +x launch_sim.sh')
+    os.system('chmod +x launch_process.sh')
 
 def main():
 
     ### INPUTS HERE ###
-    run_number = 2
+    run_number = args.run
     ### ### ###
     base_run = pylars.utils.input.run(
         run_number=run_number,
