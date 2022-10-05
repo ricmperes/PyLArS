@@ -82,7 +82,7 @@ class simple_processor():
 
         Args:
             ch (str): channel name as in the ROOT file.
-        In files from DAQ_zero/XenoDAQ these will be 'wf#' with # the 
+        In files from DAQ_zero/XenoDAQ these will be 'wf#' with # the
         number of the channel [0,7]
 
         Raises:
@@ -129,7 +129,8 @@ class simple_processor():
                 areas, lengths, positions, amplitudes = waveform_processing.process_waveform(
                     _waveform, self.baseline_samples, self.sigma_level)
 
-                assert len(areas) == len(positions) == len(lengths) == len(amplitudes)
+                assert len(areas) == len(positions) == len(
+                    lengths) == len(amplitudes)
 
                 # check if any peaks were found
                 if len(areas) == 0:
@@ -259,18 +260,18 @@ class run_processor(simple_processor):
 
         results = []
 
-        for dataset in tqdm(datasets_to_process.itertuples(), 
-                            'Loading and processing datasets: ', 
-                            total=total, 
+        for dataset in tqdm(datasets_to_process.itertuples(),
+                            'Loading and processing datasets: ',
+                            total=total,
                             disable=(not self.show_tqdm_run)):
 
             self.load_raw_data(path_to_raw=dataset.path,
                                V=dataset.vbias,
                                T=dataset.temp,
                                module=dataset.module)
-                               
+
             # this returns a pd.DataFrame
-            _results_of_dataset = self.process_all_channels()  
+            _results_of_dataset = self.process_all_channels()
             results.append(_results_of_dataset)
             self.purge_processor()
 

@@ -63,8 +63,9 @@ class BV_dataset():
 
         return self.data  # not needed but doesn't harm and can be useful
 
-def compute_BV(df_results: pd.DataFrame, 
-               plot:bool or str = False) -> pd.DataFrame:
+
+def compute_BV(df_results: pd.DataFrame,
+               plot: bool or str = False) -> pd.DataFrame:
     """Computes the breakdown voltage with a linear fit of gain over V points.
     Takes a dataframe with the collumns 'T' (temperature), 'V' (voltage) and
     'gain' (self-explanatory, c'mon...)
@@ -79,30 +80,29 @@ def compute_BV(df_results: pd.DataFrame,
     (breakdown voltage) and 'OV' (over-voltage).
     """
 
-    df_results = copy.deepcopy(df_results) # just to be sure
+    df_results = copy.deepcopy(df_results)  # just to be sure
     temp_list = np.unique(df_results['T'])
-    df_results = pd.concat([df_results, 
-                            pd.Series(np.zeros(len(df_results)), name = 'BV')
-                            ], axis = 1
-                            )
-    
+    df_results = pd.concat([df_results,
+                            pd.Series(np.zeros(len(df_results)), name='BV')
+                            ], axis=1
+                           )
+
     for _temp in temp_list:
         volt_list_in_temp = np.unique(
             df_results[df_results['T'] == _temp]['V'])
         gain_list_in_temp = np.unique(
             df_results[df_results['T'] == _temp]['Gain'])
-        (a,b),cov = curve_fit(func_linear,volt_list_in_temp, gain_list_in_temp)
-        _breakdown_v = -b/a
-        #print(_breakdown_v)
-        df_results.loc[df_results['T'] == _temp,'BV'] = _breakdown_v
+        (a, b), cov = curve_fit(func_linear, volt_list_in_temp, gain_list_in_temp)
+        _breakdown_v = -b / a
+        # print(_breakdown_v)
+        df_results.loc[df_results['T'] == _temp, 'BV'] = _breakdown_v
 
         if plot != False:
-            pylars.plotting.plotanalysis.plot_BV_fit(plot, _temp, 
-                                                     volt_list_in_temp, 
-                                                     gain_list_in_temp, a, b, 
+            pylars.plotting.plotanalysis.plot_BV_fit(plot, _temp,
+                                                     volt_list_in_temp,
+                                                     gain_list_in_temp, a, b,
                                                      _breakdown_v)
 
     df_results['OV'] = df_results['V'] - df_results['BV']
-    
-    return df_results
 
+    return df_results

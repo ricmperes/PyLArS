@@ -128,7 +128,7 @@ class run():
         Returns:
             list: list of all ROOT files in the run.
         """
-        
+
         all_root_files = glob(self.main_run_path + '**/*.root', recursive=True)
         return all_root_files
 
@@ -142,23 +142,23 @@ class run():
         all_root_files = self.root_files
         datasets = []
         if self.run_number >= 6:
-            
+
             for file in all_root_files:
                 split_file_path = file.split('/')
                 _module = int(split_file_path[-1][-8])
                 _temp = float(split_file_path[-1][-27:-24])
                 _vbias = float(split_file_path[-1][-22:-17].replace('_', '.'))
-                if split_file_path[-1][0] == 'B' :
+                if split_file_path[-1][0] == 'B':
                     _kind = 'BV'
-                elif split_file_path[-1][0] == 'D' :
+                elif split_file_path[-1][0] == 'D':
                     _kind = 'DCR'
-                elif split_file_path[-1][0] == 'f' :
+                elif split_file_path[-1][0] == 'f':
                     _kind = 'fplt'
                 else:
-                    print('Ignoring file: ',file)
+                    print('Ignoring file: ', file)
                     continue
                 datasets.append(dataset(file, _kind, _module, _temp, _vbias))
-        
+
         elif self.run_number == 1:
             '''TODO'''
             raise NotImplementedError("Run 1 structure not yet implemented :(")
@@ -172,27 +172,24 @@ class run():
                     continue
                 if file_split[8] == 'breakdown-v':
                     _kind = 'BV'
-                    _vbias = float(f_split[1]+'.'+f_split[2][:-1])
+                    _vbias = float(f_split[1] + '.' + f_split[2][:-1])
                 elif file_split[8] == 'dcr':
                     _kind = 'DCR'
                     _vbias = float(f_split[1][:-1])
                 else:
                     print('Ignoring file due to unknown kind: ', file)
                     continue
-                
+
                 _temp = float(f_split[0][:-1])
-                
+
                 _module = int(f_split[-2])
 
                 datasets.append(dataset(file, _kind, _module, _temp, _vbias))
 
-
-
-
         return datasets
 
     def get_run_df(self) -> pd.DataFrame:
-        """Get a frienly pandas dataframe with all the datasets available, 
+        """Get a frienly pandas dataframe with all the datasets available,
         their kind, V, T, module and path.
 
         Returns:
@@ -202,7 +199,7 @@ class run():
         dicts_list = [ds.dict for ds in dataset_list]
         dataset_df = pd.DataFrame(dicts_list)
         dataset_df = dataset_df.sort_values(
-            ['kind','temp','vbias', 'module'], 
+            ['kind', 'temp', 'vbias', 'module'],
             ignore_index=True)
         return dataset_df
 
