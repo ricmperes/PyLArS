@@ -1,5 +1,5 @@
 import copy
-import matplotlib.pyplot as plt
+
 import numpy as np
 import pandas as pd
 import pylars
@@ -7,7 +7,12 @@ import pylars.plotting.plotanalysis
 import pylars.utils.input
 import pylars.utils.output
 import scipy.interpolate as itp
+from pylars.analysis.breakdown import compute_BV
 from scipy.optimize import curve_fit
+from tqdm import tqdm
+
+from .common import Gaussean, func_linear
+
 
 class DCR_dataset():
     """Object class to hold dark count related instances and
@@ -28,6 +33,58 @@ class DCR_dataset():
         self.channel = channel
         self.process = processor
         self.voltages = self.get_voltages_available()
+        self.plots_flag = False
+
+    def set_plots_flag(self, flag: bool) -> None:
+        """Set if computing properties makes plots (True) or not (False).
+        Assumes a ./figures/ directory exists.
+
+        Args:
+            flag (bool): True for plotting stuff, False for not making nice
+        pictures (plots) to hang on the wall. Yes, I hang plots on my bedroom
+        wall and it looks nice.
+        """
+        self.plots_flag = flag
+
+    def define_ADC_config(self, F_amp: float, ADC_range: int = 2.25, 
+                          ADC_impedance: int = 50, ADC_res: float = 2**14, 
+                          q_e:float = 1.602176634e-19) -> None:
+        """Define the ADC related quantities for the dataset.
+
+        Args:
+            F_amp (float): signal amplification from the sensor (pre-amp *
+        external amplification on rack)
+            ADC_range (int, optional): Range of the ADC [V]. Defaults to 2.25.
+            ADC_impedance (int, optional): Impedance of the ADC and cables 
+        [ohm]. Defaults to 50.
+            ADC_res (float, optional): Resolution/bits of the ADC (2**N_bits).
+        Defaults to 2**14.
+            q_e (float, optional): Element charge of the electron [C].
+        Defaults to 1.602176634e-19.
+        """
+        ADC_config = {'ADC_range': ADC_range,
+                      'ADC_impedance': ADC_impedance,
+                      'F_amp': F_amp,
+                      'ADC_res': ADC_res,
+                      'q_e': q_e}
+        
+        self.ADC_config = ADC_config
+
+    def define_SiPM_config(self, livetime: float, 
+                           sensor_area: float = 12*12,
+                           ) -> None:
+        """Define the SiPM data related quantities for the dataset.
+
+        Args:
+            livetime (float): livetime of the measurement for DCR porpuses.
+            sensor_area (float, optional): Area of the photosensor (mm**2).
+        Defaults to 12*12.
+        """
+        SiPM_config = {'livetime': livetime,
+                      'sensor_area': sensor_area,
+                      }
+        
+        self.SiPM_config = SiPM_config
 
     def get_voltages_available(self) -> np.array:
         """Checks the loaded run for which voltages are available for the
@@ -105,7 +162,7 @@ class DCR_dataset():
                 DCR_der_y_points,min_area_x)
         
         area_hist = np.histogram(df[df['length']> length_cut]['area'], 
-            bins = np.linspace(0.9*min_area_x, 1.1*min_area_x, 300))
+            bins = np.linspace(0.5*min_area_x, 1.5*min_area_x, 300))
         area_hist_x = area_hist[1]
         area_hist_x = (area_hist_x + (area_hist_x[1]-area_hist_x[0])/2)[:-1]
         area_hist_y = area_hist[0]
@@ -140,7 +197,8 @@ class DCR_dataset():
         (area_hist_x, DCR_values) = cls.get_DCR_above_threshold_values(
             df, length_cut, bins)
         grad = np.gradient(DCR_values)
-        grad_spline = itp.UnivariateSpline(area_hist_x, grad, s = len(area_hist_x)*3)
+        grad_spline = itp.UnivariateSpline(area_hist_x, grad)
+        #, s = len(area_hist_x)*3)
         _x = np.linspace(area_hist_x[0],area_hist_x[-1], 500)
         _y = grad_spline(_x)
         min_idx = np.where(_y == min(_y))
@@ -300,102 +358,299 @@ class DCR_dataset():
 
         print(f'Your lovely DCR is: ({DCR:.2f} +- {DCR_error:.2f}) Hz/mm^2')
         print(f'Your lovely CTP is: ({CTP*100:.2f} +- {CTP_error*100:.2f})%')
+    
+    def get_gain(self, spe_area: float) -> float:
+        """Compute the gain given the value of the SPE area
+
+        Args:
+            spe_area (float): Area of the SPE peak in integrated ADC
+        counts [ADC count * ns].
+
+        Raises:
+            ValueError: self.ADC_config not defined for the current dataset.
+        Run dataset.define_ADC_config(...)
+
+        Returns:
+            float: the calculated gain.
+        """
+
+        if not isinstance(self.ADC_config, dict):
+            raise ValueError('Define ADC_config first.')
+
+        ADC_range = self.ADC_config['ADC_range']
+        ADC_impedance = self.ADC_config['ADC_impedance']
+        F_amp = self.ADC_config['F_amp']
+        ADC_res = self.ADC_config['ADC_res']
+        q_e = self.ADC_config['q_e']
+
+        gain = (ADC_range * spe_area * 1e-9 / ADC_impedance / F_amp /
+                ADC_res / q_e)
+                
+        return gain
+
+    def compute_properties_of_dataset(self,
+                                      length_cut_min:int = 4,
+                                      length_cut_max:int = 20) -> pd.DataFrame:
+        """Calculate the gain, DCR, CTP and BV for the dataset in a single
+        line!
+
+        Args:
+            temp (float): temperature to consider in the dataset.
+            module (int): module to load.
+            channel (str): channel to load.
+            length_cut_min (int): lower bound accepted for the length of
+        peaks. Defaults to 4.
+            length_cut_max (int): upper bound accepted for the length of
+        peaks. Defaults to 20.
+
+        Returns:
+            pd.DataFrame: dataframe with all the computed properties with
+        the columns ['V','T','path','module','channel','Gain','DCR','CTP',
+        'DCR_error','CTP_error','BV','OV']
+        """
+
+        assert isinstance(self.data, dict), ('Woops, no data found! Load'
+                                             ' data into the dataset first')
+
+        voltage_list = self.voltages
+        
+        _results_dataset = pd.DataFrame(columns = ['T','V', 'pe_area', 'Gain', 
+                                                   'res', 'DCR', 'DCR_error',
+                                                    'CTP', 'CTP_error'])
+
+        for _volt in voltage_list:
+            # select voltage
+            df = self.data[_volt]
+            if self.plots_flag == True:
+                plot_name_1pe_fit = (f'{self.temp}K_{_volt}V_mod{self.module}_'
+                                     f'ch{self.channel}')
+            else:
+                plot_name_1pe_fit = False
+            
+            #Get SPE value from Gaussian fit
+            (A, mu, sigma), cov = self.get_1pe_value_fit(
+                df, plot = plot_name_1pe_fit)
+
+            #Calculate DCR and CTP
+            DCR, DCR_error, CTP, CTP_error = self.get_DCR(
+                df = df, 
+                length_cut_min = length_cut_min,
+                length_cut_max = length_cut_max, 
+                pe_area = mu,
+                sensor_area = self.SiPM_config['sensor_area'] ,
+                t = self.SiPM_config['livetime'])
+
+            #Calculate gain
+            gain = self.get_gain(mu)
+
+            #Merge into rolling dataframe (I know it's slow... make a PR, pls)
+            _results_dataset = pd.concat((_results_dataset, 
+                                          pd.DataFrame({'T': [self.temp],
+                                                        'V': [_volt], 
+                                                        'pe_area':[mu], 
+                                                        'Gain':[gain], 
+                                                        'res':[mu/sigma],
+                                                        'DCR':[DCR],  
+                                                        'DCR_error': [DCR_error], 
+                                                        'CTP':[CTP], 
+                                                        'CTP_error':[CTP_error]})
+                                         ), ignore_index = True)
+            
+        #Compute BV from gain(V) curve and update df
+        if self.plots_flag == True:
+            plot_BV = f'BV_mod{self.module}_ch{self.channel}'
+        else:
+            plot_BV = False
+        _results_dataset = compute_BV(_results_dataset, plot_BV)
+
+        return _results_dataset
 
 
-class fingerplot_dataset(DCR_dataset):
-    """Object class to hold finger spectrum related instances and
-    methods. Collects all the data and properties of a single MMPC,
-    meaning the pair (module, channel) for all the available voltages at
-    a certain temperature.
+class DCR_run():
+    """Collection of all the DCR_datasets results for a run, ie, for all
+    the channels and modules, for every available temperatures and voltages.
+    
+    The results of every dataset (channel, V, T) is saved on the instance
+    DCR_run.results_df .
     """
 
     __version__ = '0.0.1'
 
-    def __init__(self, run: pylars.utils.input.run, temperature: float,
-                 module: int, channel: str,
+    def __init__(self, run: pylars.utils.input.run,
                  processor: pylars.processing.rawprocessor.run_processor):
 
         self.run = run
-        self.temp = temperature
-        self.module = module
-        self.channel = channel
         self.process = processor
-        self.voltages = self.get_voltages_available()
+        self.datasets = self.process.datasets_df
+        self.temperatures = self.get_run_temperatures()
+        self.plots_flag = False
 
-    def get_voltages_available(self) -> np.array:
-        """Checks the loaded run for which voltages are available for the
-        defined temperature.
+    def set_plots_flag(self, flag: bool) -> None:
+        """Set if computing properties makes plots (True) or not (False).
+        Assumes a ./figures/ directory exists.
+
+        Args:
+            flag (bool): True for plotting stuff, False for not making nice
+        pictures (plots) to hang on the wall. Yes, I hang plots on my bedroom
+        wall and it looks nice.
+        """
+        self.plots_flag = flag
+
+    def get_run_temperatures(self)->np.array:
+        """Get all the temperatures available in the DCR run.
 
         Returns:
-            np.array: array of the available voltages
+            np.array: array with all the available temperatures.
+        """
+        temp_list = np.unique(self.datasets['temp'])
+
+        return temp_list
+    
+    def initialize_results_df(self)-> None:
+        """Initialize a clean results_df instance in the object.
         """
 
-        voltages = []
-        for _dataset in self.run.datasets:
-            if (_dataset.temp == self.temp) and (_dataset.kind == 'fplt'):
-                voltages.append(_dataset.vbias)
-        voltages = np.unique(voltages)
+        results_df = pd.DataFrame(columns = ['V','T','module','channel',
+                                             'Gain','DCR','CTP','DCR_error',
+                                             'CTP_error','BV','OV']
+                                 )
+        self.results_df = results_df
 
-        return voltages
+    def define_run_ADC_config(self, F_amp: float, ADC_range: int = 2.25, 
+                              ADC_impedance: int = 50, ADC_res: float = 2**14, 
+                              q_e:float = 1.602176634e-19) -> None:
+        """Define the ADC related quantities for the dataset.
 
-    def load_processed_data(self, force_processing: bool = False) -> dict:
-        self.data = {}
-        for _voltage in self.voltages:
-            processed_data = pylars.utils.output.processed_dataset(
-                run=self.run,
-                kind='fplt',
-                vbias=_voltage,
-                temp=self.temp,
-                path_processed=('/disk/gfs_atp/xenoscope/SiPMs/char_campaign/'
-                                'processed_data/'),
-                process_hash=self.process.hash)
-            processed_data.load_data(force=force_processing)
+        Args:
+            F_amp (float): signal amplification from the sensor (pre-amp *
+        external amplification on rack)
+            ADC_range (int, optional): Range of the ADC [V]. Defaults to 2.25.
+            ADC_impedance (int, optional): Impedance of the ADC and cables 
+        [ohm]. Defaults to 50.
+            ADC_res (float, optional): Resolution/bits of the ADC (2**N_bits).
+        Defaults to 2**14.
+            q_e (float, optional): Element charge of the electron [C].
+        Defaults to 1.602176634e-19.
+        """
+        ADC_config = {'ADC_range': ADC_range,
+                      'ADC_impedance': ADC_impedance,
+                      'F_amp': F_amp,
+                      'ADC_res': ADC_res,
+                      'q_e': q_e}
+        
+        self.ADC_config = ADC_config
 
-            _df = processed_data.data
-            mask = ((_df['module'] == self.module) &
-                    (_df['channel'] == self.channel))
+    def define_run_SiPM_config(self, livetime: float, 
+                               sensor_area: float = 12*12,
+                               ) -> None:
+        """Define the SiPM data related quantities for the dataset.
 
-            self.data[_voltage] = _df[mask].copy()
+        Args:
+            livetime (float): livetime of the measurement for DCR porpuses.
+            sensor_area (float, optional): Area of the photosensor (mm**2).
+        Defaults to 12*12.
+        """
+        SiPM_config = {'livetime': livetime,
+                      'sensor_area': sensor_area,
+                      }
+        self.SiPM_config = SiPM_config
 
-    def make_finger_plot(df, length_cut_min,
-                         length_cut_max, plot=False,
-                         ax=None):
-        _cuts = ((df['length'] > length_cut_min) &
-                 (df['length'] < length_cut_max)
-                 )
+    def load_dataset(self, temp: float,
+                     module: int,
+                     channel: str) -> DCR_dataset:
+        """Create a DCR_dataset object for a (T, mod, ch) configuration and
+        load the corresponding data into it.
+        ! This assumes processed data is availabel for all the raw files of 
+        the DCR run datasets !
 
-        if ax is None:
-            fig, ax = plt.subplots(1, 1, figsize=(10, 5), dpi=400)
-        area_hist = plt.hist(
-            df[_cuts]['area'],
-            bins=1000,
-            histtype='step',
-            color='k')
+        Args:
+            temp (float): temperature to consider
+            module (int): module to load
+            channel (str): channel in the module to select
 
-        area_hist_x = area_hist[1]
-        area_hist_x = (
-            area_hist_x + (area_hist_x[1] - area_hist_x[0]) / 2)[:-1]
-        area_hist_y = area_hist[0]
+        Returns:
+            DCR_dataset: _description_
+        """
+        particular_DCR_dataset = DCR_dataset(run = self.run,
+                                             temperature = temp,
+                                             module = module,
+                                             channel = channel,
+                                             processor = self.process,
+                                             )
 
-        (A, mu, sigma), cov = curve_fit(Gaussean, area_hist_x, area_hist_y,
-                                        p0=(2000, 30000, 0.05 * 30000))
+        particular_DCR_dataset.load_processed_data()
 
-        if plot != False:
-            _x = np.linspace(mu - 5 * sigma, mu + 5 * sigma, 400)
-            ax.hist(df[_cuts]['area'], bins=1000, histtype='step', color='k')
-            ax.plot(_x, Gaussean(_x, A, mu, sigma), c='r')
+        return particular_DCR_dataset
 
-            ax.yscale('log')
-            ax.ylabel('# Events')
-            ax.title('Module 0 | Channel 0')
-            ax.xlabel('Peak Area [integrated ADC counts]')
-            if isinstance(plot, str):
-                fig.savefig(f'figures/fingerplot_{plot}.png')
-            else:
-                plt.show()
-        return mu, sigma
+    def compute_properties_of_ds(self,temp: float,
+                                      module: int,
+                                      channel: str) -> pd.DataFrame:
+        """Loads and computes the properties of a single dataset (temp,
+        module, channel) by creating a DCR_dataset object and calling its
+        methods.
+
+        Args:
+            temp (float): temperature
+            module (int): module
+            channel (str): channel
+
+        Returns:
+            pd.DataFrame: dataframe
+        """
+
+        assert isinstance(self.SiPM_config, dict), 'No SiPM_config found!'
+        assert isinstance(self.ADC_config, dict), 'No ADC_config found!'
+
+        ds = self.load_dataset(temp, module, channel)
+        ds.set_plots_flag(self.plots_flag)
+        ds.ADC_config = self.ADC_config
+        ds.SiPM_config = self.SiPM_config
+
+        ds_results = ds.compute_properties_of_dataset()
+
+        # Add module and channel columns
+        module_Series = pd.Series([module]*len(ds_results), name='module')
+        channel_Series = pd.Series([channel]*len(ds_results), name='channel')
+        ds_results = pd.concat([ds_results, module_Series,channel_Series],
+                               axis = 1)
+        return ds_results
+
+    def read_channel_map(self, path_to_map:str) -> None:
+        """Define the active modules and channels for the run.
+        UNDER CONSTRUCTION. I know it doesn't work that nicely but
+        I need to have somthing that works for now, so... 
+        Define it with self.channel_map = dict(mod:[ch#,...],...)
+
+        Args:
+            path_to_map (str): path to csv file with the channel map
+        """
+        if self.run.run_number == 7:
+            channel_map = {0: ['wf0', 'wf3','wf4', 'wf6'],
+                           1: ['wf0', 'wf3','wf4', 'wf6'],}
+        else:
+            channel_map = pd.read_csv(path_to_map)
+        
+        self.channel_map = channel_map
 
 
-def Gaussean(x, A, mu, sigma):
-    y = A * np.exp(-((x - mu) / sigma)**2 / 2) / np.sqrt(2 * np.pi * sigma**2)
-    return y
+    def compute_properties_of_run(self) -> pd.DataFrame:
+        """Loads and computes the properties of ALL the datasets.
+
+        Returns:
+            pd.DataFrame: The results.
+        """
+        self.initialize_results_df()
+
+        for temperature in self.temperatures:
+            for module in self.channel_map.keys():
+                for channel in tqdm(self.channel_map[module], 
+                                    (f'Computing properties for '
+                                     f'T={temperature}; module '
+                                     f'{module}: ')):
+                    _ds_results = self.compute_properties_of_ds(
+                        temp = temperature,
+                        module = module,
+                        channel = channel)
+                    
+                    self.results_df = pd.concat([self.results_df, _ds_results],
+                        ignore_index = True)
