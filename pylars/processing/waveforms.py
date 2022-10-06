@@ -50,10 +50,12 @@ class waveform_processing():
 
         # handle case where no peaks were found
         if len(peaks[0]) == 0:
-            return [], [], []
+            return [], [], [], []
 
         areas = peak_processing.get_all_areas(waveform, peaks, baseline_rough)
         lengths = peak_processing.get_all_lengths(peaks)
         positions = peak_processing.get_all_positions(peaks)
+        amplitudes = peak_processing.get_all_amplitudes(waveform, peaks,
+                                                        baseline_rough)
 
-        return areas, lengths, positions
+        return areas, lengths, positions, amplitudes
