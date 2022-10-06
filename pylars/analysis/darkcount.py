@@ -1,4 +1,5 @@
 import copy
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
@@ -484,6 +485,8 @@ class DCR_run():
         self.datasets = self.process.datasets_df
         self.temperatures = self.get_run_temperatures()
         self.plots_flag = False
+        self.analysis_path = (f'{self.run.main_data_path[:-9]}analysis_data'
+                              f'/run{self.run.run_number}/')
 
     def set_plots_flag(self, flag: bool) -> None:
         """Set if computing properties makes plots (True) or not (False).
@@ -653,3 +656,42 @@ class DCR_run():
 
                     self.results_df = pd.concat([self.results_df, _ds_results],
                                                 ignore_index=True)
+
+        datetime.now()
+
+    def save_results(self, custom_name:str = str(int(
+            datetime.timestamp(datetime.now())))) -> None:
+        f"""Save dataframe of results to a hdf5 file. Saved files go to 
+        {self.analysis_path} .
+
+        Args:
+            name (str): name to give the file (without extension). Defaults to
+        timestamp of 
+        """
+        assert isinstance(self.results_df, pd.DataFrame), ("Trying to save "
+            "results that do not exist in the object, c'mon, you know better.")
+        assert len(self.results_df) > 0, ("Results df is empty, please compute"
+            "something before trying to save, otherwire it's just a waste of "
+            "disk space")
+
+        name = f'DCR_results_{custom_name}'
+        self.results_df.to_hdf(self.analysis_path + name + '.h5', 'df')
+        print('Saved results to ')
+    
+    def load_results(self, name:str) -> None:
+        f"""Load dataframe of results from a hdf5 file. Looks for files in 
+        {self.analysis_path} .
+
+        Args:
+            name (str): name of the file to load (without extension)
+        """
+        assert isinstance(self.results_df, pd.DataFrame), ("Trying to save "
+            "results that do not exist in the object, c'mon, you know better.")
+        assert len(self.results_df) > 0, ("Results df is empty, please compute"
+            "something before trying to save, otherwire it's just a waste of "
+            "disk space")
+
+        _df = pd.read_hdf(self.analysis_path + name + '.h5')
+        self.results_df = _df
+        
+        
