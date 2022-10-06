@@ -679,17 +679,12 @@ class DCR_run():
         print('Saved results to ')
     
     def load_results(self, name:str) -> None:
-        f"""Load dataframe of results from a hdf5 file. Looks for files in 
-        {self.analysis_path} .
+        """Load dataframe of results from a hdf5 file. Looks for files in 
+        the standard analysis cache directory.
 
         Args:
             name (str): name of the file to load (without extension)
         """
-        assert isinstance(self.results_df, pd.DataFrame), ("Trying to save "
-            "results that do not exist in the object, c'mon, you know better.")
-        assert len(self.results_df) > 0, ("Results df is empty, please compute"
-            "something before trying to save, otherwire it's just a waste of "
-            "disk space")
 
         _df = pd.read_hdf(self.analysis_path + name + '.h5')
         self.results_df = _df
