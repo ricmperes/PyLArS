@@ -563,7 +563,7 @@ class DCR_run():
                      channel: str) -> DCR_dataset:
         """Create a DCR_dataset object for a (T, mod, ch) configuration and
         load the corresponding data into it.
-        ! This assumes processed data is availabel for all the raw files of
+        ! This assumes processed data is available for all the raw files of
         the DCR run datasets !
 
         Args:

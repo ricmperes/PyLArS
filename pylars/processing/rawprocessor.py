@@ -158,7 +158,7 @@ class simple_processor():
 
     def process_all_channels(self) -> pd.DataFrame:
         """Calls the process_channel method of each of
-        the availabel channels in the dataset.
+        the available channels in the dataset.
 
         Returns:
             pd.DataFrame: Results for all the channels of a dataset.
