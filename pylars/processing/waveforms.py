@@ -26,7 +26,7 @@ class waveform_processing():
 
     @classmethod
     def process_waveform(cls, waveform: np.ndarray, baseline_samples: int,
-                         sigma_level: float = 5):
+                         sigma_level: float = 5) -> tuple:
         """Main process function on the waveform level. Finds peaks above
         (actually bellow) threshold and calls peak level processing like
         area, length and position.
@@ -39,7 +39,7 @@ class waveform_processing():
         times the std of the computed baseline. Defaults to 5.
 
         Returns:
-            _type_: areas, lengths, positions
+            tuple: areas, lengths, positions
         """
 
         baseline_rough = cls.get_baseline_rough(waveform, baseline_samples)

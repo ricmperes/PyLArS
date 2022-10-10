@@ -40,10 +40,11 @@ class peak_processing():
         (It's faster without @numba.njit)
 
         Args:
-            peaks (_type_): _description_
+            peaks (list): list of arrays where the elements are the index
+        of samples within each peak.
 
         Returns:
-            _type_: _description_
+            list: list with the lenght for each peak.
         """
         lengths = [len(_peak) for _peak in peaks]
         return lengths
@@ -55,10 +56,10 @@ class peak_processing():
         (Faster without numba...?)
 
         Args:
-            peaks (_type_): array of identified peaks.
+            peaks (list): array of identified peaks.
 
         Returns:
-            _type_: list of positions of peaks.
+            list: list of positions of peaks.
         """
         positions = [_peak[0] for _peak in peaks]
         return positions
@@ -80,15 +81,19 @@ class peak_processing():
     @classmethod
     def get_all_amplitudes(cls, waveform: np.ndarray, peaks: list,
                            baseline_value: float) -> list:
-        """Calcultes the max amplitude of the identified peak
+        """Calculates the max amplitude of the identified peak
         in number of samples.
         (Faster without numba...?)
 
         Args:
-            peaks (_type_): array of identified peaks.
+            waveform (np.ndarray): 1D array of all the ADC counts where each
+    element is a sample number in the waveform. The length of the array is the
+    ammount of samples in the waveform.
+            peaks (np.ndarray): array of identified peaks.
+            baseline_value (float): value of ADC counts to use as baseline.
 
         Returns:
-            _type_: list of amplitudes of peaks.
+            list: list of amplitudes of peaks.
         """
         amplitudes = np.zeros(len(peaks))
         for i, _peak in enumerate(peaks):
@@ -100,6 +105,9 @@ class peak_processing():
     def split_consecutive(cls, array: np.array, stepsize: int = 1):
         """Splits an array into several where values are consecutive
         to each other. Points to numbafied function _split_consecutive().
+
+        Args:
+            array (np.array): 
         """
         split_array = _split_consecutive(array, stepsize)
         return split_array
@@ -107,17 +115,21 @@ class peak_processing():
     @classmethod
     def find_peaks_simple(cls, waveform_array: np.ndarray,
                           baseline_value: float, std_value: float,
-                          sigma_lvl: float = 5):
+                          sigma_lvl: float = 5) -> list:
         """Pulse processing to find peaks above sigma times baseline rms.
 
         Args:
-            waveform_array (_type_): _description_
-            baseline_value (float): _description_
-            std_value (float): _description_
-            sigma_lvl (float, optional): _description_. Defaults to 5.
+            waveform_array (np.ndarray): 1D array of all the ADC counts where
+        each element is a sample number in the waveform. The length of the
+        array is the ammount of samples in the waveform.
+            baseline_value (float): value of ADC counts to use as baseline.
+            std_value (float): standard deviation of the calculated baseline
+        value.
+            sigma_lvl (float, optional): number of times above baseline in
+        stds to consider as new peak. Defaults to 5.
 
         Returns:
-            _type_: _description_
+            list: list with the found peaks.
         """
 
         bellow_baseline = np.where(
@@ -135,14 +147,17 @@ def _get_area(waveform: np.ndarray, baseline_value: float,
     """Get area of a single identified peak in a waveform. Numbafied.
 
     Args:
-        waveform (_type_): _description_
-        baseline_value (float): _description_
-        peak_start (int): _description_
-        peak_end (int): _description_
-        dt (int, optional): _description_. Defaults to 10.
+        waveform (np.ndarray): 1D array of all the ADC counts where each
+    element is a sample number in the waveform. The length of the array is the
+    ammount of samples in the waveform.
+        baseline_value (float): value of ADC counts to use as baseline.
+        peak_start (int): index of start of the peak
+        peak_end (int): index of end of the peak
+        dt (int, optional): duration of each sample in the waveform in
+    nanoseconds. Defaults to 10.
 
     Returns:
-        _type_: _description_
+        float: return calculated integrated ADC counts.
     """
     peak_wf = waveform[peak_start:peak_end]
     area_under = np.sum(baseline_value - peak_wf) * dt
@@ -155,15 +170,20 @@ def _get_amplitude(waveform: np.ndarray, baseline_value: float,
     """Get area of a single identified peak in a waveform. Numbafied.
 
     Args:
-        waveform (_type_): _description_
-        baseline_value (float): _description_
-        peak_start (int): _description_
-        peak_end (int): _description_
-        dt (int, optional): _description_. Defaults to 10.
+        waveform (np.ndarray): 1D array of all the ADC counts where each
+    element is a sample number in the waveform. The length of the array is the
+    ammount of samples in the waveform.
+        baseline_value (float): value of ADC counts to use as baseline.
+        peak_start (int): index of start of the peak
+        peak_end (int): index of end of the peak
+        dt (int, optional): duration of each sample in the waveform in
+    nanoseconds. Defaults to 10.
 
     Returns:
-        _type_: _description_
+        float: return amplitude of peak in ADC counts (minimum value of 
+    ADC counts registered in peak)
     """
+
     peak_wf = waveform[peak_start:peak_end]
     if len(peak_wf) > 0:
         amplitude = min(peak_wf)
@@ -178,11 +198,12 @@ def _split_consecutive(array: np.array, stepsize: int = 1) -> np.ndarray:
     to each other, in a numbafied verison.
 
     Args:
-        array (np.array): _description_
-        stepsize (int, optional): _description_. Defaults to 1.
+        array (np.array): array of indexes recognised as peaks.
+        stepsize (int, optional): minimum consecutive indexes to split into
+    different peaks. Defaults to 1.
 
     Returns:
-        _type_: _description_
+        np.ndarray: array with splitted peaks.
     """
     split_index = np.where(np.diff(array) != stepsize)[0] + 1
     split_array = np.split(array, split_index)
