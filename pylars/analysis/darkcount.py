@@ -630,6 +630,12 @@ class DCR_run():
         if self.run.run_number == 7:
             channel_map = {0: ['wf0', 'wf3', 'wf4', 'wf6'],
                            1: ['wf0', 'wf3', 'wf4', 'wf6'], }
+        
+        elif self.run.run_number == 8:
+            channel_map = {0: ['wf0', 'wf3', 'wf4', 'wf5', 'wf6'],
+                           1: ['wf0', 'wf1', 'wf2', 'wf3', 'wf4', 
+                               'wf6', 'wf7']}
+
         else:
             channel_map = pd.read_csv(path_to_map)
 
@@ -659,15 +665,13 @@ class DCR_run():
 
         datetime.now()
 
-    def save_results(self, custom_name:str = str(int(
-            datetime.timestamp(datetime.now())))) -> None:
-        f"""Save dataframe of results to a hdf5 file. Saved files go to 
-        {self.analysis_path} .
+    def save_results(self, custom_name) -> None:
+        """Save dataframe of results to a hdf5 file. Saved files go to 
+        %s.
 
         Args:
-            name (str): name to give the file (without extension). Defaults to
-        timestamp of 
-        """
+            name (str): name to give the file (without extension).
+        """ %self.analysis_path
         assert isinstance(self.results_df, pd.DataFrame), ("Trying to save "
             "results that do not exist in the object, c'mon, you know better.")
         assert len(self.results_df) > 0, ("Results df is empty, please compute"
