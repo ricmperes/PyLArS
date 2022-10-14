@@ -1,66 +1,65 @@
 import numpy as np
-from awkward.highlevel import Array as akarray
 import numba as nb
 
 
-class peak_processing():
-    """All the things peaks.
+class pulse_processing():
+    """All the things pulses.
     """
 
     @classmethod
     def get_area(cls, waveform: np.ndarray, baseline_value: float,
-                 peak_start: int, peak_end: int, dt: int = 10) -> float:
-        """Get area of a single identified peak in a waveform. Points to
+                 pulse_start: int, pulse_end: int, dt: int = 10) -> float:
+        """Get area of a single identified pulse in a waveform. Points to
         the numbafied function _get_area(...).
         """
         area_under = _get_area(
             waveform,
             baseline_value,
-            peak_start,
-            peak_end,
+            pulse_start,
+            pulse_end,
             dt)
         return area_under
 
     @classmethod
-    def get_all_areas(cls, waveform: np.ndarray, peaks: list,
+    def get_all_areas(cls, waveform: np.ndarray, pulses: list,
                       baseline_value: float) -> np.ndarray:
-        """Compute the areas of all the peaks in a waveform.
+        """Compute the areas of all the pulses in a waveform.
         TO DO: use np.apply_along_axis or similar and see if
         there is speed improvement.
         """
-        areas = np.zeros(len(peaks))
-        for i, _peak in enumerate(peaks):
+        areas = np.zeros(len(pulses))
+        for i, _pulse in enumerate(pulses):
             areas[i] = cls.get_area(
-                waveform, baseline_value, _peak[0], _peak[-1])
+                waveform, baseline_value, _pulse[0], _pulse[-1])
         return areas
 
     @classmethod
-    def get_all_lengths(cls, peaks: list) -> list:
-        """Compute the lengths of all the peaks in a waveform.
+    def get_all_lengths(cls, pulses: list) -> list:
+        """Compute the lengths of all the pulses in a waveform.
         (It's faster without @numba.njit)
 
         Args:
-            peaks (_type_): _description_
+            pulses (_type_): _description_
 
         Returns:
             _type_: _description_
         """
-        lengths = [len(_peak) for _peak in peaks]
+        lengths = [len(_pulse) for _pulse in pulses]
         return lengths
 
     @classmethod
-    def get_all_positions(cls, peaks: list) -> list:
-        """Calcultes the initial position of the identified peak
+    def get_all_positions(cls, pulses: list) -> list:
+        """Calcultes the initial position of the identified pulse
         in number of samples.
         (Faster without numba...?)
 
         Args:
-            peaks (_type_): array of identified peaks.
+            pulses (_type_): array of identified pulses.
 
         Returns:
-            _type_: list of positions of peaks.
+            _type_: list of positions of pulses.
         """
-        positions = [_peak[0] for _peak in peaks]
+        positions = [_pulse[0] for _pulse in pulses]
         return positions
 
     @classmethod
@@ -72,9 +71,9 @@ class peak_processing():
         return split_array
 
     @classmethod
-    def find_peaks_simple(cls, waveform_array: np.ndarray, baseline_value: float,
+    def find_pulses_simple(cls, waveform_array: np.ndarray, baseline_value: float,
                           std_value: float, sigma_lvl: float = 5):
-        """Pulse processing to find peaks above sigma times baseline rms.
+        """Pulse processing to find pulses above sigma times baseline rms.
 
         Args:
             waveform_array (_type_): _description_
@@ -91,27 +90,27 @@ class peak_processing():
                 baseline_value -
                 std_value *
                 sigma_lvl))[0]
-        peaks = cls.split_consecutive(bellow_baseline)
-        return peaks
+        pulses = cls.split_consecutive(bellow_baseline)
+        return pulses
 
 
 @nb.njit
 def _get_area(waveform: np.ndarray, baseline_value: float,
-              peak_start: int, peak_end: int, dt: int = 10) -> float:
-    """Get area of a single identified peak in a waveform. Numbafied.
+              pulse_start: int, pulse_end: int, dt: int = 10) -> float:
+    """Get area of a single identified pulse in a waveform. Numbafied.
 
     Args:
         waveform (_type_): _description_
         baseline_value (float): _description_
-        peak_start (int): _description_
-        peak_end (int): _description_
+        pulse_start (int): _description_
+        pulse_end (int): _description_
         dt (int, optional): _description_. Defaults to 10.
 
     Returns:
         _type_: _description_
     """
-    peak_wf = waveform[peak_start:peak_end]
-    area_under = np.sum(baseline_value - peak_wf) * dt
+    pulse_wf = waveform[pulse_start:pulse_end]
+    area_under = np.sum(baseline_value - pulse_wf) * dt
     return area_under
 
 
