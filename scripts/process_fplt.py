@@ -1,7 +1,14 @@
+
+import pylars.utils.input
+import pylars.utils.output
+import pylars
+import datetime
 import argparse
+from tqdm import tqdm
+import numpy as np
 
 parser = argparse.ArgumentParser(
-    description=('Script to process DCR datasets for a given set of'
+    description=('Script to process BV datasets for a given set of'
                  'temperatures  and all the available voltages of each'
                  '(sigma=5, baseline counts = 50).')
 )
@@ -27,12 +34,6 @@ parser.add_argument('-pp', '--path_processed',
 
 args = parser.parse_args()
 
-import pylars.utils.input
-import pylars.utils.output
-import pylars
-import datetime
-from tqdm import tqdm
-import numpy as np
 
 def run_process_dataset(run_number: int, kind: str,
                         vbias: float, temp: float,
@@ -74,23 +75,24 @@ if __name__ == '__main__':
         main_data_path='/disk/gfs_atp/xenoscope/SiPMs/char_campaign/raw_data/')
 
     datasets_df = base_run.get_run_df()
-    print('Temeperatures to process: ', args.temperature)
+    print('Temperatures to process: ', args.temperature)
     for _temp in tqdm(args.temperature, 'Temperatures to process:'):
         _voltages = np.unique(
-            datasets_df[(datasets_df['kind'] == 'DCR') &
+            datasets_df[(datasets_df['kind'] == 'fplt') &
                         (datasets_df['temp'] == _temp)]['vbias']
         )
         for _volt in tqdm(_voltages, 'Voltages to process:'):
             try:
                 run_process_dataset(
                     run_number=args.run,
-                    kind='DCR',
+                    kind='fplt',
                     vbias=_volt,
                     temp=_temp,
                     main_data_path=args.path_raw,
                     path_processed=args.path_processed)
             except BaseException:
-                print(f'Could not process file for DCR, {_volt} V, {_temp} K.')
+                print(
+                    f'Could not process file for fplt, {_volt} V, {_temp} K.')
 
     tf = datetime.datetime.now()
     print('Processing finished at: ', tf)

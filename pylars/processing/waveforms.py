@@ -56,4 +56,4 @@ class waveform_processing():
         lengths = pulse_processing.get_all_lengths(pulses)
         positions = pulse_processing.get_all_positions(pulses)
 
-        return areas, lengths, positions
+        return areas, lengths, positions, amplitudes
