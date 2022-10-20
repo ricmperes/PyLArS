@@ -55,5 +55,7 @@ class waveform_processing():
         areas = pulse_processing.get_all_areas(waveform, pulses, baseline_rough)
         lengths = pulse_processing.get_all_lengths(pulses)
         positions = pulse_processing.get_all_positions(pulses)
+        amplitudes = pulse_processing.get_all_amplitudes(waveform, peaks,
+                                                        baseline_rough)
 
         return areas, lengths, positions, amplitudes
