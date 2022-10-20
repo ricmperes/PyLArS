@@ -42,26 +42,26 @@ class DCR_dataset():
 
         Args:
             flag (bool): True for plotting stuff, False for not making nice
-        pictures (plots) to hang on the wall. Yes, I hang plots on my bedroom
-        wall and it looks nice.
+                pictures (plots) to hang on the wall. Yes, I hang plots on 
+                my bedroom wall and it looks nice.
         """
         self.plots_flag = flag
 
     def define_ADC_config(self, F_amp: float, ADC_range: int = 2.25,
                           ADC_impedance: int = 50, ADC_res: float = 2**14,
                           q_e: float = 1.602176634e-19) -> None:
-        """Define the ADC related quantities for the dataset.
+        r"""Define the ADC related quantities for the dataset.
 
         Args:
             F_amp (float): signal amplification from the sensor (pre-amp *
-        external amplification on rack)
+                external amplification on rack)
             ADC_range (int, optional): Range of the ADC [V]. Defaults to 2.25.
             ADC_impedance (int, optional): Impedance of the ADC and cables
-        [ohm]. Defaults to 50.
-            ADC_res (float, optional): Resolution/bits of the ADC (2**N_bits).
-        Defaults to 2**14.
+                [ohm]. Defaults to 50.
+            ADC_res (float, optional): Resolution/bits of the ADC (2\*\*N_bits).
+                Defaults to 2**14.
             q_e (float, optional): Element charge of the electron [C].
-        Defaults to 1.602176634e-19.
+                Defaults to 1.602176634e-19.
         """
         ADC_config = {'ADC_range': ADC_range,
                       'ADC_impedance': ADC_impedance,
@@ -74,12 +74,12 @@ class DCR_dataset():
     def define_SiPM_config(self, livetime: float,
                            sensor_area: float = 12 * 12,
                            ) -> None:
-        """Define the SiPM data related quantities for the dataset.
+        r"""Define the SiPM data related quantities for the dataset.
 
         Args:
             livetime (float): livetime of the measurement for DCR porpuses.
-            sensor_area (float, optional): Area of the photosensor (mm**2).
-        Defaults to 12*12.
+            sensor_area (float, optional): Area of the photosensor (mm\*\*2).
+                Defaults to 12\*12.
         """
         SiPM_config = {'livetime': livetime,
                        'sensor_area': sensor_area,
@@ -111,8 +111,8 @@ class DCR_dataset():
 
         Args:
             force_processing (bool, optional): Flag to force processing
-        of raw data in case the processed dataset is not found. Defaults
-        to False.
+                of raw data in case the processed dataset is not found. 
+                Defaults to False.
 
         Returns:
             dict: _description_
@@ -146,7 +146,7 @@ class DCR_dataset():
         Args:
             df (pd.DataFrame): _description_
             length_cut (int, optional): cut to impose on the length of
-        the peaks for noise suppression. Defaults to 5.
+                        the peaks for noise suppression. Defaults to 5.
             plot (boolorstr, optional): _description_. Defaults to False.
 
         Returns:
@@ -188,8 +188,8 @@ class DCR_dataset():
             df (_type_): _description_
             length_cut (_type_): _description_
             bins (intorlist, optional): number of bins to make the are
-        histogram or list of bin edges to consider on the histogram.
-        Defaults to 200.
+                histogram or list of bin edges to consider on the histogram.
+                Defaults to 200.
 
         Returns:
             tuple: _description_
@@ -215,12 +215,12 @@ class DCR_dataset():
 
         Args:
             df (pd.DataFrame): a pd.DataFrame with the series "area" and
-        "length".
+                "length".       
             length_cut (int, optional): cut to impose on the length of
-        the peaks for noise suppression. Defaults to 5.
+                the peaks for noise suppression. Defaults to 5.
             bins (intorlist, optional): number of bins to make the are
-        histogram or list of bin edges to consider on the histogram.
-        Defaults to 200.
+                histogram or list of bin edges to consider on the histogram.
+                Defaults to 200.
 
         Returns:
             tuple: pair of np.arrays (area thersholds, DCR values)
@@ -246,16 +246,16 @@ class DCR_dataset():
 
         Args:
             df (pd.DataFrame): a pd.DataFrame with the series "area" and
-        "length".
+                "length".
             length_cut (int, optional): cut to impose on the length of
-        the peaks for noise suppression. Defaults to 5.
+                the peaks for noise suppression. Defaults to 5.
             bins (intorlist, optional): number of bins to make the are
-        histogram or list of bin edges to consider on the histogram.
-        Defaults to 200.
+                histogram or list of bin edges to consider on the histogram.
+                Defaults to 200.
 
         Returns:
             itp.UnivariateSpline: spline object of the DCR vs area
-        threshold curve.
+                threshold curve.
         """
         area_hist = np.histogram(df[df['length'] > length_cut]['area'],
                                  bins=bins)
@@ -278,16 +278,16 @@ class DCR_dataset():
 
         Args:
             df (pd.DataFrame): a pd.DataFrame with the series "area" and
-        "length".
+                "length".
             length_cut (int, optional): cut to impose on the length of
-        the peaks for noise suppression. Defaults to 5.
+                the peaks for noise suppression. Defaults to 5.
             bins (intorlist, optional): number of bins to make the are
-        histogram or list of bin edges to consider on the histogram.
-        Defaults to 200.
+                histogram or list of bin edges to consider on the histogram.
+                Defaults to 200.
 
         Returns:
             itp.interp1d: 1D interpolation object of the DCR vs area
-        threshold curve.
+                threshold curve.
         """
         area_hist = np.histogram(df[df['length'] > length_cut]['area'],
                                  bins=bins)
@@ -320,7 +320,7 @@ class DCR_dataset():
 
         Returns:
             tuple: DCR value, error of DCR value, CTP value, error of
-        CTP value
+                CTP value
         """
         pe_0_5 = pe_area * 0.5
         pe_1_5 = pe_area * 1.5
@@ -365,11 +365,11 @@ class DCR_dataset():
 
         Args:
             spe_area (float): Area of the SPE peak in integrated ADC
-        counts [ADC count * ns].
+                counts [ADC count * ns].
 
         Raises:
             ValueError: self.ADC_config not defined for the current dataset.
-        Run dataset.define_ADC_config(...)
+                Run dataset.define_ADC_config(...)
 
         Returns:
             float: the calculated gain.
@@ -400,14 +400,14 @@ class DCR_dataset():
             module (int): module to load.
             channel (str): channel to load.
             length_cut_min (int): lower bound accepted for the length of
-        peaks. Defaults to 4.
+                peaks. Defaults to 4.
             length_cut_max (int): upper bound accepted for the length of
-        peaks. Defaults to 20.
+                peaks. Defaults to 20.
 
         Returns:
             pd.DataFrame: dataframe with all the computed properties with
-        the columns ['V','T','path','module','channel','Gain','DCR','CTP',
-        'DCR_error','CTP_error','BV','OV']
+                the columns ['V','T','path','module','channel','Gain','DCR',
+                'CTP','DCR_error','CTP_error','BV','OV']
         """
 
         assert isinstance(self.data, dict), ('Woops, no data found! Load'
@@ -493,9 +493,9 @@ class DCR_run():
         Assumes a ./figures/ directory exists.
 
         Args:
-            flag (bool): True for plotting stuff, False for not making nice
-        pictures (plots) to hang on the wall. Yes, I hang plots on my bedroom
-        wall and it looks nice.
+            flag (bool): True for plotting stuff, False for not making nice 
+                pictures (plots) to hang on the wall. Yes, I hang plots on my 
+                bedroom wall and it looks nice.
         """
         self.plots_flag = flag
 
@@ -522,18 +522,18 @@ class DCR_run():
     def define_run_ADC_config(self, F_amp: float, ADC_range: int = 2.25,
                               ADC_impedance: int = 50, ADC_res: float = 2**14,
                               q_e: float = 1.602176634e-19) -> None:
-        """Define the ADC related quantities for the dataset.
+        r"""Define the ADC related quantities for the dataset.
 
         Args:
-            F_amp (float): signal amplification from the sensor (pre-amp *
-        external amplification on rack)
+            F_amp (float): signal amplification from the sensor (pre-amp \* 
+                external amplification on rack)
             ADC_range (int, optional): Range of the ADC [V]. Defaults to 2.25.
             ADC_impedance (int, optional): Impedance of the ADC and cables
-        [ohm]. Defaults to 50.
-            ADC_res (float, optional): Resolution/bits of the ADC (2**N_bits).
-        Defaults to 2**14.
+                [ohm]. Defaults to 50.
+            ADC_res (float, optional): Resolution/bits of the ADC (2\*\*
+                N_bits). Defaults to 2\*\*14.
             q_e (float, optional): Element charge of the electron [C].
-        Defaults to 1.602176634e-19.
+                Defaults to 1.602176634e-19.
         """
         ADC_config = {'ADC_range': ADC_range,
                       'ADC_impedance': ADC_impedance,
@@ -546,12 +546,12 @@ class DCR_run():
     def define_run_SiPM_config(self, livetime: float,
                                sensor_area: float = 12 * 12,
                                ) -> None:
-        """Define the SiPM data related quantities for the dataset.
+        r"""Define the SiPM data related quantities for the dataset.
 
         Args:
             livetime (float): livetime of the measurement for DCR porpuses.
-            sensor_area (float, optional): Area of the photosensor (mm**2).
-        Defaults to 12*12.
+            sensor_area (float, optional): Area of the photosensor (mm\*\*2).
+                Defaults to 12\*12.
         """
         SiPM_config = {'livetime': livetime,
                        'sensor_area': sensor_area,
@@ -563,6 +563,7 @@ class DCR_run():
                      channel: str) -> DCR_dataset:
         """Create a DCR_dataset object for a (T, mod, ch) configuration and
         load the corresponding data into it.
+
         ! This assumes processed data is available for all the raw files of
         the DCR run datasets !
 
@@ -572,7 +573,7 @@ class DCR_run():
             channel (str): channel in the module to select
 
         Returns:
-            DCR_dataset: _description_
+            DCR_dataset: dataset obeject
         """
         particular_DCR_dataset = DCR_dataset(run=self.run,
                                              temperature=temp,
@@ -620,6 +621,7 @@ class DCR_run():
 
     def read_channel_map(self, path_to_map: str) -> None:
         """Define the active modules and channels for the run.
+
         UNDER CONSTRUCTION. I know it doesn't work that nicely but
         I need to have somthing that works for now, so...
         Define it with self.channel_map = dict(mod:[ch#,...],...)

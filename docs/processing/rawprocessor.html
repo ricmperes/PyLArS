@@ -110,19 +110,19 @@ class simple_processor():
 
         Args:
             ch (str): channel name as in the ROOT file.
-        In files from DAQ_zero/XenoDAQ these will be &#39;wf#&#39; with # the
-        number of the channel [0,7]
+                In files from DAQ_zero/XenoDAQ these will be &#39;wf#&#39; with # 
+                the number of the channel [0,7]
 
         Raises:
             AssertionError: if the requested channel
-        is not available on the raw file.
+                is not available on the raw file.
             AssertionError: if the there was a problem
-        in the processing of a waveform
+                in the processing of a waveform
 
         Returns:
             dict: Dictionary of keys module, channel, wf_number
-        area, length, position where the values are lists (order
-        matters) of the processed waveforms.
+                area, length, position where the values are lists (order
+                matters) of the processed waveforms.
         &#34;&#34;&#34;
         if ch not in self.raw_data.channels:
             raise AssertionError(
@@ -673,19 +673,19 @@ of the pulse.</p></div>
 
         Args:
             ch (str): channel name as in the ROOT file.
-        In files from DAQ_zero/XenoDAQ these will be &#39;wf#&#39; with # the
-        number of the channel [0,7]
+                In files from DAQ_zero/XenoDAQ these will be &#39;wf#&#39; with # 
+                the number of the channel [0,7]
 
         Raises:
             AssertionError: if the requested channel
-        is not available on the raw file.
+                is not available on the raw file.
             AssertionError: if the there was a problem
-        in the processing of a waveform
+                in the processing of a waveform
 
         Returns:
             dict: Dictionary of keys module, channel, wf_number
-        area, length, position where the values are lists (order
-        matters) of the processed waveforms.
+                area, length, position where the values are lists (order
+                matters) of the processed waveforms.
         &#34;&#34;&#34;
         if ch not in self.raw_data.channels:
             raise AssertionError(
@@ -902,25 +902,26 @@ the available channels in the dataset.</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>ch</code></strong> :&ensp;<code>str</code></dt>
-<dd>channel name as in the ROOT file.</dd>
+<dd>channel name as in the ROOT file.
+In files from DAQ_zero/XenoDAQ these will be 'wf#' with #
+the number of the channel [0,7]</dd>
 </dl>
-<p>In files from DAQ_zero/XenoDAQ these will be 'wf#' with # the
-number of the channel [0,7]</p>
 <h2 id="raises">Raises</h2>
 <dl>
 <dt><code>AssertionError</code></dt>
-<dd>if the requested channel</dd>
+<dd>if the requested channel
+is not available on the raw file.</dd>
+<dt><code>AssertionError</code></dt>
+<dd>if the there was a problem
+in the processing of a waveform</dd>
 </dl>
-<p>is not available on the raw file.
-AssertionError: if the there was a problem
-in the processing of a waveform</p>
 <h2 id="returns">Returns</h2>
 <dl>
 <dt><code>dict</code></dt>
-<dd>Dictionary of keys module, channel, wf_number</dd>
-</dl>
-<p>area, length, position where the values are lists (order
-matters) of the processed waveforms.</p></div>
+<dd>Dictionary of keys module, channel, wf_number
+area, length, position where the values are lists (order
+matters) of the processed waveforms.</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
@@ -930,19 +931,19 @@ matters) of the processed waveforms.</p></div>
 
     Args:
         ch (str): channel name as in the ROOT file.
-    In files from DAQ_zero/XenoDAQ these will be &#39;wf#&#39; with # the
-    number of the channel [0,7]
+            In files from DAQ_zero/XenoDAQ these will be &#39;wf#&#39; with # 
+            the number of the channel [0,7]
 
     Raises:
         AssertionError: if the requested channel
-    is not available on the raw file.
+            is not available on the raw file.
         AssertionError: if the there was a problem
-    in the processing of a waveform
+            in the processing of a waveform
 
     Returns:
         dict: Dictionary of keys module, channel, wf_number
-    area, length, position where the values are lists (order
-    matters) of the processed waveforms.
+            area, length, position where the values are lists (order
+            matters) of the processed waveforms.
     &#34;&#34;&#34;
     if ch not in self.raw_data.channels:
         raise AssertionError(

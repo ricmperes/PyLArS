@@ -79,6 +79,7 @@ class pulse_processing():
     def get_all_positions(cls, pulses: list) -&gt; list:
         &#34;&#34;&#34;Calcultes the initial position of the identified pulse
         in number of samples.
+
         (Faster without numba...?)
 
         Args:
@@ -109,6 +110,7 @@ class pulse_processing():
                            baseline_value: float) -&gt; list:
         &#34;&#34;&#34;Calcultes the max amplitude of the identified peak
         in number of samples.
+        
         (Faster without numba...?)
 
         Args:
@@ -283,6 +285,7 @@ def _split_consecutive(array: np.array, stepsize: int = 1) -&gt; np.ndarray:
     def get_all_positions(cls, pulses: list) -&gt; list:
         &#34;&#34;&#34;Calcultes the initial position of the identified pulse
         in number of samples.
+
         (Faster without numba...?)
 
         Args:
@@ -313,6 +316,7 @@ def _split_consecutive(array: np.array, stepsize: int = 1) -&gt; np.ndarray:
                            baseline_value: float) -&gt; list:
         &#34;&#34;&#34;Calcultes the max amplitude of the identified peak
         in number of samples.
+        
         (Faster without numba...?)
 
         Args:
@@ -414,8 +418,8 @@ def find_pulses_simple(cls, waveform_array: np.ndarray, baseline_value: float,
 </code></dt>
 <dd>
 <div class="desc"><p>Calcultes the max amplitude of the identified peak
-in number of samples.
-(Faster without numba&hellip;?)</p>
+in number of samples.</p>
+<p>(Faster without numba&hellip;?)</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>peaks</code></strong> :&ensp;<code>_type_</code></dt>
@@ -435,6 +439,7 @@ def get_all_amplitudes(cls, waveform: np.ndarray, peaks: list,
                        baseline_value: float) -&gt; list:
     &#34;&#34;&#34;Calcultes the max amplitude of the identified peak
     in number of samples.
+    
     (Faster without numba...?)
 
     Args:
@@ -515,8 +520,8 @@ def get_all_lengths(cls, pulses: list) -&gt; list:
 </code></dt>
 <dd>
 <div class="desc"><p>Calcultes the initial position of the identified pulse
-in number of samples.
-(Faster without numba&hellip;?)</p>
+in number of samples.</p>
+<p>(Faster without numba&hellip;?)</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>pulses</code></strong> :&ensp;<code>_type_</code></dt>
@@ -535,6 +540,7 @@ in number of samples.
 def get_all_positions(cls, pulses: list) -&gt; list:
     &#34;&#34;&#34;Calcultes the initial position of the identified pulse
     in number of samples.
+
     (Faster without numba...?)
 
     Args:

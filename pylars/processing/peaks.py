@@ -12,10 +12,10 @@ class peak_processing():
     
     def get_sum_area(self, waveforms_subtracted: np.ndarray,
                  pulse_start: int, pulse_end: int) -> float:
-        """Get summed area over the all the channels.
+        r"""Get summed area over the all the channels.
         
         Args:
-            waveforms_subtracted (np.ndarray): array (N samples * M channels)
+            waveforms_subtracted (np.ndarray): array (N samples \* M channels)
         """
 
         waveforms_pe = cls.apply_gain(waveforms_subtracted)

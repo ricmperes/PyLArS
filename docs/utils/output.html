@@ -69,16 +69,16 @@ class processed_dataset():
 
     def save_data(self, type: str = &#39;hdf5&#39;) -&gt; None:
         &#34;&#34;&#34;Saves the data within the processed_dataset object
-        to a file
+        to a file.
 
         Args:
-            type (str, optional): type of file to save the data as. Can be
-            &#39;hdf5&#39; or &#39;csv&#39;. Defaults to &#39;hdf5&#39;.
+            type (str, optional): type of file to save the data as. Can be 
+                &#39;hdf5&#39; or &#39;csv&#39;. Defaults to &#39;hdf5&#39;.
 
         Raises:
             AssertionError: Raises the object has no data attached.
-            NotImplementedError: Raises if the file format is
-        different from &#39;hdf5&#39; or &#39;csv&#39;.
+            NotImplementedError: Raises if the file format is 
+                different from &#39;hdf5&#39; or &#39;csv&#39;.
         &#34;&#34;&#34;
         if not isinstance(self.data, pd.DataFrame):
             raise AssertionError(
@@ -102,16 +102,17 @@ class processed_dataset():
             print(&#39;Saved file to:&#39;, file_path + file_name)
 
         else:
-            raise NotImplementedError(f&#34;The requested type ({type}) is not&#34; +
-                                      &#34;implemented. Choose &#39;hdf5&#39;, &#39;csv&#39; or make a PR.&#34;)
+            raise NotImplementedError(
+                f&#34;The requested type ({type}) is not&#34; +
+                 &#34;implemented. Choose &#39;hdf5&#39;, &#39;csv&#39; or make a PR.&#34;)
 
     def load_data(self, verbose: int = 0, force: bool = False) -&gt; None:
         &#34;&#34;&#34;Load cached processed data for a given processed data configuration.
 
         Args:
             force (bool, optional): If True and no cached file found,
-        processes the raw_data (if found) with default processor
-        options. Defaults to False.
+                processes the raw_data (if found) with default processor
+                options. Defaults to False.
 
         Raises:
             FileNotFoundError: If force=False and file not found.
@@ -225,16 +226,16 @@ saving/loading cached processed files.</p></div>
 
     def save_data(self, type: str = &#39;hdf5&#39;) -&gt; None:
         &#34;&#34;&#34;Saves the data within the processed_dataset object
-        to a file
+        to a file.
 
         Args:
-            type (str, optional): type of file to save the data as. Can be
-            &#39;hdf5&#39; or &#39;csv&#39;. Defaults to &#39;hdf5&#39;.
+            type (str, optional): type of file to save the data as. Can be 
+                &#39;hdf5&#39; or &#39;csv&#39;. Defaults to &#39;hdf5&#39;.
 
         Raises:
             AssertionError: Raises the object has no data attached.
-            NotImplementedError: Raises if the file format is
-        different from &#39;hdf5&#39; or &#39;csv&#39;.
+            NotImplementedError: Raises if the file format is 
+                different from &#39;hdf5&#39; or &#39;csv&#39;.
         &#34;&#34;&#34;
         if not isinstance(self.data, pd.DataFrame):
             raise AssertionError(
@@ -258,16 +259,17 @@ saving/loading cached processed files.</p></div>
             print(&#39;Saved file to:&#39;, file_path + file_name)
 
         else:
-            raise NotImplementedError(f&#34;The requested type ({type}) is not&#34; +
-                                      &#34;implemented. Choose &#39;hdf5&#39;, &#39;csv&#39; or make a PR.&#34;)
+            raise NotImplementedError(
+                f&#34;The requested type ({type}) is not&#34; +
+                 &#34;implemented. Choose &#39;hdf5&#39;, &#39;csv&#39; or make a PR.&#34;)
 
     def load_data(self, verbose: int = 0, force: bool = False) -&gt; None:
         &#34;&#34;&#34;Load cached processed data for a given processed data configuration.
 
         Args:
             force (bool, optional): If True and no cached file found,
-        processes the raw_data (if found) with default processor
-        options. Defaults to False.
+                processes the raw_data (if found) with default processor
+                options. Defaults to False.
 
         Raises:
             FileNotFoundError: If force=False and file not found.
@@ -373,10 +375,10 @@ def format_kind_v_t(kind: str, v: float, t: float) -&gt; str:
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>force</code></strong> :&ensp;<code>bool</code>, optional</dt>
-<dd>If True and no cached file found,</dd>
+<dd>If True and no cached file found,
+processes the raw_data (if found) with default processor
+options. Defaults to False.</dd>
 </dl>
-<p>processes the raw_data (if found) with default processor
-options. Defaults to False.</p>
 <h2 id="raises">Raises</h2>
 <dl>
 <dt><code>FileNotFoundError</code></dt>
@@ -391,8 +393,8 @@ options. Defaults to False.</p>
 
     Args:
         force (bool, optional): If True and no cached file found,
-    processes the raw_data (if found) with default processor
-    options. Defaults to False.
+            processes the raw_data (if found) with default processor
+            options. Defaults to False.
 
     Raises:
         FileNotFoundError: If force=False and file not found.
@@ -453,37 +455,37 @@ options. Defaults to False.</p>
 </code></dt>
 <dd>
 <div class="desc"><p>Saves the data within the processed_dataset object
-to a file</p>
+to a file.</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>type</code></strong> :&ensp;<code>str</code>, optional</dt>
-<dd>type of file to save the data as. Can be</dd>
+<dd>type of file to save the data as. Can be
+'hdf5' or 'csv'. Defaults to 'hdf5'.</dd>
 </dl>
-<p>'hdf5' or 'csv'. Defaults to 'hdf5'.</p>
 <h2 id="raises">Raises</h2>
 <dl>
 <dt><code>AssertionError</code></dt>
 <dd>Raises the object has no data attached.</dd>
 <dt><code>NotImplementedError</code></dt>
-<dd>Raises if the file format is</dd>
-</dl>
-<p>different from 'hdf5' or 'csv'.</p></div>
+<dd>Raises if the file format is
+different from 'hdf5' or 'csv'.</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def save_data(self, type: str = &#39;hdf5&#39;) -&gt; None:
     &#34;&#34;&#34;Saves the data within the processed_dataset object
-    to a file
+    to a file.
 
     Args:
-        type (str, optional): type of file to save the data as. Can be
-        &#39;hdf5&#39; or &#39;csv&#39;. Defaults to &#39;hdf5&#39;.
+        type (str, optional): type of file to save the data as. Can be 
+            &#39;hdf5&#39; or &#39;csv&#39;. Defaults to &#39;hdf5&#39;.
 
     Raises:
         AssertionError: Raises the object has no data attached.
-        NotImplementedError: Raises if the file format is
-    different from &#39;hdf5&#39; or &#39;csv&#39;.
+        NotImplementedError: Raises if the file format is 
+            different from &#39;hdf5&#39; or &#39;csv&#39;.
     &#34;&#34;&#34;
     if not isinstance(self.data, pd.DataFrame):
         raise AssertionError(
@@ -507,8 +509,9 @@ to a file</p>
         print(&#39;Saved file to:&#39;, file_path + file_name)
 
     else:
-        raise NotImplementedError(f&#34;The requested type ({type}) is not&#34; +
-                                  &#34;implemented. Choose &#39;hdf5&#39;, &#39;csv&#39; or make a PR.&#34;)</code></pre>
+        raise NotImplementedError(
+            f&#34;The requested type ({type}) is not&#34; +
+             &#34;implemented. Choose &#39;hdf5&#39;, &#39;csv&#39; or make a PR.&#34;)</code></pre>
 </details>
 </dd>
 </dl>

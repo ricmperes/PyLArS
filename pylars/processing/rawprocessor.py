@@ -82,19 +82,19 @@ class simple_processor():
 
         Args:
             ch (str): channel name as in the ROOT file.
-        In files from DAQ_zero/XenoDAQ these will be 'wf#' with # the
-        number of the channel [0,7]
+                In files from DAQ_zero/XenoDAQ these will be 'wf#' with # 
+                the number of the channel [0,7]
 
         Raises:
             AssertionError: if the requested channel
-        is not available on the raw file.
+                is not available on the raw file.
             AssertionError: if the there was a problem
-        in the processing of a waveform
+                in the processing of a waveform
 
         Returns:
             dict: Dictionary of keys module, channel, wf_number
-        area, length, position where the values are lists (order
-        matters) of the processed waveforms.
+                area, length, position where the values are lists (order
+                matters) of the processed waveforms.
         """
         if ch not in self.raw_data.channels:
             raise AssertionError(

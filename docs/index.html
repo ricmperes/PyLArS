@@ -26,29 +26,28 @@
 <p>PyLArS is a processing and analysis framework particularly aimed at silicon
 photomultiplier (SiPM) data but can be easily adapted for the study of other
 photosensors. It is developed in the context of the
-<a href="https://www.physik.uzh.ch/en/groups/baudis/Research/Xenoscope.html">Xenoscope</a> project at
-and <a href="https://darwin.physik.uzh.ch/">DARWIN</a> projects at the University of
-Zürich.</p>
+<a href="https://www.physik.uzh.ch/en/groups/baudis/Research/Xenoscope.html">Xenoscope</a>
+project at and <a href="https://darwin.physik.uzh.ch/">DARWIN</a> projects at the
+University of Zürich.</p>
 <p>PyLArS main features are a focus on data structure and automated SiPM data
-analysis:
-- Quick data processing using <a href="https://numba.pydata.org/">numba</a> JIT compiler
-at its core processing;
-- Several levels of data structure, aimed at characterization of SiPMs at
-different conditions;
-- One-line analysis for breakdown voltage, gain, DCR, CTP, etc;
-- Save and load processed datasets and analysis results;
-- Batch submission of dataset processing;
-- Batch submisison of full run analysis;
-- Easy waveform watching;
-- Main analysis plots available as one-liners;</p>
+analysis:</p>
+<ul>
+<li>Quick data processing using <a href="https://numba.pydata.org/">numba</a> JIT compiler
+at its core processing;</li>
+<li>Several levels of data structure, aimed at characterization of SiPMs at
+different conditions;</li>
+<li>One-line analysis for breakdown voltage, gain, DCR, CTP, etc;</li>
+<li>Save and load processed datasets and analysis results;</li>
+<li>Batch submission of dataset processing;</li>
+<li>Batch submisison of full run analysis;</li>
+<li>Easy waveform watching;</li>
+<li>Main analysis plots available as one-liners;</li>
+</ul>
 <h1 id="where-to-start">Where to start?</h1>
 <ol>
-<li>Install the package (requirements might not yet be well established)</li>
-</ol>
-<pre><code>git clone git@github.com:ricmperes/PyLArS.git
-pip install -e pylars
-</code></pre>
-<ol>
+<li>Install the package (requirements might not yet be well established)
+<code>git clone git@github.com:ricmperes/PyLArS.git
+pip install -e pylars</code></li>
 <li>Take a look at the example
 <a href="https://github.com/ricmperes/PyLArS/tree/main/notebooks"><code>notebooks</code></a> (maybe
 check the development branch for any updates yet to be merged and released). </li>
@@ -69,12 +68,13 @@ if interested, reach out and contribute to the project!</p>
 PyLArS is a processing and analysis framework particularly aimed at silicon 
 photomultiplier (SiPM) data but can be easily adapted for the study of other 
 photosensors. It is developed in the context of the 
-[Xenoscope](https://www.physik.uzh.ch/en/groups/baudis/Research/Xenoscope.html) project at 
-and [DARWIN](https://darwin.physik.uzh.ch/) projects at the University of 
-Zürich.
+[Xenoscope](https://www.physik.uzh.ch/en/groups/baudis/Research/Xenoscope.html) 
+project at and [DARWIN](https://darwin.physik.uzh.ch/) projects at the 
+University of Zürich.
 
 PyLArS main features are a focus on data structure and automated SiPM data 
 analysis:
+
   - Quick data processing using [numba](https://numba.pydata.org/) JIT compiler
 at its core processing;
   - Several levels of data structure, aimed at characterization of SiPMs at 
@@ -89,10 +89,10 @@ different conditions;
 # Where to start?
 
   1. Install the package (requirements might not yet be well established)
-```
-git clone git@github.com:ricmperes/PyLArS.git
-pip install -e pylars
-```
+  ```
+  git clone git@github.com:ricmperes/PyLArS.git
+  pip install -e pylars
+  ```
   2. Take a look at the example 
 [`notebooks`](https://github.com/ricmperes/PyLArS/tree/main/notebooks) (maybe 
 check the development branch for any updates yet to be merged and released). 
@@ -122,8 +122,7 @@ highest level data structures …</p></div>
 <dt><code class="name"><a title="pylars.plotting" href="plotting/index.html">pylars.plotting</a></code></dt>
 <dd>
 <div class="desc"><p>This module contains the one-liner plots that everyone always desires.
-It is subdivided into:
-- <code>plotwaveforms</code>: waveforn plot function (with and …</p></div>
+It is subdivided into: …</p></div>
 </dd>
 <dt><code class="name"><a title="pylars.processing" href="processing/index.html">pylars.processing</a></code></dt>
 <dd>
@@ -131,11 +130,7 @@ It is subdivided into:
 </dd>
 <dt><code class="name"><a title="pylars.utils" href="utils/index.html">pylars.utils</a></code></dt>
 <dd>
-<div class="desc"><p>I/O classes and functions, as well as the data structuring classes:
-- raw data
-- dataset
-- run
-- processed data …</p></div>
+<div class="desc"><p>I/O classes and functions, as well as the data structuring classes: …</p></div>
 </dd>
 </dl>
 </section>

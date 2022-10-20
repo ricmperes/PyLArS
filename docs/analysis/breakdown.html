@@ -100,12 +100,13 @@ def compute_BV(df_results: pd.DataFrame,
 
     Args:
         df_results (pd.DataFrame): dataframe with the processed datasets
-    calculated gains.
-        plot (boolorstr, optional): flag for plotting choice. Defaults to False.
+            calculated gains.
+        plot (boolorstr, optional): flag for plotting choice. Defaults to 
+            False.
 
     Returns:
         pd.DataFrame: copy of input dataset with the extra collumns &#39;BV&#39;
-    (breakdown voltage) and &#39;OV&#39; (over-voltage).
+            (breakdown voltage) and &#39;OV&#39; (over-voltage).
     &#34;&#34;&#34;
 
     df_results = copy.deepcopy(df_results)  # just to be sure
@@ -153,16 +154,18 @@ Takes a dataframe with the collumns 'T' (temperature), 'V' (voltage) and
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>df_results</code></strong> :&ensp;<code>pd.DataFrame</code></dt>
-<dd>dataframe with the processed datasets</dd>
+<dd>dataframe with the processed datasets
+calculated gains.</dd>
+<dt><strong><code>plot</code></strong> :&ensp;<code>boolorstr</code>, optional</dt>
+<dd>flag for plotting choice. Defaults to
+False.</dd>
 </dl>
-<p>calculated gains.
-plot (boolorstr, optional): flag for plotting choice. Defaults to False.</p>
 <h2 id="returns">Returns</h2>
 <dl>
 <dt><code>pd.DataFrame</code></dt>
-<dd>copy of input dataset with the extra collumns 'BV'</dd>
-</dl>
-<p>(breakdown voltage) and 'OV' (over-voltage).</p></div>
+<dd>copy of input dataset with the extra collumns 'BV'
+(breakdown voltage) and 'OV' (over-voltage).</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
@@ -175,12 +178,13 @@ plot (boolorstr, optional): flag for plotting choice. Defaults to False.</p>
 
     Args:
         df_results (pd.DataFrame): dataframe with the processed datasets
-    calculated gains.
-        plot (boolorstr, optional): flag for plotting choice. Defaults to False.
+            calculated gains.
+        plot (boolorstr, optional): flag for plotting choice. Defaults to 
+            False.
 
     Returns:
         pd.DataFrame: copy of input dataset with the extra collumns &#39;BV&#39;
-    (breakdown voltage) and &#39;OV&#39; (over-voltage).
+            (breakdown voltage) and &#39;OV&#39; (over-voltage).
     &#34;&#34;&#34;
 
     df_results = copy.deepcopy(df_results)  # just to be sure

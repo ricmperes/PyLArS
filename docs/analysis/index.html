@@ -26,19 +26,23 @@ highest level data structures …" />
 <p>This module contains all the pre-established analysis of PyLArS and its
 highest level data structures. </p>
 <p>These <code>analysis</code> are mainly standard SiPM
-characterization processing scripts, namely for both LED ON (<code>breakdown.py</code>)
-and LED OFF (<code>darkcount.py</code>). In particular, these aim to analyse processed
-data to compute and deliver for a collection of voltages and temperatures:
-- Gain
-- Breakdown voltage
-- SPE resolution
-- Dark count rate (DCR)
-- Crosstalk probability (CTP)
-- Standard plots of all the above</p>
+characterization processing scripts, namely for both LED ON (<code><a title="pylars.analysis.breakdown" href="breakdown.html">pylars.analysis.breakdown</a></code>)
+and LED OFF (<code><a title="pylars.analysis.darkcount" href="darkcount.html">pylars.analysis.darkcount</a></code>). In particular, these aim to analyse processed
+data to compute and deliver for a collection of voltages and temperatures:</p>
+<ul>
+<li>Gain</li>
+<li>Breakdown voltage</li>
+<li>SPE resolution</li>
+<li>Dark count rate (DCR)</li>
+<li>Crosstalk probability (CTP)</li>
+<li>Standard plots of all the above</li>
+</ul>
 <h3 id="planned-to-do">Planned TO DO:</h3>
-<p>The additions in the pipeline to this module are the following:
-- Gain map structure
-- Automatic gain calculation and save/load functions for gain map</p>
+<p>The additions in the pipeline to this module are the following:</p>
+<ul>
+<li>Gain map structure</li>
+<li>Automatic gain calculation and save/load functions for gain map</li>
+</ul>
 <details class="source">
 <summary>
 <span>Expand source code</span>
@@ -47,9 +51,10 @@ data to compute and deliver for a collection of voltages and temperatures:
 highest level data structures. 
 
 These `analysis` are mainly standard SiPM 
-characterization processing scripts, namely for both LED ON (`breakdown.py`) 
-and LED OFF (`darkcount.py`). In particular, these aim to analyse processed 
+characterization processing scripts, namely for both LED ON (`breakdown`) 
+and LED OFF (`darkcount`). In particular, these aim to analyse processed 
 data to compute and deliver for a collection of voltages and temperatures:
+
   - Gain
   - Breakdown voltage
   - SPE resolution
@@ -59,8 +64,10 @@ data to compute and deliver for a collection of voltages and temperatures:
 
 ### Planned TO DO:
 The additions in the pipeline to this module are the following:
+
   - Gain map structure
   - Automatic gain calculation and save/load functions for gain map
+
 &#39;&#39;&#39;
 
 from .breakdown import *

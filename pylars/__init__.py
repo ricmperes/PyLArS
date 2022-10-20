@@ -4,12 +4,13 @@ r'''
 PyLArS is a processing and analysis framework particularly aimed at silicon 
 photomultiplier (SiPM) data but can be easily adapted for the study of other 
 photosensors. It is developed in the context of the 
-[Xenoscope](https://www.physik.uzh.ch/en/groups/baudis/Research/Xenoscope.html) project at 
-and [DARWIN](https://darwin.physik.uzh.ch/) projects at the University of 
-Zürich.
+[Xenoscope](https://www.physik.uzh.ch/en/groups/baudis/Research/Xenoscope.html) 
+project at and [DARWIN](https://darwin.physik.uzh.ch/) projects at the 
+University of Zürich.
 
 PyLArS main features are a focus on data structure and automated SiPM data 
 analysis:
+
   - Quick data processing using [numba](https://numba.pydata.org/) JIT compiler
 at its core processing;
   - Several levels of data structure, aimed at characterization of SiPMs at 
@@ -24,10 +25,10 @@ different conditions;
 # Where to start?
 
   1. Install the package (requirements might not yet be well established)
-```
-git clone git@github.com:ricmperes/PyLArS.git
-pip install -e pylars
-```
+  ```
+  git clone git@github.com:ricmperes/PyLArS.git
+  pip install -e pylars
+  ```
   2. Take a look at the example 
 [`notebooks`](https://github.com/ricmperes/PyLArS/tree/main/notebooks) (maybe 
 check the development branch for any updates yet to be merged and released). 

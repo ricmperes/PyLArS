@@ -72,12 +72,13 @@ def compute_BV(df_results: pd.DataFrame,
 
     Args:
         df_results (pd.DataFrame): dataframe with the processed datasets
-    calculated gains.
-        plot (boolorstr, optional): flag for plotting choice. Defaults to False.
+            calculated gains.
+        plot (boolorstr, optional): flag for plotting choice. Defaults to 
+            False.
 
     Returns:
         pd.DataFrame: copy of input dataset with the extra collumns 'BV'
-    (breakdown voltage) and 'OV' (over-voltage).
+            (breakdown voltage) and 'OV' (over-voltage).
     """
 
     df_results = copy.deepcopy(df_results)  # just to be sure

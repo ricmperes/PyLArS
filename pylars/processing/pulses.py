@@ -51,6 +51,7 @@ class pulse_processing():
     def get_all_positions(cls, pulses: list) -> list:
         """Calcultes the initial position of the identified pulse
         in number of samples.
+
         (Faster without numba...?)
 
         Args:
@@ -81,6 +82,7 @@ class pulse_processing():
                            baseline_value: float) -> list:
         """Calcultes the max amplitude of the identified peak
         in number of samples.
+        
         (Faster without numba...?)
 
         Args:

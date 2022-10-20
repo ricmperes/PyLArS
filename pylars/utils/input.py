@@ -137,7 +137,7 @@ class run():
 
         Returns:
             list: list of all the datasets of a given run. Elements
-        are type dataset
+                are type dataset
         """
         all_root_files = self.root_files
         datasets = []
