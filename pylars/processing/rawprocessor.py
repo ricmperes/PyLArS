@@ -108,7 +108,7 @@ class simple_processor():
         results = {'module': [],
                    'channel': [],
                    'wf_number': [],
-                   'peak_number': [],
+                   'pulse_number': [],
                    'area': [],
                    'length': [],
                    'position': [],
@@ -132,19 +132,19 @@ class simple_processor():
                 assert len(areas) == len(positions) == len(
                     lengths) == len(amplitudes)
 
-                # check if any peaks were found
+                # check if any pulses were found
                 if len(areas) == 0:
                     continue
 
                 module_number = [module] * len(areas)
                 ch_name = [ch] * len(areas)
                 wf_number = np.ones(len(areas), dtype=int) * i
-                peak_number = np.arange(len(areas))
+                pulse_number = np.arange(len(areas))
 
                 results['module'] += module_number
                 results['channel'] += ch_name
                 results['wf_number'] += list(wf_number)
-                results['peak_number'] += list(peak_number)
+                results['pulse_number'] += list(pulse_number)
                 results['area'] += list(areas)
                 results['length'] += list(lengths)
                 results['position'] += list(positions)
@@ -233,7 +233,7 @@ class run_processor(simple_processor):
         Returns:
             pd.DataFrame: processed data with computed area, length
         and position, retaining info on module, channel and waveform
-        of the peak.
+        of the pulse.
         """
 
         selection = ((self.datasets_df['kind'] == kind) &

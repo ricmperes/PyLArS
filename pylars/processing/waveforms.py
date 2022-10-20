@@ -1,5 +1,5 @@
 import numpy as np
-from .peaks import peak_processing
+from .pulses import pulse_processing
 
 
 class waveform_processing():
@@ -26,9 +26,9 @@ class waveform_processing():
 
     @classmethod
     def process_waveform(cls, waveform: np.ndarray, baseline_samples: int,
-                         sigma_level: float = 5) -> tuple:
-        """Main process function on the waveform level. Finds peaks above
-        (actually bellow) threshold and calls peak level processing like
+                         sigma_level: float = 5):
+        """Main process function on the waveform level. Finds pulses above
+        (actually bellow) threshold and calls pulse level processing like
         area, length and position.
 
         Args:
@@ -45,17 +45,15 @@ class waveform_processing():
         baseline_rough = cls.get_baseline_rough(waveform, baseline_samples)
         std_rough = cls.get_std_rough(waveform, baseline_samples)
 
-        peaks = peak_processing.find_peaks_simple(
+        pulses = pulse_processing.find_pulses_simple(
             waveform, baseline_rough, std_rough, sigma_level)
 
-        # handle case where no peaks were found
-        if len(peaks[0]) == 0:
-            return [], [], [], []
+        # handle case where no pulses were found
+        if len(pulses[0]) == 0:
+            return [], [], []
 
-        areas = peak_processing.get_all_areas(waveform, peaks, baseline_rough)
-        lengths = peak_processing.get_all_lengths(peaks)
-        positions = peak_processing.get_all_positions(peaks)
-        amplitudes = peak_processing.get_all_amplitudes(waveform, peaks,
-                                                        baseline_rough)
+        areas = pulse_processing.get_all_areas(waveform, pulses, baseline_rough)
+        lengths = pulse_processing.get_all_lengths(pulses)
+        positions = pulse_processing.get_all_positions(pulses)
 
         return areas, lengths, positions, amplitudes
