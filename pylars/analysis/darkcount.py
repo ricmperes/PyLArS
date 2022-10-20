@@ -563,7 +563,7 @@ class DCR_run():
                      channel: str) -> DCR_dataset:
         """Create a DCR_dataset object for a (T, mod, ch) configuration and
         load the corresponding data into it.
-        ! This assumes processed data is availabel for all the raw files of
+        ! This assumes processed data is available for all the raw files of
         the DCR run datasets !
 
         Args:
@@ -630,6 +630,12 @@ class DCR_run():
         if self.run.run_number == 7:
             channel_map = {0: ['wf0', 'wf3', 'wf4', 'wf6'],
                            1: ['wf0', 'wf3', 'wf4', 'wf6'], }
+        
+        elif self.run.run_number == 8:
+            channel_map = {0: ['wf0', 'wf3', 'wf4', 'wf5', 'wf6'],
+                           1: ['wf0', 'wf1', 'wf2', 'wf3', 'wf4', 
+                               'wf6', 'wf7']}
+
         else:
             channel_map = pd.read_csv(path_to_map)
 
@@ -659,15 +665,13 @@ class DCR_run():
 
         datetime.now()
 
-    def save_results(self, custom_name:str = str(int(
-            datetime.timestamp(datetime.now())))) -> None:
-        f"""Save dataframe of results to a hdf5 file. Saved files go to 
-        {self.analysis_path} .
+    def save_results(self, custom_name) -> None:
+        """Save dataframe of results to a hdf5 file. Saved files go to 
+        %s.
 
         Args:
-            name (str): name to give the file (without extension). Defaults to
-        timestamp of 
-        """
+            name (str): name to give the file (without extension).
+        """ %self.analysis_path
         assert isinstance(self.results_df, pd.DataFrame), ("Trying to save "
             "results that do not exist in the object, c'mon, you know better.")
         assert len(self.results_df) > 0, ("Results df is empty, please compute"
@@ -679,17 +683,12 @@ class DCR_run():
         print('Saved results to ')
     
     def load_results(self, name:str) -> None:
-        f"""Load dataframe of results from a hdf5 file. Looks for files in 
-        {self.analysis_path} .
+        """Load dataframe of results from a hdf5 file. Looks for files in 
+        the standard analysis cache directory.
 
         Args:
             name (str): name of the file to load (without extension)
         """
-        assert isinstance(self.results_df, pd.DataFrame), ("Trying to save "
-            "results that do not exist in the object, c'mon, you know better.")
-        assert len(self.results_df) > 0, ("Results df is empty, please compute"
-            "something before trying to save, otherwire it's just a waste of "
-            "disk space")
 
         _df = pd.read_hdf(self.analysis_path + name + '.h5')
         self.results_df = _df
