@@ -50,12 +50,12 @@ class waveform_processing():
 
         # handle case where no pulses were found
         if len(pulses[0]) == 0:
-            return [], [], []
+            return [], [], [], []
 
         areas = pulse_processing.get_all_areas(waveform, pulses, baseline_rough)
         lengths = pulse_processing.get_all_lengths(pulses)
         positions = pulse_processing.get_all_positions(pulses)
-        amplitudes = pulse_processing.get_all_amplitudes(waveform, peaks,
+        amplitudes = pulse_processing.get_all_amplitudes(waveform, pulses,
                                                         baseline_rough)
 
         return areas, lengths, positions, amplitudes

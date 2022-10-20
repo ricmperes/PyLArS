@@ -78,7 +78,9 @@ class simple_processor():
 
     # Processing functions
     def process_channel(self, ch: str) -> dict:
-        """_summary_
+        """Process a channel by iterating over all its waveforms, running
+    the pulse finding algorithm and the calculating the following pulse
+    properties: areas, lengths, positions and amplitudes.
 
         Args:
             ch (str): channel name as in the ROOT file.
