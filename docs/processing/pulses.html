@@ -67,10 +67,10 @@ class pulse_processing():
         (It&#39;s faster without @numba.njit)
 
         Args:
-            pulses (_type_): _description_
-
+            pulses (list): list of arrays where the elements are the index
+                of samples within each pulse.
         Returns:
-            _type_: _description_
+            list: list with the lenght for each pulse.
         &#34;&#34;&#34;
         lengths = [len(_pulse) for _pulse in pulses]
         return lengths
@@ -83,10 +83,10 @@ class pulse_processing():
         (Faster without numba...?)
 
         Args:
-            pulses (_type_): array of identified pulses.
+            pulses (list): array of identified pulses.
 
         Returns:
-            _type_: list of positions of pulses.
+            list: list of positions of pulses.
         &#34;&#34;&#34;
         positions = [_pulse[0] for _pulse in pulses]
         return positions
@@ -94,7 +94,7 @@ class pulse_processing():
     @classmethod
     def get_amplitude(cls, waveform: np.ndarray, baseline_value: float,
                       peak_start: int, peak_end: int, dt: int = 10) -&gt; float:
-        &#34;&#34;&#34;Get area of a single identified peak in a waveform. Points to
+        &#34;&#34;&#34;Get area of a single identified pulse in a waveform. Points to
         the numbafied function _get_area(...).
         &#34;&#34;&#34;
         amplitude = _get_amplitude(
@@ -106,21 +106,25 @@ class pulse_processing():
         return amplitude
 
     @classmethod
-    def get_all_amplitudes(cls, waveform: np.ndarray, peaks: list,
+    def get_all_amplitudes(cls, waveform: np.ndarray, pulses: list,
                            baseline_value: float) -&gt; list:
-        &#34;&#34;&#34;Calcultes the max amplitude of the identified peak
+        &#34;&#34;&#34;Calcultes the max amplitude of the identified pulse
         in number of samples.
         
         (Faster without numba...?)
 
         Args:
-            peaks (_type_): array of identified peaks.
+            waveform (np.ndarray): 1D array of all the ADC counts where each
+                element is a sample number in the waveform. The length of the 
+                array is the ammount of samples in the waveform.
+            pulses (np.ndarray): array of identified pulse.
+            baseline_value (float): value of ADC counts to use as baseline.
 
         Returns:
-            _type_: list of amplitudes of peaks.
+            list: list of amplitudes of pulses.
         &#34;&#34;&#34;
-        amplitudes = np.zeros(len(peaks))
-        for i, _peak in enumerate(peaks):
+        amplitudes = np.zeros(len(pulses))
+        for i, _peak in enumerate(pulses):
             amplitudes[i] = cls.get_amplitude(
                 waveform, baseline_value, _peak[0], _peak[-1])
         return amplitudes
@@ -139,13 +143,17 @@ class pulse_processing():
         &#34;&#34;&#34;Pulse processing to find pulses above sigma times baseline rms.
 
         Args:
-            waveform_array (_type_): _description_
-            baseline_value (float): _description_
-            std_value (float): _description_
-            sigma_lvl (float, optional): _description_. Defaults to 5.
+           waveform_array (np.ndarray): 1D array of all the ADC counts where
+                each element is a sample number in the waveform. The length of the
+                array is the ammount of samples in the waveform.
+            baseline_value (float): value of ADC counts to use as baseline.
+            std_value (float): standard deviation of the calculated baseline
+                value.
+            sigma_lvl (float, optional): number of times above baseline in
+                stds to consider as new pulse. Defaults to 5.
 
         Returns:
-            _type_: _description_
+            list: list with the found pulses.
         &#34;&#34;&#34;
 
         bellow_baseline = np.where(
@@ -163,14 +171,17 @@ def _get_area(waveform: np.ndarray, baseline_value: float,
     &#34;&#34;&#34;Get area of a single identified pulse in a waveform. Numbafied.
 
     Args:
-        waveform (_type_): _description_
-        baseline_value (float): _description_
-        pulse_start (int): _description_
-        pulse_end (int): _description_
-        dt (int, optional): _description_. Defaults to 10.
-
+        waveform (np.ndarray): 1D array of all the ADC counts where each
+            element is a sample number in the waveform. The length of the array is the
+            ammount of samples in the waveform.
+        baseline_value (float): value of ADC counts to use as baseline.
+        peak_start (int): index of start of the pulse
+        peak_end (int): index of end of the pulse
+        dt (int, optional): duration of each sample in the waveform in
+            nanoseconds. Defaults to 10.
+    
     Returns:
-        _type_: _description_
+        float: return calculated integrated ADC counts.
     &#34;&#34;&#34;
     pulse_wf = waveform[pulse_start:pulse_end]
     area_under = np.sum(baseline_value - pulse_wf) * dt
@@ -180,17 +191,21 @@ def _get_area(waveform: np.ndarray, baseline_value: float,
 @nb.njit
 def _get_amplitude(waveform: np.ndarray, baseline_value: float,
                    peak_start: int, peak_end: int, dt: int = 10) -&gt; float:
-    &#34;&#34;&#34;Get area of a single identified peak in a waveform. Numbafied.
+    &#34;&#34;&#34;Get area of a single identified pulse in a waveform. Numbafied.
 
     Args:
-        waveform (_type_): _description_
-        baseline_value (float): _description_
-        peak_start (int): _description_
-        peak_end (int): _description_
-        dt (int, optional): _description_. Defaults to 10.
-
+        waveform (np.ndarray): 1D array of all the ADC counts where each
+            element is a sample number in the waveform. The length of the array is the
+            ammount of samples in the waveform.
+        baseline_value (float): value of ADC counts to use as baseline.
+        peak_start (int): index of start of the pulse
+        peak_end (int): index of end of the pulse
+        dt (int, optional): duration of each sample in the waveform in
+            nanoseconds. Defaults to 10.
+    
     Returns:
-        _type_: _description_
+        float: return amplitude of pulse in ADC counts (minimum value of 
+            ADC counts registered in pulse)
     &#34;&#34;&#34;
     peak_wf = waveform[peak_start:peak_end]
     if len(peak_wf) &gt; 0:
@@ -206,11 +221,12 @@ def _split_consecutive(array: np.array, stepsize: int = 1) -&gt; np.ndarray:
     to each other, in a numbafied verison.
 
     Args:
-        array (np.array): _description_
-        stepsize (int, optional): _description_. Defaults to 1.
+        array (np.array): array of indexes recognised as pulses.
+        stepsize (int, optional): minimum consecutive indexes to split into
+            different pulses. Defaults to 1.
 
     Returns:
-        _type_: _description_
+        np.ndarray: array with splitted pulses.
     &#34;&#34;&#34;
     split_index = np.where(np.diff(array) != stepsize)[0] + 1
     split_array = np.split(array, split_index)
@@ -273,10 +289,10 @@ def _split_consecutive(array: np.array, stepsize: int = 1) -&gt; np.ndarray:
         (It&#39;s faster without @numba.njit)
 
         Args:
-            pulses (_type_): _description_
-
+            pulses (list): list of arrays where the elements are the index
+                of samples within each pulse.
         Returns:
-            _type_: _description_
+            list: list with the lenght for each pulse.
         &#34;&#34;&#34;
         lengths = [len(_pulse) for _pulse in pulses]
         return lengths
@@ -289,10 +305,10 @@ def _split_consecutive(array: np.array, stepsize: int = 1) -&gt; np.ndarray:
         (Faster without numba...?)
 
         Args:
-            pulses (_type_): array of identified pulses.
+            pulses (list): array of identified pulses.
 
         Returns:
-            _type_: list of positions of pulses.
+            list: list of positions of pulses.
         &#34;&#34;&#34;
         positions = [_pulse[0] for _pulse in pulses]
         return positions
@@ -300,7 +316,7 @@ def _split_consecutive(array: np.array, stepsize: int = 1) -&gt; np.ndarray:
     @classmethod
     def get_amplitude(cls, waveform: np.ndarray, baseline_value: float,
                       peak_start: int, peak_end: int, dt: int = 10) -&gt; float:
-        &#34;&#34;&#34;Get area of a single identified peak in a waveform. Points to
+        &#34;&#34;&#34;Get area of a single identified pulse in a waveform. Points to
         the numbafied function _get_area(...).
         &#34;&#34;&#34;
         amplitude = _get_amplitude(
@@ -312,21 +328,25 @@ def _split_consecutive(array: np.array, stepsize: int = 1) -&gt; np.ndarray:
         return amplitude
 
     @classmethod
-    def get_all_amplitudes(cls, waveform: np.ndarray, peaks: list,
+    def get_all_amplitudes(cls, waveform: np.ndarray, pulses: list,
                            baseline_value: float) -&gt; list:
-        &#34;&#34;&#34;Calcultes the max amplitude of the identified peak
+        &#34;&#34;&#34;Calcultes the max amplitude of the identified pulse
         in number of samples.
         
         (Faster without numba...?)
 
         Args:
-            peaks (_type_): array of identified peaks.
+            waveform (np.ndarray): 1D array of all the ADC counts where each
+                element is a sample number in the waveform. The length of the 
+                array is the ammount of samples in the waveform.
+            pulses (np.ndarray): array of identified pulse.
+            baseline_value (float): value of ADC counts to use as baseline.
 
         Returns:
-            _type_: list of amplitudes of peaks.
+            list: list of amplitudes of pulses.
         &#34;&#34;&#34;
-        amplitudes = np.zeros(len(peaks))
-        for i, _peak in enumerate(peaks):
+        amplitudes = np.zeros(len(pulses))
+        for i, _peak in enumerate(pulses):
             amplitudes[i] = cls.get_amplitude(
                 waveform, baseline_value, _peak[0], _peak[-1])
         return amplitudes
@@ -345,13 +365,17 @@ def _split_consecutive(array: np.array, stepsize: int = 1) -&gt; np.ndarray:
         &#34;&#34;&#34;Pulse processing to find pulses above sigma times baseline rms.
 
         Args:
-            waveform_array (_type_): _description_
-            baseline_value (float): _description_
-            std_value (float): _description_
-            sigma_lvl (float, optional): _description_. Defaults to 5.
+           waveform_array (np.ndarray): 1D array of all the ADC counts where
+                each element is a sample number in the waveform. The length of the
+                array is the ammount of samples in the waveform.
+            baseline_value (float): value of ADC counts to use as baseline.
+            std_value (float): standard deviation of the calculated baseline
+                value.
+            sigma_lvl (float, optional): number of times above baseline in
+                stds to consider as new pulse. Defaults to 5.
 
         Returns:
-            _type_: _description_
+            list: list with the found pulses.
         &#34;&#34;&#34;
 
         bellow_baseline = np.where(
@@ -371,19 +395,20 @@ def _split_consecutive(array: np.array, stepsize: int = 1) -&gt; np.ndarray:
 <div class="desc"><p>Pulse processing to find pulses above sigma times baseline rms.</p>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>waveform_array</code></strong> :&ensp;<code>_type_</code></dt>
-<dd><em>description</em></dd>
-<dt><strong><code>baseline_value</code></strong> :&ensp;<code>float</code></dt>
-<dd><em>description</em></dd>
-<dt><strong><code>std_value</code></strong> :&ensp;<code>float</code></dt>
-<dd><em>description</em></dd>
-<dt><strong><code>sigma_lvl</code></strong> :&ensp;<code>float</code>, optional</dt>
-<dd><em>description</em>. Defaults to 5.</dd>
+<dt><strong><code>waveform_array</code></strong> :&ensp;<code>np.ndarray</code></dt>
+<dd>1D array of all the ADC counts where
+each element is a sample number in the waveform. The length of the
+array is the ammount of samples in the waveform.</dd>
 </dl>
+<p>baseline_value (float): value of ADC counts to use as baseline.
+std_value (float): standard deviation of the calculated baseline
+value.
+sigma_lvl (float, optional): number of times above baseline in
+stds to consider as new pulse. Defaults to 5.</p>
 <h2 id="returns">Returns</h2>
 <dl>
-<dt><code>_type_</code></dt>
-<dd><em>description</em></dd>
+<dt><code>list</code></dt>
+<dd>list with the found pulses.</dd>
 </dl></div>
 <details class="source">
 <summary>
@@ -395,13 +420,17 @@ def find_pulses_simple(cls, waveform_array: np.ndarray, baseline_value: float,
     &#34;&#34;&#34;Pulse processing to find pulses above sigma times baseline rms.
 
     Args:
-        waveform_array (_type_): _description_
-        baseline_value (float): _description_
-        std_value (float): _description_
-        sigma_lvl (float, optional): _description_. Defaults to 5.
+       waveform_array (np.ndarray): 1D array of all the ADC counts where
+            each element is a sample number in the waveform. The length of the
+            array is the ammount of samples in the waveform.
+        baseline_value (float): value of ADC counts to use as baseline.
+        std_value (float): standard deviation of the calculated baseline
+            value.
+        sigma_lvl (float, optional): number of times above baseline in
+            stds to consider as new pulse. Defaults to 5.
 
     Returns:
-        _type_: _description_
+        list: list with the found pulses.
     &#34;&#34;&#34;
 
     bellow_baseline = np.where(
@@ -414,42 +443,52 @@ def find_pulses_simple(cls, waveform_array: np.ndarray, baseline_value: float,
 </details>
 </dd>
 <dt id="pylars.processing.pulses.pulse_processing.get_all_amplitudes"><code class="name flex">
-<span>def <span class="ident">get_all_amplitudes</span></span>(<span>waveform: numpy.ndarray, peaks: list, baseline_value: float) ‑> list</span>
+<span>def <span class="ident">get_all_amplitudes</span></span>(<span>waveform: numpy.ndarray, pulses: list, baseline_value: float) ‑> list</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Calcultes the max amplitude of the identified peak
+<div class="desc"><p>Calcultes the max amplitude of the identified pulse
 in number of samples.</p>
 <p>(Faster without numba&hellip;?)</p>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>peaks</code></strong> :&ensp;<code>_type_</code></dt>
-<dd>array of identified peaks.</dd>
+<dt><strong><code>waveform</code></strong> :&ensp;<code>np.ndarray</code></dt>
+<dd>1D array of all the ADC counts where each
+element is a sample number in the waveform. The length of the
+array is the ammount of samples in the waveform.</dd>
+<dt><strong><code>pulses</code></strong> :&ensp;<code>np.ndarray</code></dt>
+<dd>array of identified pulse.</dd>
+<dt><strong><code>baseline_value</code></strong> :&ensp;<code>float</code></dt>
+<dd>value of ADC counts to use as baseline.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
-<dt><code>_type_</code></dt>
-<dd>list of amplitudes of peaks.</dd>
+<dt><code>list</code></dt>
+<dd>list of amplitudes of pulses.</dd>
 </dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">@classmethod
-def get_all_amplitudes(cls, waveform: np.ndarray, peaks: list,
+def get_all_amplitudes(cls, waveform: np.ndarray, pulses: list,
                        baseline_value: float) -&gt; list:
-    &#34;&#34;&#34;Calcultes the max amplitude of the identified peak
+    &#34;&#34;&#34;Calcultes the max amplitude of the identified pulse
     in number of samples.
     
     (Faster without numba...?)
 
     Args:
-        peaks (_type_): array of identified peaks.
+        waveform (np.ndarray): 1D array of all the ADC counts where each
+            element is a sample number in the waveform. The length of the 
+            array is the ammount of samples in the waveform.
+        pulses (np.ndarray): array of identified pulse.
+        baseline_value (float): value of ADC counts to use as baseline.
 
     Returns:
-        _type_: list of amplitudes of peaks.
+        list: list of amplitudes of pulses.
     &#34;&#34;&#34;
-    amplitudes = np.zeros(len(peaks))
-    for i, _peak in enumerate(peaks):
+    amplitudes = np.zeros(len(pulses))
+    for i, _peak in enumerate(pulses):
         amplitudes[i] = cls.get_amplitude(
             waveform, baseline_value, _peak[0], _peak[-1])
     return amplitudes</code></pre>
@@ -488,13 +527,14 @@ def get_all_areas(cls, waveform: np.ndarray, pulses: list,
 (It's faster without @numba.njit)</p>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>pulses</code></strong> :&ensp;<code>_type_</code></dt>
-<dd><em>description</em></dd>
+<dt><strong><code>pulses</code></strong> :&ensp;<code>list</code></dt>
+<dd>list of arrays where the elements are the index
+of samples within each pulse.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
-<dt><code>_type_</code></dt>
-<dd><em>description</em></dd>
+<dt><code>list</code></dt>
+<dd>list with the lenght for each pulse.</dd>
 </dl></div>
 <details class="source">
 <summary>
@@ -506,10 +546,10 @@ def get_all_lengths(cls, pulses: list) -&gt; list:
     (It&#39;s faster without @numba.njit)
 
     Args:
-        pulses (_type_): _description_
-
+        pulses (list): list of arrays where the elements are the index
+            of samples within each pulse.
     Returns:
-        _type_: _description_
+        list: list with the lenght for each pulse.
     &#34;&#34;&#34;
     lengths = [len(_pulse) for _pulse in pulses]
     return lengths</code></pre>
@@ -524,12 +564,12 @@ in number of samples.</p>
 <p>(Faster without numba&hellip;?)</p>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>pulses</code></strong> :&ensp;<code>_type_</code></dt>
+<dt><strong><code>pulses</code></strong> :&ensp;<code>list</code></dt>
 <dd>array of identified pulses.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
-<dt><code>_type_</code></dt>
+<dt><code>list</code></dt>
 <dd>list of positions of pulses.</dd>
 </dl></div>
 <details class="source">
@@ -544,10 +584,10 @@ def get_all_positions(cls, pulses: list) -&gt; list:
     (Faster without numba...?)
 
     Args:
-        pulses (_type_): array of identified pulses.
+        pulses (list): array of identified pulses.
 
     Returns:
-        _type_: list of positions of pulses.
+        list: list of positions of pulses.
     &#34;&#34;&#34;
     positions = [_pulse[0] for _pulse in pulses]
     return positions</code></pre>
@@ -557,7 +597,7 @@ def get_all_positions(cls, pulses: list) -&gt; list:
 <span>def <span class="ident">get_amplitude</span></span>(<span>waveform: numpy.ndarray, baseline_value: float, peak_start: int, peak_end: int, dt: int = 10) ‑> float</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Get area of a single identified peak in a waveform. Points to
+<div class="desc"><p>Get area of a single identified pulse in a waveform. Points to
 the numbafied function _get_area(&hellip;).</p></div>
 <details class="source">
 <summary>
@@ -566,7 +606,7 @@ the numbafied function _get_area(&hellip;).</p></div>
 <pre><code class="python">@classmethod
 def get_amplitude(cls, waveform: np.ndarray, baseline_value: float,
                   peak_start: int, peak_end: int, dt: int = 10) -&gt; float:
-    &#34;&#34;&#34;Get area of a single identified peak in a waveform. Points to
+    &#34;&#34;&#34;Get area of a single identified pulse in a waveform. Points to
     the numbafied function _get_area(...).
     &#34;&#34;&#34;
     amplitude = _get_amplitude(

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.9.2" />
-<title>pylars.processing.rawprocessor API documentation</title>
+<title>pylars.processing.peaksprocessor API documentation</title>
 <meta name="description" content="" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
@@ -19,30 +19,36 @@
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>pylars.processing.rawprocessor</code></h1>
+<h1 class="title">Module <code>pylars.processing.peaksprocessor</code></h1>
 </header>
 <section id="section-intro">
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">import numpy as np
+<pre><code class="python">import csv
+import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
 from pylars.utils.input import raw_data, run
-from pylars.utils.common import get_deterministic_hash
+from pylars.utils.common import get_deterministic_hash, load_ADC_config
 from .waveforms import waveform_processing
+from .peaks import peak_processing
 
+class peak_processor():
+    &#34;&#34;&#34;Define the functions for a simple peak processor.
 
-class simple_processor():
-    &#34;&#34;&#34;Define the atributes and functions for a simple processor.
+    Defines a processor object to process waveforms from summing all the 
+    channels in the photosensor array.
     &#34;&#34;&#34;
 
-    version = &#39;0.0.2&#39;
-    processing_method = &#39;simple&#39;
+    version = &#39;0.0.1&#39;
+    processing_method = &#39;peaks_simple&#39;
 
-    def __init__(self, sigma_level: float, baseline_samples: int):
+    def __init__(self, sigma_level: float, baseline_samples: int, 
+                 gains_tag: str , gains_path: str) -&gt; None:
+
         self.sigma_level = sigma_level
         self.baseline_samples = baseline_samples
         self.hash = get_deterministic_hash(f&#34;{self.processing_method}&#34; +
@@ -53,8 +59,42 @@ class simple_processor():
         self.show_loadbar_channel = True
         self.show_tqdm_channel = True
 
+        self.gains_tag = gains_tag
+        self.gains_path = gains_path
+        &#34;&#34;&#34;Path to where the gains are saved. 
+        
+        In the future this should be defined in a config file.
+        &#34;&#34;&#34;
+        self.gains = self.load_gains()
+        &#34;&#34;&#34;Dictionary of gains [e/pe] for each channel.
+        &#34;&#34;&#34;
+
     def __hash__(self) -&gt; int:
         return self.hash
+
+    def load_gains(self) -&gt; np.array:
+        &#34;&#34;&#34;Load gains of photosensors based on the defined path and tag.
+
+        Returns:
+            np.array: array with channel gains [e/pe]) in ascending order (mo
+                dule-&gt;channel) 
+        &#34;&#34;&#34;
+
+        # csv is extremely fast but pandas is easier to load and sort 
+        # right away
+
+        # with open(self.gains_path + self.gains_tag, mode=&#39;r&#39;) as file:
+        #     reader = csv.reader(file)
+        #     gains = {rows[0]:float(rows[1]) for rows in reader}
+
+        # return gains
+        
+        gain_df = pd.read_csv(self.gains_path + self.gains_tag,
+                              header=None, 
+                              names=[&#39;module&#39;, &#39;channel&#39;,&#39;gain&#39;])
+        gain_df = gain_df.sort_values([&#39;module&#39;,&#39;channel&#39;], ignore_index=True)
+
+        return gain_df[&#39;gain&#39;].values
 
     def set_tqdm_channel(self, bar: bool, show: bool):
         &#34;&#34;&#34;Change the tqdm config
@@ -66,7 +106,44 @@ class simple_processor():
         self.show_loadbar_channel = bar
         self.show_tqdm_channel = show
 
-    # General functions for I/O
+    def define_ADC_config(self, F_amp: float, model: str = &#39;v1724&#39;) -&gt; None:
+        &#34;&#34;&#34;Load the ADC related quantities for the dataset.
+
+        Args:
+        model (str): model of the digitizer
+        F_amp (float): signal amplification from the sensor (pre-amp *
+            external amplification on the rack).
+        &#34;&#34;&#34;
+
+        self.ADC_config = load_ADC_config(model, F_amp)
+
+    def process_waveform_set(self, waveforms:np.array):
+        &#34;&#34;&#34;Process an array of waveforms from all channels.
+
+        The waveforms are asusmed to be synchronized and each row of the 
+        array is a channel. Once a summed waveform is formed, uses the same
+        functions as the pulse processing to find peaks and compute its
+        properties.
+
+        Args:
+            waveforms (np.array): waveforms of all channels stacked.
+        &#34;&#34;&#34;
+
+        baselines = np.apply_along_axis(
+            func1d = waveform_processing.get_baseline_rough,
+            axis = 1,
+            arr = waveforms,
+            baseline_samples = self.baseline_samples)
+
+        waveforms_pe = peak_processing.apply_waveforms_transform(
+            waveforms, baselines, self.gains, self.ADC_config)
+        sum_waveform = peak_processing.get_sum_waveform(waveforms_pe)
+
+        areas, lengths, positions, amplitudes = waveform_processing.process_waveform(
+                    sum_waveform, self.baseline_samples, self.sigma_level)
+
+
+
     def load_raw_data(self, path_to_raw: str, V: float, T: float, module: int):
         &#34;&#34;&#34;Raw data loader to pass to the processing scripts.
 
@@ -92,19 +169,19 @@ class simple_processor():
 
         Args:
             ch (str): channel name as in the ROOT file.
-                In files from DAQ_zero/XenoDAQ these will be &#39;wf#&#39; with # 
-                the number of the channel [0,7]
+        In files from DAQ_zero/XenoDAQ these will be &#39;wf#&#39; with # the
+        number of the channel [0,7]
 
         Raises:
             AssertionError: if the requested channel
-                is not available on the raw file.
+        is not available on the raw file.
             AssertionError: if the there was a problem
-                in the processing of a waveform
+        in the processing of a waveform
 
         Returns:
             dict: Dictionary of keys module, channel, wf_number
-                area, length, position where the values are lists (order
-                matters) of the processed waveforms.
+        area, length, position where the values are lists (order
+        matters) of the processed waveforms.
         &#34;&#34;&#34;
         if ch not in self.raw_data.channels:
             raise AssertionError(
@@ -162,554 +239,7 @@ class simple_processor():
 
             except Exception:
                 raise AssertionError(
-                    f&#39;Ups! There was a problem on iteration number: {i}&#39;)
-
-        return results
-
-    def process_all_channels(self) -&gt; pd.DataFrame:
-        &#34;&#34;&#34;Calls the process_channel method of each of
-        the available channels in the dataset.
-
-        Returns:
-            pd.DataFrame: Results for all the channels of a dataset.
-        &#34;&#34;&#34;
-        channels_to_process = self.raw_data.channels
-        results_list = [pd.DataFrame(self.process_channel(
-            _channel)) for _channel in channels_to_process]
-        results_df = pd.concat(results_list, ignore_index=True)
-
-        return results_df
-
-    def purge_processor(self):
-        del self.raw_data
-
-
-class run_processor(simple_processor):
-    &#34;&#34;&#34;The &#39;run_processor&#39; extends the use of the &#39;simple_processor&#39;
-    to full run, ie, a set of datasets taken at different operating
-    conditions but with the same setup.
-
-    Args:
-        simple_processor (simple_processor): super class with
-    dataset-level processing methods.
-    &#34;&#34;&#34;
-
-    def __init__(self, run_to_process: run, processor_type: str,
-                 sigma_level: float, baseline_samples: int):
-        if not isinstance(run_to_process, run):
-            raise TypeError(&#34;Needs run type object.&#34;)
-        if processor_type != &#39;simple&#39;:
-            raise NotImplementedError(
-                &#34;Only &#39;simple&#39; is available. Please make a PR to add more.&#34;)
-
-        self.run = run_to_process
-
-        super().__init__(sigma_level, baseline_samples)
-
-        self.datasets_df = self.run.get_run_df()
-        self.show_loadbar_run = True
-        self.show_tqdm_run = True
-        self.show_loadbar_channel = True
-        self.show_tqdm_channel = True
-
-    def set_tqdm_run(self, bar: bool, show: bool):
-        &#34;&#34;&#34;Define the use of tqdm for run level processing.
-
-        Args:
-            bar (bool): show tqdm bar
-            show (bool): use tqdm or not
-        &#34;&#34;&#34;
-        self.show_loadbar_run = bar
-        self.show_tqdm_run = show
-
-    def print_tqdm_options(self):
-        print(f&#39;show bar channel:{self.show_loadbar_channel}\n&#39; +
-              f&#39;show tqdm channel:{self.show_tqdm_channel}\n&#39; +
-              f&#39;show bar run:{self.show_loadbar_run}\n&#39; +
-              f&#39;show tqdm run:{self.show_tqdm_run}&#39;)
-
-    def process_datasets(self, kind: str, vbias: float,
-                         temp: float) -&gt; pd.DataFrame:
-        &#34;&#34;&#34;Runs the loaded processor through a full dataset, ie,
-        Processes all the channels of all the boards for a set of
-        given operating conditions (kind, vbias, temp).
-
-        Args:
-            kind (str): type of data (&#39;BV&#39; for breakdown voltage/LED
-        ON, &#39;DCR&#39; for dark count rate data/LED OFF.)
-            vbias (float): bias voltage applied
-            temp (float): temperature of the setup
-
-        Returns:
-            pd.DataFrame: processed data with computed area, length
-        and position, retaining info on module, channel and waveform
-        of the pulse.
-        &#34;&#34;&#34;
-
-        selection = ((self.datasets_df[&#39;kind&#39;] == kind) &amp;
-                     (self.datasets_df[&#39;vbias&#39;] == vbias) &amp;
-                     (self.datasets_df[&#39;temp&#39;] == temp))
-
-        datasets_to_process = self.datasets_df[selection]
-
-        if len(datasets_to_process) == 0:
-            # prints screw up tqdm and are not that useful
-            # #print(
-            #    f&#39;No datasets found on run with kind = {kind}, &#39;
-            #    f&#39;voltage = {vbias} and temperature = {temp}.&#39;)
-            return None
-
-        print(
-            f&#39;Found {len(datasets_to_process)} datasets. &#39;
-            f&#39;Ramping up processor!&#39;)
-
-        if self.show_loadbar_run:
-            total = len(datasets_to_process)
-        else:
-            total = None
-
-        results = []
-
-        for dataset in tqdm(datasets_to_process.itertuples(),
-                            &#39;Loading and processing datasets: &#39;,
-                            total=total,
-                            disable=(not self.show_tqdm_run)):
-
-            self.load_raw_data(path_to_raw=dataset.path,
-                               V=dataset.vbias,
-                               T=dataset.temp,
-                               module=dataset.module)
-
-            # this returns a pd.DataFrame
-            _results_of_dataset = self.process_all_channels()
-            results.append(_results_of_dataset)
-            self.purge_processor()
-
-        results = pd.concat(results, ignore_index=True)
-
-        return results</code></pre>
-</details>
-</section>
-<section>
-</section>
-<section>
-</section>
-<section>
-</section>
-<section>
-<h2 class="section-title" id="header-classes">Classes</h2>
-<dl>
-<dt id="pylars.processing.rawprocessor.run_processor"><code class="flex name class">
-<span>class <span class="ident">run_processor</span></span>
-<span>(</span><span>run_to_process: <a title="pylars.utils.input.run" href="../utils/input.html#pylars.utils.input.run">run</a>, processor_type: str, sigma_level: float, baseline_samples: int)</span>
-</code></dt>
-<dd>
-<div class="desc"><p>The 'run_processor' extends the use of the 'simple_processor'
-to full run, ie, a set of datasets taken at different operating
-conditions but with the same setup.</p>
-<h2 id="args">Args</h2>
-<dl>
-<dt><strong><code>simple_processor</code></strong> :&ensp;<code><a title="pylars.processing.rawprocessor.simple_processor" href="#pylars.processing.rawprocessor.simple_processor">simple_processor</a></code></dt>
-<dd>super class with</dd>
-</dl>
-<p>dataset-level processing methods.</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">class run_processor(simple_processor):
-    &#34;&#34;&#34;The &#39;run_processor&#39; extends the use of the &#39;simple_processor&#39;
-    to full run, ie, a set of datasets taken at different operating
-    conditions but with the same setup.
-
-    Args:
-        simple_processor (simple_processor): super class with
-    dataset-level processing methods.
-    &#34;&#34;&#34;
-
-    def __init__(self, run_to_process: run, processor_type: str,
-                 sigma_level: float, baseline_samples: int):
-        if not isinstance(run_to_process, run):
-            raise TypeError(&#34;Needs run type object.&#34;)
-        if processor_type != &#39;simple&#39;:
-            raise NotImplementedError(
-                &#34;Only &#39;simple&#39; is available. Please make a PR to add more.&#34;)
-
-        self.run = run_to_process
-
-        super().__init__(sigma_level, baseline_samples)
-
-        self.datasets_df = self.run.get_run_df()
-        self.show_loadbar_run = True
-        self.show_tqdm_run = True
-        self.show_loadbar_channel = True
-        self.show_tqdm_channel = True
-
-    def set_tqdm_run(self, bar: bool, show: bool):
-        &#34;&#34;&#34;Define the use of tqdm for run level processing.
-
-        Args:
-            bar (bool): show tqdm bar
-            show (bool): use tqdm or not
-        &#34;&#34;&#34;
-        self.show_loadbar_run = bar
-        self.show_tqdm_run = show
-
-    def print_tqdm_options(self):
-        print(f&#39;show bar channel:{self.show_loadbar_channel}\n&#39; +
-              f&#39;show tqdm channel:{self.show_tqdm_channel}\n&#39; +
-              f&#39;show bar run:{self.show_loadbar_run}\n&#39; +
-              f&#39;show tqdm run:{self.show_tqdm_run}&#39;)
-
-    def process_datasets(self, kind: str, vbias: float,
-                         temp: float) -&gt; pd.DataFrame:
-        &#34;&#34;&#34;Runs the loaded processor through a full dataset, ie,
-        Processes all the channels of all the boards for a set of
-        given operating conditions (kind, vbias, temp).
-
-        Args:
-            kind (str): type of data (&#39;BV&#39; for breakdown voltage/LED
-        ON, &#39;DCR&#39; for dark count rate data/LED OFF.)
-            vbias (float): bias voltage applied
-            temp (float): temperature of the setup
-
-        Returns:
-            pd.DataFrame: processed data with computed area, length
-        and position, retaining info on module, channel and waveform
-        of the pulse.
-        &#34;&#34;&#34;
-
-        selection = ((self.datasets_df[&#39;kind&#39;] == kind) &amp;
-                     (self.datasets_df[&#39;vbias&#39;] == vbias) &amp;
-                     (self.datasets_df[&#39;temp&#39;] == temp))
-
-        datasets_to_process = self.datasets_df[selection]
-
-        if len(datasets_to_process) == 0:
-            # prints screw up tqdm and are not that useful
-            # #print(
-            #    f&#39;No datasets found on run with kind = {kind}, &#39;
-            #    f&#39;voltage = {vbias} and temperature = {temp}.&#39;)
-            return None
-
-        print(
-            f&#39;Found {len(datasets_to_process)} datasets. &#39;
-            f&#39;Ramping up processor!&#39;)
-
-        if self.show_loadbar_run:
-            total = len(datasets_to_process)
-        else:
-            total = None
-
-        results = []
-
-        for dataset in tqdm(datasets_to_process.itertuples(),
-                            &#39;Loading and processing datasets: &#39;,
-                            total=total,
-                            disable=(not self.show_tqdm_run)):
-
-            self.load_raw_data(path_to_raw=dataset.path,
-                               V=dataset.vbias,
-                               T=dataset.temp,
-                               module=dataset.module)
-
-            # this returns a pd.DataFrame
-            _results_of_dataset = self.process_all_channels()
-            results.append(_results_of_dataset)
-            self.purge_processor()
-
-        results = pd.concat(results, ignore_index=True)
-
-        return results</code></pre>
-</details>
-<h3>Ancestors</h3>
-<ul class="hlist">
-<li><a title="pylars.processing.rawprocessor.simple_processor" href="#pylars.processing.rawprocessor.simple_processor">simple_processor</a></li>
-</ul>
-<h3>Methods</h3>
-<dl>
-<dt id="pylars.processing.rawprocessor.run_processor.print_tqdm_options"><code class="name flex">
-<span>def <span class="ident">print_tqdm_options</span></span>(<span>self)</span>
-</code></dt>
-<dd>
-<div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def print_tqdm_options(self):
-    print(f&#39;show bar channel:{self.show_loadbar_channel}\n&#39; +
-          f&#39;show tqdm channel:{self.show_tqdm_channel}\n&#39; +
-          f&#39;show bar run:{self.show_loadbar_run}\n&#39; +
-          f&#39;show tqdm run:{self.show_tqdm_run}&#39;)</code></pre>
-</details>
-</dd>
-<dt id="pylars.processing.rawprocessor.run_processor.process_datasets"><code class="name flex">
-<span>def <span class="ident">process_datasets</span></span>(<span>self, kind: str, vbias: float, temp: float) ‑> pandas.core.frame.DataFrame</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Runs the loaded processor through a full dataset, ie,
-Processes all the channels of all the boards for a set of
-given operating conditions (kind, vbias, temp).</p>
-<h2 id="args">Args</h2>
-<dl>
-<dt><strong><code>kind</code></strong> :&ensp;<code>str</code></dt>
-<dd>type of data ('BV' for breakdown voltage/LED</dd>
-</dl>
-<p>ON, 'DCR' for dark count rate data/LED OFF.)
-vbias (float): bias voltage applied
-temp (float): temperature of the setup</p>
-<h2 id="returns">Returns</h2>
-<dl>
-<dt><code>pd.DataFrame</code></dt>
-<dd>processed data with computed area, length</dd>
-</dl>
-<p>and position, retaining info on module, channel and waveform
-of the pulse.</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def process_datasets(self, kind: str, vbias: float,
-                     temp: float) -&gt; pd.DataFrame:
-    &#34;&#34;&#34;Runs the loaded processor through a full dataset, ie,
-    Processes all the channels of all the boards for a set of
-    given operating conditions (kind, vbias, temp).
-
-    Args:
-        kind (str): type of data (&#39;BV&#39; for breakdown voltage/LED
-    ON, &#39;DCR&#39; for dark count rate data/LED OFF.)
-        vbias (float): bias voltage applied
-        temp (float): temperature of the setup
-
-    Returns:
-        pd.DataFrame: processed data with computed area, length
-    and position, retaining info on module, channel and waveform
-    of the pulse.
-    &#34;&#34;&#34;
-
-    selection = ((self.datasets_df[&#39;kind&#39;] == kind) &amp;
-                 (self.datasets_df[&#39;vbias&#39;] == vbias) &amp;
-                 (self.datasets_df[&#39;temp&#39;] == temp))
-
-    datasets_to_process = self.datasets_df[selection]
-
-    if len(datasets_to_process) == 0:
-        # prints screw up tqdm and are not that useful
-        # #print(
-        #    f&#39;No datasets found on run with kind = {kind}, &#39;
-        #    f&#39;voltage = {vbias} and temperature = {temp}.&#39;)
-        return None
-
-    print(
-        f&#39;Found {len(datasets_to_process)} datasets. &#39;
-        f&#39;Ramping up processor!&#39;)
-
-    if self.show_loadbar_run:
-        total = len(datasets_to_process)
-    else:
-        total = None
-
-    results = []
-
-    for dataset in tqdm(datasets_to_process.itertuples(),
-                        &#39;Loading and processing datasets: &#39;,
-                        total=total,
-                        disable=(not self.show_tqdm_run)):
-
-        self.load_raw_data(path_to_raw=dataset.path,
-                           V=dataset.vbias,
-                           T=dataset.temp,
-                           module=dataset.module)
-
-        # this returns a pd.DataFrame
-        _results_of_dataset = self.process_all_channels()
-        results.append(_results_of_dataset)
-        self.purge_processor()
-
-    results = pd.concat(results, ignore_index=True)
-
-    return results</code></pre>
-</details>
-</dd>
-<dt id="pylars.processing.rawprocessor.run_processor.set_tqdm_run"><code class="name flex">
-<span>def <span class="ident">set_tqdm_run</span></span>(<span>self, bar: bool, show: bool)</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Define the use of tqdm for run level processing.</p>
-<h2 id="args">Args</h2>
-<dl>
-<dt><strong><code>bar</code></strong> :&ensp;<code>bool</code></dt>
-<dd>show tqdm bar</dd>
-<dt><strong><code>show</code></strong> :&ensp;<code>bool</code></dt>
-<dd>use tqdm or not</dd>
-</dl></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def set_tqdm_run(self, bar: bool, show: bool):
-    &#34;&#34;&#34;Define the use of tqdm for run level processing.
-
-    Args:
-        bar (bool): show tqdm bar
-        show (bool): use tqdm or not
-    &#34;&#34;&#34;
-    self.show_loadbar_run = bar
-    self.show_tqdm_run = show</code></pre>
-</details>
-</dd>
-</dl>
-<h3>Inherited members</h3>
-<ul class="hlist">
-<li><code><b><a title="pylars.processing.rawprocessor.simple_processor" href="#pylars.processing.rawprocessor.simple_processor">simple_processor</a></b></code>:
-<ul class="hlist">
-<li><code><a title="pylars.processing.rawprocessor.simple_processor.load_raw_data" href="#pylars.processing.rawprocessor.simple_processor.load_raw_data">load_raw_data</a></code></li>
-<li><code><a title="pylars.processing.rawprocessor.simple_processor.process_all_channels" href="#pylars.processing.rawprocessor.simple_processor.process_all_channels">process_all_channels</a></code></li>
-<li><code><a title="pylars.processing.rawprocessor.simple_processor.process_channel" href="#pylars.processing.rawprocessor.simple_processor.process_channel">process_channel</a></code></li>
-<li><code><a title="pylars.processing.rawprocessor.simple_processor.set_tqdm_channel" href="#pylars.processing.rawprocessor.simple_processor.set_tqdm_channel">set_tqdm_channel</a></code></li>
-</ul>
-</li>
-</ul>
-</dd>
-<dt id="pylars.processing.rawprocessor.simple_processor"><code class="flex name class">
-<span>class <span class="ident">simple_processor</span></span>
-<span>(</span><span>sigma_level: float, baseline_samples: int)</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Define the atributes and functions for a simple processor.</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">class simple_processor():
-    &#34;&#34;&#34;Define the atributes and functions for a simple processor.
-    &#34;&#34;&#34;
-
-    version = &#39;0.0.2&#39;
-    processing_method = &#39;simple&#39;
-
-    def __init__(self, sigma_level: float, baseline_samples: int):
-        self.sigma_level = sigma_level
-        self.baseline_samples = baseline_samples
-        self.hash = get_deterministic_hash(f&#34;{self.processing_method}&#34; +
-                                           f&#34;{self.version}&#34; +
-                                           f&#34;{self.sigma_level}&#34; +
-                                           f&#34;{self.baseline_samples:.2f}&#34;)
-        self.processed_data = dict()
-        self.show_loadbar_channel = True
-        self.show_tqdm_channel = True
-
-    def __hash__(self) -&gt; int:
-        return self.hash
-
-    def set_tqdm_channel(self, bar: bool, show: bool):
-        &#34;&#34;&#34;Change the tqdm config
-
-        Args:
-            bar (bool): show or not the tqdm bar.
-            show (bool): use tqdm if true, disable if false
-        &#34;&#34;&#34;
-        self.show_loadbar_channel = bar
-        self.show_tqdm_channel = show
-
-    # General functions for I/O
-    def load_raw_data(self, path_to_raw: str, V: float, T: float, module: int):
-        &#34;&#34;&#34;Raw data loader to pass to the processing scripts.
-
-        Args:
-            path_to_raw (str): _description_
-            V (float): _description_
-            T (float): _description_
-
-        Returns:
-            raw_data: _description_
-        &#34;&#34;&#34;
-        raw = raw_data(path_to_raw, V, T, module)
-        raw.load_root()
-        raw.get_available_channels()
-
-        self.raw_data = raw
-
-    # Processing functions
-    def process_channel(self, ch: str) -&gt; dict:
-        &#34;&#34;&#34;Process a channel by iterating over all its waveforms, running
-    the pulse finding algorithm and the calculating the following pulse
-    properties: areas, lengths, positions and amplitudes.
-
-        Args:
-            ch (str): channel name as in the ROOT file.
-                In files from DAQ_zero/XenoDAQ these will be &#39;wf#&#39; with # 
-                the number of the channel [0,7]
-
-        Raises:
-            AssertionError: if the requested channel
-                is not available on the raw file.
-            AssertionError: if the there was a problem
-                in the processing of a waveform
-
-        Returns:
-            dict: Dictionary of keys module, channel, wf_number
-                area, length, position where the values are lists (order
-                matters) of the processed waveforms.
-        &#34;&#34;&#34;
-        if ch not in self.raw_data.channels:
-            raise AssertionError(
-                f&#39;The requested channel is not available. &#39;
-                f&#39;Loaded channels:{self.raw_data.channels}&#39;)
-
-        module = self.raw_data.module
-        channel_data = self.raw_data.get_channel_data(ch)
-        # converted before to np to speed up ahead
-        #channel_data = np.array(channel_data)
-        results = {&#39;module&#39;: [],
-                   &#39;channel&#39;: [],
-                   &#39;wf_number&#39;: [],
-                   &#39;pulse_number&#39;: [],
-                   &#39;area&#39;: [],
-                   &#39;length&#39;: [],
-                   &#39;position&#39;: [],
-                   &#39;amplitude&#39;: [],
-                   }
-        if self.show_loadbar_channel:
-            total = len(channel_data)
-        else:
-            total = None
-
-        for i, _waveform in tqdm(enumerate(channel_data),
-                                 disable=(not self.show_tqdm_channel),
-                                 total=total,
-                                 desc=(f&#39;Processing module {module} &#39;
-                                       f&#39;channel {ch}&#39;)
-                                 ):
-            try:
-                areas, lengths, positions, amplitudes = waveform_processing.process_waveform(
-                    _waveform, self.baseline_samples, self.sigma_level)
-
-                assert len(areas) == len(positions) == len(
-                    lengths) == len(amplitudes)
-
-                # check if any pulses were found
-                if len(areas) == 0:
-                    continue
-
-                module_number = [module] * len(areas)
-                ch_name = [ch] * len(areas)
-                wf_number = np.ones(len(areas), dtype=int) * i
-                pulse_number = np.arange(len(areas))
-
-                results[&#39;module&#39;] += module_number
-                results[&#39;channel&#39;] += ch_name
-                results[&#39;wf_number&#39;] += list(wf_number)
-                results[&#39;pulse_number&#39;] += list(pulse_number)
-                results[&#39;area&#39;] += list(areas)
-                results[&#39;length&#39;] += list(lengths)
-                results[&#39;position&#39;] += list(positions)
-                results[&#39;amplitude&#39;] += list(amplitudes)
-
-            except Exception:
-                raise AssertionError(
-                    f&#39;Ups! There was a problem on iteration number: {i}&#39;)
+                    &#39;Ups! There was a problem on iteration number: &#39;, i)
 
         return results
 
@@ -730,24 +260,343 @@ of the pulse.</p></div>
     def purge_processor(self):
         del self.raw_data</code></pre>
 </details>
-<h3>Subclasses</h3>
-<ul class="hlist">
-<li><a title="pylars.processing.rawprocessor.run_processor" href="#pylars.processing.rawprocessor.run_processor">run_processor</a></li>
-</ul>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="pylars.processing.peaksprocessor.peak_processor"><code class="flex name class">
+<span>class <span class="ident">peak_processor</span></span>
+<span>(</span><span>sigma_level: float, baseline_samples: int, gains_tag: str, gains_path: str)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Define the functions for a simple peak processor.</p>
+<p>Defines a processor object to process waveforms from summing all the
+channels in the photosensor array.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class peak_processor():
+    &#34;&#34;&#34;Define the functions for a simple peak processor.
+
+    Defines a processor object to process waveforms from summing all the 
+    channels in the photosensor array.
+    &#34;&#34;&#34;
+
+    version = &#39;0.0.1&#39;
+    processing_method = &#39;peaks_simple&#39;
+
+    def __init__(self, sigma_level: float, baseline_samples: int, 
+                 gains_tag: str , gains_path: str) -&gt; None:
+
+        self.sigma_level = sigma_level
+        self.baseline_samples = baseline_samples
+        self.hash = get_deterministic_hash(f&#34;{self.processing_method}&#34; +
+                                           f&#34;{self.version}&#34; +
+                                           f&#34;{self.sigma_level}&#34; +
+                                           f&#34;{self.baseline_samples:.2f}&#34;)
+        self.processed_data = dict()
+        self.show_loadbar_channel = True
+        self.show_tqdm_channel = True
+
+        self.gains_tag = gains_tag
+        self.gains_path = gains_path
+        &#34;&#34;&#34;Path to where the gains are saved. 
+        
+        In the future this should be defined in a config file.
+        &#34;&#34;&#34;
+        self.gains = self.load_gains()
+        &#34;&#34;&#34;Dictionary of gains [e/pe] for each channel.
+        &#34;&#34;&#34;
+
+    def __hash__(self) -&gt; int:
+        return self.hash
+
+    def load_gains(self) -&gt; np.array:
+        &#34;&#34;&#34;Load gains of photosensors based on the defined path and tag.
+
+        Returns:
+            np.array: array with channel gains [e/pe]) in ascending order (mo
+                dule-&gt;channel) 
+        &#34;&#34;&#34;
+
+        # csv is extremely fast but pandas is easier to load and sort 
+        # right away
+
+        # with open(self.gains_path + self.gains_tag, mode=&#39;r&#39;) as file:
+        #     reader = csv.reader(file)
+        #     gains = {rows[0]:float(rows[1]) for rows in reader}
+
+        # return gains
+        
+        gain_df = pd.read_csv(self.gains_path + self.gains_tag,
+                              header=None, 
+                              names=[&#39;module&#39;, &#39;channel&#39;,&#39;gain&#39;])
+        gain_df = gain_df.sort_values([&#39;module&#39;,&#39;channel&#39;], ignore_index=True)
+
+        return gain_df[&#39;gain&#39;].values
+
+    def set_tqdm_channel(self, bar: bool, show: bool):
+        &#34;&#34;&#34;Change the tqdm config
+
+        Args:
+            bar (bool): show or not the tqdm bar.
+            show (bool): use tqdm if true, disable if false
+        &#34;&#34;&#34;
+        self.show_loadbar_channel = bar
+        self.show_tqdm_channel = show
+
+    def define_ADC_config(self, F_amp: float, model: str = &#39;v1724&#39;) -&gt; None:
+        &#34;&#34;&#34;Load the ADC related quantities for the dataset.
+
+        Args:
+        model (str): model of the digitizer
+        F_amp (float): signal amplification from the sensor (pre-amp *
+            external amplification on the rack).
+        &#34;&#34;&#34;
+
+        self.ADC_config = load_ADC_config(model, F_amp)
+
+    def process_waveform_set(self, waveforms:np.array):
+        &#34;&#34;&#34;Process an array of waveforms from all channels.
+
+        The waveforms are asusmed to be synchronized and each row of the 
+        array is a channel. Once a summed waveform is formed, uses the same
+        functions as the pulse processing to find peaks and compute its
+        properties.
+
+        Args:
+            waveforms (np.array): waveforms of all channels stacked.
+        &#34;&#34;&#34;
+
+        baselines = np.apply_along_axis(
+            func1d = waveform_processing.get_baseline_rough,
+            axis = 1,
+            arr = waveforms,
+            baseline_samples = self.baseline_samples)
+
+        waveforms_pe = peak_processing.apply_waveforms_transform(
+            waveforms, baselines, self.gains, self.ADC_config)
+        sum_waveform = peak_processing.get_sum_waveform(waveforms_pe)
+
+        areas, lengths, positions, amplitudes = waveform_processing.process_waveform(
+                    sum_waveform, self.baseline_samples, self.sigma_level)
+
+
+
+    def load_raw_data(self, path_to_raw: str, V: float, T: float, module: int):
+        &#34;&#34;&#34;Raw data loader to pass to the processing scripts.
+
+        Args:
+            path_to_raw (str): _description_
+            V (float): _description_
+            T (float): _description_
+
+        Returns:
+            raw_data: _description_
+        &#34;&#34;&#34;
+        raw = raw_data(path_to_raw, V, T, module)
+        raw.load_root()
+        raw.get_available_channels()
+
+        self.raw_data = raw
+
+    # Processing functions
+    def process_channel(self, ch: str) -&gt; dict:
+        &#34;&#34;&#34;Process a channel by iterating over all its waveforms, running
+    the pulse finding algorithm and the calculating the following pulse
+    properties: areas, lengths, positions and amplitudes.
+
+        Args:
+            ch (str): channel name as in the ROOT file.
+        In files from DAQ_zero/XenoDAQ these will be &#39;wf#&#39; with # the
+        number of the channel [0,7]
+
+        Raises:
+            AssertionError: if the requested channel
+        is not available on the raw file.
+            AssertionError: if the there was a problem
+        in the processing of a waveform
+
+        Returns:
+            dict: Dictionary of keys module, channel, wf_number
+        area, length, position where the values are lists (order
+        matters) of the processed waveforms.
+        &#34;&#34;&#34;
+        if ch not in self.raw_data.channels:
+            raise AssertionError(
+                f&#39;The requested channel is not available. &#39;
+                f&#39;Loaded channels:{self.raw_data.channels}&#39;)
+
+        module = self.raw_data.module
+        channel_data = self.raw_data.get_channel_data(ch)
+        # converted before to np to speed up ahead
+        #channel_data = np.array(channel_data)
+        results = {&#39;module&#39;: [],
+                   &#39;channel&#39;: [],
+                   &#39;wf_number&#39;: [],
+                   &#39;pulse_number&#39;: [],
+                   &#39;area&#39;: [],
+                   &#39;length&#39;: [],
+                   &#39;position&#39;: [],
+                   &#39;amplitude&#39;: [],
+                   }
+        if self.show_loadbar_channel:
+            total = len(channel_data)
+        else:
+            total = None
+
+        for i, _waveform in tqdm(enumerate(channel_data),
+                                 disable=(not self.show_tqdm_channel),
+                                 total=total,
+                                 desc=(f&#39;Processing module {module} &#39;
+                                       f&#39;channel {ch}&#39;)
+                                 ):
+            try:
+                areas, lengths, positions, amplitudes = waveform_processing.process_waveform(
+                    _waveform, self.baseline_samples, self.sigma_level)
+
+                assert len(areas) == len(positions) == len(
+                    lengths) == len(amplitudes)
+
+                # check if any pulses were found
+                if len(areas) == 0:
+                    continue
+
+                module_number = [module] * len(areas)
+                ch_name = [ch] * len(areas)
+                wf_number = np.ones(len(areas), dtype=int) * i
+                pulse_number = np.arange(len(areas))
+
+                results[&#39;module&#39;] += module_number
+                results[&#39;channel&#39;] += ch_name
+                results[&#39;wf_number&#39;] += list(wf_number)
+                results[&#39;pulse_number&#39;] += list(pulse_number)
+                results[&#39;area&#39;] += list(areas)
+                results[&#39;length&#39;] += list(lengths)
+                results[&#39;position&#39;] += list(positions)
+                results[&#39;amplitude&#39;] += list(amplitudes)
+
+            except Exception:
+                raise AssertionError(
+                    &#39;Ups! There was a problem on iteration number: &#39;, i)
+
+        return results
+
+    def process_all_channels(self) -&gt; pd.DataFrame:
+        &#34;&#34;&#34;Calls the process_channel method of each of
+        the available channels in the dataset.
+
+        Returns:
+            pd.DataFrame: Results for all the channels of a dataset.
+        &#34;&#34;&#34;
+        channels_to_process = self.raw_data.channels
+        results_list = [pd.DataFrame(self.process_channel(
+            _channel)) for _channel in channels_to_process]
+        results_df = pd.concat(results_list, ignore_index=True)
+
+        return results_df
+
+    def purge_processor(self):
+        del self.raw_data</code></pre>
+</details>
 <h3>Class variables</h3>
 <dl>
-<dt id="pylars.processing.rawprocessor.simple_processor.processing_method"><code class="name">var <span class="ident">processing_method</span></code></dt>
+<dt id="pylars.processing.peaksprocessor.peak_processor.processing_method"><code class="name">var <span class="ident">processing_method</span></code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
-<dt id="pylars.processing.rawprocessor.simple_processor.version"><code class="name">var <span class="ident">version</span></code></dt>
+<dt id="pylars.processing.peaksprocessor.peak_processor.version"><code class="name">var <span class="ident">version</span></code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
 </dl>
+<h3>Instance variables</h3>
+<dl>
+<dt id="pylars.processing.peaksprocessor.peak_processor.gains"><code class="name">var <span class="ident">gains</span></code></dt>
+<dd>
+<div class="desc"><p>Dictionary of gains [e/pe] for each channel.</p></div>
+</dd>
+<dt id="pylars.processing.peaksprocessor.peak_processor.gains_path"><code class="name">var <span class="ident">gains_path</span></code></dt>
+<dd>
+<div class="desc"><p>Path to where the gains are saved. </p>
+<p>In the future this should be defined in a config file.</p></div>
+</dd>
+</dl>
 <h3>Methods</h3>
 <dl>
-<dt id="pylars.processing.rawprocessor.simple_processor.load_raw_data"><code class="name flex">
+<dt id="pylars.processing.peaksprocessor.peak_processor.define_ADC_config"><code class="name flex">
+<span>def <span class="ident">define_ADC_config</span></span>(<span>self, F_amp: float, model: str = 'v1724') ‑> NoneType</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Load the ADC related quantities for the dataset.</p>
+<p>Args:
+model (str): model of the digitizer
+F_amp (float): signal amplification from the sensor (pre-amp *
+external amplification on the rack).</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def define_ADC_config(self, F_amp: float, model: str = &#39;v1724&#39;) -&gt; None:
+    &#34;&#34;&#34;Load the ADC related quantities for the dataset.
+
+    Args:
+    model (str): model of the digitizer
+    F_amp (float): signal amplification from the sensor (pre-amp *
+        external amplification on the rack).
+    &#34;&#34;&#34;
+
+    self.ADC_config = load_ADC_config(model, F_amp)</code></pre>
+</details>
+</dd>
+<dt id="pylars.processing.peaksprocessor.peak_processor.load_gains"><code class="name flex">
+<span>def <span class="ident">load_gains</span></span>(<span>self) ‑> <built-in function array></span>
+</code></dt>
+<dd>
+<div class="desc"><p>Load gains of photosensors based on the defined path and tag.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>np.array</code></dt>
+<dd>array with channel gains [e/pe]) in ascending order (mo
+dule-&gt;channel)</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def load_gains(self) -&gt; np.array:
+    &#34;&#34;&#34;Load gains of photosensors based on the defined path and tag.
+
+    Returns:
+        np.array: array with channel gains [e/pe]) in ascending order (mo
+            dule-&gt;channel) 
+    &#34;&#34;&#34;
+
+    # csv is extremely fast but pandas is easier to load and sort 
+    # right away
+
+    # with open(self.gains_path + self.gains_tag, mode=&#39;r&#39;) as file:
+    #     reader = csv.reader(file)
+    #     gains = {rows[0]:float(rows[1]) for rows in reader}
+
+    # return gains
+    
+    gain_df = pd.read_csv(self.gains_path + self.gains_tag,
+                          header=None, 
+                          names=[&#39;module&#39;, &#39;channel&#39;,&#39;gain&#39;])
+    gain_df = gain_df.sort_values([&#39;module&#39;,&#39;channel&#39;], ignore_index=True)
+
+    return gain_df[&#39;gain&#39;].values</code></pre>
+</details>
+</dd>
+<dt id="pylars.processing.peaksprocessor.peak_processor.load_raw_data"><code class="name flex">
 <span>def <span class="ident">load_raw_data</span></span>(<span>self, path_to_raw: str, V: float, T: float, module: int)</span>
 </code></dt>
 <dd>
@@ -788,7 +637,7 @@ of the pulse.</p></div>
     self.raw_data = raw</code></pre>
 </details>
 </dd>
-<dt id="pylars.processing.rawprocessor.simple_processor.process_all_channels"><code class="name flex">
+<dt id="pylars.processing.peaksprocessor.peak_processor.process_all_channels"><code class="name flex">
 <span>def <span class="ident">process_all_channels</span></span>(<span>self) ‑> pandas.core.frame.DataFrame</span>
 </code></dt>
 <dd>
@@ -818,7 +667,7 @@ the available channels in the dataset.</p>
     return results_df</code></pre>
 </details>
 </dd>
-<dt id="pylars.processing.rawprocessor.simple_processor.process_channel"><code class="name flex">
+<dt id="pylars.processing.peaksprocessor.peak_processor.process_channel"><code class="name flex">
 <span>def <span class="ident">process_channel</span></span>(<span>self, ch: str) ‑> dict</span>
 </code></dt>
 <dd>
@@ -827,19 +676,19 @@ the pulse finding algorithm and the calculating the following pulse
 properties: areas, lengths, positions and amplitudes.</p>
 <pre><code>Args:
     ch (str): channel name as in the ROOT file.
-        In files from DAQ_zero/XenoDAQ these will be 'wf#' with # 
-        the number of the channel [0,7]
+In files from DAQ_zero/XenoDAQ these will be 'wf#' with # the
+number of the channel [0,7]
 
 Raises:
     AssertionError: if the requested channel
-        is not available on the raw file.
+is not available on the raw file.
     AssertionError: if the there was a problem
-        in the processing of a waveform
+in the processing of a waveform
 
 Returns:
     dict: Dictionary of keys module, channel, wf_number
-        area, length, position where the values are lists (order
-        matters) of the processed waveforms.
+area, length, position where the values are lists (order
+matters) of the processed waveforms.
 </code></pre></div>
 <details class="source">
 <summary>
@@ -852,19 +701,19 @@ properties: areas, lengths, positions and amplitudes.
 
     Args:
         ch (str): channel name as in the ROOT file.
-            In files from DAQ_zero/XenoDAQ these will be &#39;wf#&#39; with # 
-            the number of the channel [0,7]
+    In files from DAQ_zero/XenoDAQ these will be &#39;wf#&#39; with # the
+    number of the channel [0,7]
 
     Raises:
         AssertionError: if the requested channel
-            is not available on the raw file.
+    is not available on the raw file.
         AssertionError: if the there was a problem
-            in the processing of a waveform
+    in the processing of a waveform
 
     Returns:
         dict: Dictionary of keys module, channel, wf_number
-            area, length, position where the values are lists (order
-            matters) of the processed waveforms.
+    area, length, position where the values are lists (order
+    matters) of the processed waveforms.
     &#34;&#34;&#34;
     if ch not in self.raw_data.channels:
         raise AssertionError(
@@ -922,12 +771,56 @@ properties: areas, lengths, positions and amplitudes.
 
         except Exception:
             raise AssertionError(
-                f&#39;Ups! There was a problem on iteration number: {i}&#39;)
+                &#39;Ups! There was a problem on iteration number: &#39;, i)
 
     return results</code></pre>
 </details>
 </dd>
-<dt id="pylars.processing.rawprocessor.simple_processor.purge_processor"><code class="name flex">
+<dt id="pylars.processing.peaksprocessor.peak_processor.process_waveform_set"><code class="name flex">
+<span>def <span class="ident">process_waveform_set</span></span>(<span>self, waveforms: <built-in function array>)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Process an array of waveforms from all channels.</p>
+<p>The waveforms are asusmed to be synchronized and each row of the
+array is a channel. Once a summed waveform is formed, uses the same
+functions as the pulse processing to find peaks and compute its
+properties.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>waveforms</code></strong> :&ensp;<code>np.array</code></dt>
+<dd>waveforms of all channels stacked.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def process_waveform_set(self, waveforms:np.array):
+    &#34;&#34;&#34;Process an array of waveforms from all channels.
+
+    The waveforms are asusmed to be synchronized and each row of the 
+    array is a channel. Once a summed waveform is formed, uses the same
+    functions as the pulse processing to find peaks and compute its
+    properties.
+
+    Args:
+        waveforms (np.array): waveforms of all channels stacked.
+    &#34;&#34;&#34;
+
+    baselines = np.apply_along_axis(
+        func1d = waveform_processing.get_baseline_rough,
+        axis = 1,
+        arr = waveforms,
+        baseline_samples = self.baseline_samples)
+
+    waveforms_pe = peak_processing.apply_waveforms_transform(
+        waveforms, baselines, self.gains, self.ADC_config)
+    sum_waveform = peak_processing.get_sum_waveform(waveforms_pe)
+
+    areas, lengths, positions, amplitudes = waveform_processing.process_waveform(
+                sum_waveform, self.baseline_samples, self.sigma_level)</code></pre>
+</details>
+</dd>
+<dt id="pylars.processing.peaksprocessor.peak_processor.purge_processor"><code class="name flex">
 <span>def <span class="ident">purge_processor</span></span>(<span>self)</span>
 </code></dt>
 <dd>
@@ -940,7 +833,7 @@ properties: areas, lengths, positions and amplitudes.
     del self.raw_data</code></pre>
 </details>
 </dd>
-<dt id="pylars.processing.rawprocessor.simple_processor.set_tqdm_channel"><code class="name flex">
+<dt id="pylars.processing.peaksprocessor.peak_processor.set_tqdm_channel"><code class="name flex">
 <span>def <span class="ident">set_tqdm_channel</span></span>(<span>self, bar: bool, show: bool)</span>
 </code></dt>
 <dd>
@@ -986,23 +879,20 @@ properties: areas, lengths, positions and amplitudes.
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
-<h4><code><a title="pylars.processing.rawprocessor.run_processor" href="#pylars.processing.rawprocessor.run_processor">run_processor</a></code></h4>
+<h4><code><a title="pylars.processing.peaksprocessor.peak_processor" href="#pylars.processing.peaksprocessor.peak_processor">peak_processor</a></code></h4>
 <ul class="">
-<li><code><a title="pylars.processing.rawprocessor.run_processor.print_tqdm_options" href="#pylars.processing.rawprocessor.run_processor.print_tqdm_options">print_tqdm_options</a></code></li>
-<li><code><a title="pylars.processing.rawprocessor.run_processor.process_datasets" href="#pylars.processing.rawprocessor.run_processor.process_datasets">process_datasets</a></code></li>
-<li><code><a title="pylars.processing.rawprocessor.run_processor.set_tqdm_run" href="#pylars.processing.rawprocessor.run_processor.set_tqdm_run">set_tqdm_run</a></code></li>
-</ul>
-</li>
-<li>
-<h4><code><a title="pylars.processing.rawprocessor.simple_processor" href="#pylars.processing.rawprocessor.simple_processor">simple_processor</a></code></h4>
-<ul class="">
-<li><code><a title="pylars.processing.rawprocessor.simple_processor.load_raw_data" href="#pylars.processing.rawprocessor.simple_processor.load_raw_data">load_raw_data</a></code></li>
-<li><code><a title="pylars.processing.rawprocessor.simple_processor.process_all_channels" href="#pylars.processing.rawprocessor.simple_processor.process_all_channels">process_all_channels</a></code></li>
-<li><code><a title="pylars.processing.rawprocessor.simple_processor.process_channel" href="#pylars.processing.rawprocessor.simple_processor.process_channel">process_channel</a></code></li>
-<li><code><a title="pylars.processing.rawprocessor.simple_processor.processing_method" href="#pylars.processing.rawprocessor.simple_processor.processing_method">processing_method</a></code></li>
-<li><code><a title="pylars.processing.rawprocessor.simple_processor.purge_processor" href="#pylars.processing.rawprocessor.simple_processor.purge_processor">purge_processor</a></code></li>
-<li><code><a title="pylars.processing.rawprocessor.simple_processor.set_tqdm_channel" href="#pylars.processing.rawprocessor.simple_processor.set_tqdm_channel">set_tqdm_channel</a></code></li>
-<li><code><a title="pylars.processing.rawprocessor.simple_processor.version" href="#pylars.processing.rawprocessor.simple_processor.version">version</a></code></li>
+<li><code><a title="pylars.processing.peaksprocessor.peak_processor.define_ADC_config" href="#pylars.processing.peaksprocessor.peak_processor.define_ADC_config">define_ADC_config</a></code></li>
+<li><code><a title="pylars.processing.peaksprocessor.peak_processor.gains" href="#pylars.processing.peaksprocessor.peak_processor.gains">gains</a></code></li>
+<li><code><a title="pylars.processing.peaksprocessor.peak_processor.gains_path" href="#pylars.processing.peaksprocessor.peak_processor.gains_path">gains_path</a></code></li>
+<li><code><a title="pylars.processing.peaksprocessor.peak_processor.load_gains" href="#pylars.processing.peaksprocessor.peak_processor.load_gains">load_gains</a></code></li>
+<li><code><a title="pylars.processing.peaksprocessor.peak_processor.load_raw_data" href="#pylars.processing.peaksprocessor.peak_processor.load_raw_data">load_raw_data</a></code></li>
+<li><code><a title="pylars.processing.peaksprocessor.peak_processor.process_all_channels" href="#pylars.processing.peaksprocessor.peak_processor.process_all_channels">process_all_channels</a></code></li>
+<li><code><a title="pylars.processing.peaksprocessor.peak_processor.process_channel" href="#pylars.processing.peaksprocessor.peak_processor.process_channel">process_channel</a></code></li>
+<li><code><a title="pylars.processing.peaksprocessor.peak_processor.process_waveform_set" href="#pylars.processing.peaksprocessor.peak_processor.process_waveform_set">process_waveform_set</a></code></li>
+<li><code><a title="pylars.processing.peaksprocessor.peak_processor.processing_method" href="#pylars.processing.peaksprocessor.peak_processor.processing_method">processing_method</a></code></li>
+<li><code><a title="pylars.processing.peaksprocessor.peak_processor.purge_processor" href="#pylars.processing.peaksprocessor.peak_processor.purge_processor">purge_processor</a></code></li>
+<li><code><a title="pylars.processing.peaksprocessor.peak_processor.set_tqdm_channel" href="#pylars.processing.peaksprocessor.peak_processor.set_tqdm_channel">set_tqdm_channel</a></code></li>
+<li><code><a title="pylars.processing.peaksprocessor.peak_processor.version" href="#pylars.processing.peaksprocessor.peak_processor.version">version</a></code></li>
 </ul>
 </li>
 </ul>
