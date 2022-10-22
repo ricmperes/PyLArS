@@ -3,7 +3,8 @@ import matplotlib.pyplot as plt
 
 
 def plot_waveform(waveform_array:np.array, full_y:bool=False,
-                  full_x:bool=True, ax:plt.Axes=None) -> plt.Axes:
+                  full_x:bool=True, pe: bool = False,
+                  ax:plt.Axes=None) -> plt.Axes:
     """Plot a waveform from its array.
 
     Args:
@@ -14,6 +15,8 @@ def plot_waveform(waveform_array:np.array, full_y:bool=False,
     to False.
         full_x (bool, optional): plot full range of ADC samples. Defaults
     to True.
+        pe (bool, optional): parse that the waveform is in PE/s (for peaks). 
+            Defaults to False.
         ax (plt.Axes, optional): axes to plot into. Defaults to None.
 
     Returns:
@@ -44,7 +47,9 @@ def plot_waveform(waveform_array:np.array, full_y:bool=False,
             std_rough *
             6)
     ax.set_xlabel('Sample number')
-    ax.set_ylabel('ADC counts')
+    ax.set_ylabel('ADC counts / sample')
+    if pe == True:
+        ax.set_ylabel('PE/s')
     return ax
 
 def plot_pulses(waveform:np.array, pulse_list: list,
