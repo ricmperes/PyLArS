@@ -1,12 +1,9 @@
-import base64
-import hashlib
-import json
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
 from pylars.utils.input import raw_data, run
-
+from pylars.utils.common import get_deterministic_hash
 from .waveforms import waveform_processing
 
 
@@ -20,10 +17,10 @@ class simple_processor():
     def __init__(self, sigma_level: float, baseline_samples: int):
         self.sigma_level = sigma_level
         self.baseline_samples = baseline_samples
-        self.hash = self.get_deterministic_hash(f"{self.processing_method}" +
-                                                f"{self.version}" +
-                                                f"{self.sigma_level}" +
-                                                f"{self.baseline_samples:.2f}")
+        self.hash = get_deterministic_hash(f"{self.processing_method}" +
+                                           f"{self.version}" +
+                                           f"{self.sigma_level}" +
+                                           f"{self.baseline_samples:.2f}")
         self.processed_data = dict()
         self.show_loadbar_channel = True
         self.show_tqdm_channel = True
@@ -31,28 +28,11 @@ class simple_processor():
     def __hash__(self) -> int:
         return self.hash
 
-    @staticmethod
-    def get_deterministic_hash(id: str) -> str:
-        """Return a base32 lowercase string of length determined from hashing
-        the configs. Based on https://github.com/AxFoundation/strax/blob/
-        156254287c2037876a7040460b3551d590bf5589/strax/utils.py#L303
-
-        Args:
-            id (str): thing to hash
-
-        Returns:
-            str: hashed version of the thing
-        """
-        jsonned = json.dumps(id)
-        digest = hashlib.sha1(jsonned.encode('ascii')).digest()
-        readable_hash = base64.b32encode(digest)[:7].decode('ascii').lower()
-        return readable_hash
-
     def set_tqdm_channel(self, bar: bool, show: bool):
         """Change the tqdm config
 
         Args:
-            bar (bool): shwo or not the tqdm bar.
+            bar (bool): show or not the tqdm bar.
             show (bool): use tqdm if true, disable if false
         """
         self.show_loadbar_channel = bar
@@ -154,7 +134,7 @@ class simple_processor():
 
             except Exception:
                 raise AssertionError(
-                    'Ups! There was a problem on iteration number: ', i)
+                    f'Ups! There was a problem on iteration number: {i}')
 
         return results
 

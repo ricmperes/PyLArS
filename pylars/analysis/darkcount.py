@@ -12,7 +12,7 @@ from pylars.analysis.breakdown import compute_BV
 from scipy.optimize import curve_fit
 from tqdm import tqdm
 
-from .common import Gaussean, func_linear
+from pylars.utils.common import Gaussean, load_ADC_config
 
 
 class DCR_dataset():
@@ -47,29 +47,16 @@ class DCR_dataset():
         """
         self.plots_flag = flag
 
-    def define_ADC_config(self, F_amp: float, ADC_range: int = 2.25,
-                          ADC_impedance: int = 50, ADC_res: float = 2**14,
-                          q_e: float = 1.602176634e-19) -> None:
-        """Define the ADC related quantities for the dataset.
+    def define_ADC_config(self, F_amp: float, model: str = 'v1724') -> None:
+        """Load the ADC related quantities for the dataset.
 
         Args:
-            F_amp (float): signal amplification from the sensor (pre-amp *
-        external amplification on rack)
-            ADC_range (int, optional): Range of the ADC [V]. Defaults to 2.25.
-            ADC_impedance (int, optional): Impedance of the ADC and cables
-        [ohm]. Defaults to 50.
-            ADC_res (float, optional): Resolution/bits of the ADC (2**N_bits).
-        Defaults to 2**14.
-            q_e (float, optional): Element charge of the electron [C].
-        Defaults to 1.602176634e-19.
+        model (str): model of the digitizer
+        F_amp (float): signal amplification from the sensor (pre-amp *
+            external amplification on rack).
         """
-        ADC_config = {'ADC_range': ADC_range,
-                      'ADC_impedance': ADC_impedance,
-                      'F_amp': F_amp,
-                      'ADC_res': ADC_res,
-                      'q_e': q_e}
 
-        self.ADC_config = ADC_config
+        self.ADC_config = load_ADC_config(model, F_amp)
 
     def define_SiPM_config(self, livetime: float,
                            sensor_area: float = 12 * 12,
@@ -519,29 +506,17 @@ class DCR_run():
                                   )
         self.results_df = results_df
 
-    def define_run_ADC_config(self, F_amp: float, ADC_range: int = 2.25,
-                              ADC_impedance: int = 50, ADC_res: float = 2**14,
-                              q_e: float = 1.602176634e-19) -> None:
-        """Define the ADC related quantities for the dataset.
+    def define_run_ADC_config(self, F_amp: float, 
+                              model: str = 'v1724') -> None:
+        """Load the ADC related quantities for the run.
 
         Args:
-            F_amp (float): signal amplification from the sensor (pre-amp *
-        external amplification on rack)
-            ADC_range (int, optional): Range of the ADC [V]. Defaults to 2.25.
-            ADC_impedance (int, optional): Impedance of the ADC and cables
-        [ohm]. Defaults to 50.
-            ADC_res (float, optional): Resolution/bits of the ADC (2**N_bits).
-        Defaults to 2**14.
-            q_e (float, optional): Element charge of the electron [C].
-        Defaults to 1.602176634e-19.
+        model (str): model of the digitizer
+        F_amp (float): signal amplification from the sensor (pre-amp *
+            external amplification on rack).
         """
-        ADC_config = {'ADC_range': ADC_range,
-                      'ADC_impedance': ADC_impedance,
-                      'F_amp': F_amp,
-                      'ADC_res': ADC_res,
-                      'q_e': q_e}
 
-        self.ADC_config = ADC_config
+        self.ADC_config = load_ADC_config(model, F_amp)
 
     def define_run_SiPM_config(self, livetime: float,
                                sensor_area: float = 12 * 12,
