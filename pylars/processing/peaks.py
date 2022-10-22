@@ -1,116 +1,144 @@
 import numpy as np
 import numba as nb
 
-
 class peak_processing():
     """All the things peaks. Peaks are sums of pulses found in waveforms.
-    """
 
-    def __init__(self,sensor_gains):
-        self.gain = sensor_gains
+    This class, by definition, is a collection of class methods related 
+    to peak processing to be used in `peakprocessor`, where a processor 
+    object is then constructed.
+    """       
 
-    
-    def get_sum_area(self, waveforms_subtracted: np.ndarray,
-                 pulse_start: int, pulse_end: int) -> float:
-        r"""Get summed area over the all the channels.
+    @classmethod
+    def apply_ADCcounts_to_e(cls, waveforms_subtracted: np.array, 
+                             ADC_config: dict) -> np.array:
+        """Convert ADC counts/sample to charge.
+
+        Applies the charge converting factor to waveforms to turn ADC counts 
+        (which are integrated over 1 sample) to charge. `waveforms_subtracted` 
+        can be one or more channels.
+
+        Args:
+            waveforms_subtracted (np.array): value of ADC counts per sample 
+                above calculate local baseline
+            ADC_config (dict): dictionary with the ADC config
+
+        Raises:
+            ValueError: If the parsed ADC_config dictionary does not have the 
+                required keys.
+
+        Returns:
+            np.array: waveforms in charge.
+        """
+
+        try:
+            ADC_range = ADC_config['ADC_range']
+            ADC_impedance = ADC_config['ADC_impedance']
+            F_amp = ADC_config['F_amp']
+            ADC_res = ADC_config['ADC_res']
+            q_e = ADC_config['q_e']
+            dt = ADC_config['dt']
+        except:
+            raise ValueError('The ADC_config dictionary is probably missing ' +
+                             'something.')
         
+        to_e_constant = (ADC_range * dt / ADC_impedance / F_amp / 
+                         ADC_res / q_e)
+
+        waveforms_charge = waveforms_subtracted * to_e_constant
+
+        return waveforms_charge
+
+    @classmethod
+    def apply_e_to_pe(self,waveforms_charge: np.array,
+                      gains: np.array) -> np.array:
+        """Transform waveforms from charge to pe with gain per channel.
+
+        Takes waveforms already converted to charge from ADC counts and an 
+        array with the gains for each channel in units of [e/pe]. The ammount 
+        of rows in the waveform array needs to be the same as the length of 
+        the gains array.
+
+        The gains array is assumed to be on the correct order in respect to 
+        the order of channels in waveforms_charge.
+
         Args:
-            waveforms_subtracted (np.ndarray): array (N samples \* M channels)
+            waveforms_charge (_type_): _description_
+
+        Returns:
+            np.array: 
         """
 
-        waveforms_pe = cls.apply_gain(waveforms_subtracted)
-        summed_waveform = np.sum(waveforms_subtracted, axis = 1)
+        assert len(gains) == np.shape(waveforms_charge)[0], ('''Size of 
+        gains and channels in waveforms array do not match.''')
 
+        waveforms_pe = (waveforms_charge.T / gains).T
+
+        return waveforms_pe
+
+    @classmethod
+    def apply_baseline_subtract(cls, waveforms: np.array, 
+                                baselines:np.array) -> np.array:
+        """Apply baseline subtracting and flipping from negative to positive 
+        pulses.
+
+        Args:
+             waveforms (np.array): waveforms, all channels stacked by rows.
+            baselines (np.array): computed baselines, all channels stacked 
+                by rows.
+
+        Returns:
+            np.array: waveforms flipped and where 0 is local baseline.
+        """
+
+        assert len(baselines) == np.shape(waveforms)[0], ('''Size of 
+        baseines and channels in waveforms array do not match.''')
+
+        waveforms_subtracted = (baselines - waveforms.T).T
+
+        return waveforms_subtracted
+
+    @classmethod
+    def apply_waveforms_transform(cls, waveforms: np.array,
+                                  baselines: np.array,
+                                  gains: np.array,
+                                  ADC_config: dict) -> np.array:
+        """Converts waveforms from ADC counts/sample to pe/s.
         
-
-        return area_under
-
-    def apply_gain(self,waveforms_subtracted):
-        """Transform integrated ADC_counts to pe with gain per channel.
+        Takes the initials waveforms stacked for all channels and returns 
+        the waveforms in converted pe/s space.
 
         Args:
-            waveforms_subtracted (_type_): _description_
+            waveforms (np.array): waveforms, all channels stacked by rows.
+            baselines (np.array): computed baselines, all channels stacked 
+                by rows.
+            gains (np.array): gains, all channels stacked by rows.
+            ADC_config (dict): dictionary with the specific digitizer configs.
 
         Returns:
-            list: list with the lenght for each peak.
+            np.array: transformed waveforms
         """
 
-    @classmethod
-    def get_all_areas(cls, waveform: np.ndarray, pulses: list,
-                      baseline_value: float) -> np.ndarray:
-        """Compute the areas of all the pulses in a waveform.
-        TO DO: use np.apply_along_axis or similar and see if
-        there is speed improvement.
-        """
-        areas = np.zeros(len(pulses))
-        for i, _pulse in enumerate(pulses):
-            areas[i] = cls.get_area(
-                waveform, baseline_value, _pulse[0], _pulse[-1])
-        return areas
+        waveforms_subtracted = cls.apply_baseline_subtract(
+            waveforms, baselines)
+        waveforms_charge = cls.apply_ADCcounts_to_e(
+            waveforms_subtracted, ADC_config)
+        waveforms_pe = cls.apply_e_to_pe(waveforms_charge, gains)
+
+        return waveforms_pe
 
     @classmethod
-    def get_all_lengths(cls, pulses: list) -> list:
-        """Compute the lengths of all the pulses in a waveform.
-        (It's faster without @numba.njit)
+    def get_sum_waveform(cls, waveforms_pe: np.array) -> np.array:
+        """Sums the (transformed to pe/s) waveforms of all channels.
 
         Args:
-            pulses (_type_): _description_
+            waveforms_pe (np.array): array with waveforms from all the 
+                channels.
 
         Returns:
-            _type_: _description_
-        """
-        lengths = [len(_pulse) for _pulse in pulses]
-        return lengths
-
-    @classmethod
-    def get_all_positions(cls, pulses: list) -> list:
-        """Calcultes the initial position of the identified pulse
-        in number of samples.
-        (Faster without numba...?)
-
-        Args:
-            pulses (_type_): array of identified pulses.
-
-        Returns:
-            _type_: list of positions of pulses.
-        """
-        positions = [_pulse[0] for _pulse in pulses]
-        return positions
-
-    @classmethod
-    def split_consecutive(cls, array: np.array, stepsize: int = 1):
-        """Splits an array into several where values are consecutive
-        to each other. Points to numbafied function _split_consecutive().
-
-        Args:
-            array (np.array): 
-        """
-        split_array = _split_consecutive(array, stepsize)
-        return split_array
-
-    @classmethod
-    def find_pulses_simple(cls, waveform_array: np.ndarray, baseline_value: float,
-                          std_value: float, sigma_lvl: float = 5):
-        """Pulse processing to find pulses above sigma times baseline rms.
-
-        Args:
-            waveform_array (np.ndarray): 1D array of all the ADC counts where
-        each element is a sample number in the waveform. The length of the
-        array is the ammount of samples in the waveform.
-            baseline_value (float): value of ADC counts to use as baseline.
-            std_value (float): standard deviation of the calculated baseline
-        value.
-            sigma_lvl (float, optional): number of times above baseline in
-        stds to consider as new peak. Defaults to 5.
-
-        Returns:
-            list: list with the found peaks.
+            np.array: Summed waveform.
         """
 
-        bellow_baseline = np.where(
-            waveform_array < (
-                baseline_value -
-                std_value *
-                sigma_lvl))[0]
-        pulses = cls.split_consecutive(bellow_baseline)
-        return pulses
+        summed_waveform = np.sum(waveforms_pe, axis = 0)
+
+        return summed_waveform

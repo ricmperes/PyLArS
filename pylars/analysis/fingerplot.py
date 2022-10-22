@@ -1,7 +1,7 @@
 import numpy as np
 import pylars
 from matplotlib import pyplot as plt
-from pylars.analysis.common import Gaussean
+from pylars.utils.common import Gaussean
 from scipy.optimize import curve_fit
 
 from .darkcount import DCR_dataset

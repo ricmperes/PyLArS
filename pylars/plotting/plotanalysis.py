@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from pylars.analysis.common import Gaussean, func_linear
+from pylars.utils.common import Gaussean, func_linear
 
 from .plotprocessed import *
 

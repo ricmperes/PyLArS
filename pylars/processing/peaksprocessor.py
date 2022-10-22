@@ -1,20 +1,26 @@
+import csv
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
 from pylars.utils.input import raw_data, run
-from pylars.utils.common import get_deterministic_hash
+from pylars.utils.common import get_deterministic_hash, load_ADC_config
 from .waveforms import waveform_processing
+from .peaks import peak_processing
 
+class peak_processor():
+    """Define the functions for a simple peak processor.
 
-class simple_processor():
-    """Define the atributes and functions for a simple processor.
+    Defines a processor object to process waveforms from summing all the 
+    channels in the photosensor array.
     """
 
-    version = '0.0.2'
-    processing_method = 'simple'
+    version = '0.0.1'
+    processing_method = 'peaks_simple'
 
-    def __init__(self, sigma_level: float, baseline_samples: int):
+    def __init__(self, sigma_level: float, baseline_samples: int, 
+                 gains_tag: str , gains_path: str) -> None:
+
         self.sigma_level = sigma_level
         self.baseline_samples = baseline_samples
         self.hash = get_deterministic_hash(f"{self.processing_method}" +
@@ -25,8 +31,42 @@ class simple_processor():
         self.show_loadbar_channel = True
         self.show_tqdm_channel = True
 
+        self.gains_tag = gains_tag
+        self.gains_path = gains_path
+        """Path to where the gains are saved. 
+        
+        In the future this should be defined in a config file.
+        """
+        self.gains = self.load_gains()
+        """Dictionary of gains [e/pe] for each channel.
+        """
+
     def __hash__(self) -> int:
         return self.hash
+
+    def load_gains(self) -> np.array:
+        """Load gains of photosensors based on the defined path and tag.
+
+        Returns:
+            np.array: array with channel gains [e/pe]) in ascending order (mo
+                dule->channel) 
+        """
+
+        # csv is extremely fast but pandas is easier to load and sort 
+        # right away
+
+        # with open(self.gains_path + self.gains_tag, mode='r') as file:
+        #     reader = csv.reader(file)
+        #     gains = {rows[0]:float(rows[1]) for rows in reader}
+
+        # return gains
+        
+        gain_df = pd.read_csv(self.gains_path + self.gains_tag,
+                              header=None, 
+                              names=['module', 'channel','gain'])
+        gain_df = gain_df.sort_values(['module','channel'], ignore_index=True)
+
+        return gain_df['gain'].values
 
     def set_tqdm_channel(self, bar: bool, show: bool):
         """Change the tqdm config
@@ -38,7 +78,44 @@ class simple_processor():
         self.show_loadbar_channel = bar
         self.show_tqdm_channel = show
 
-    # General functions for I/O
+    def define_ADC_config(self, F_amp: float, model: str = 'v1724') -> None:
+        """Load the ADC related quantities for the dataset.
+
+        Args:
+        model (str): model of the digitizer
+        F_amp (float): signal amplification from the sensor (pre-amp *
+            external amplification on the rack).
+        """
+
+        self.ADC_config = load_ADC_config(model, F_amp)
+
+    def process_waveform_set(self, waveforms:np.array):
+        """Process an array of waveforms from all channels.
+
+        The waveforms are asusmed to be synchronized and each row of the 
+        array is a channel. Once a summed waveform is formed, uses the same
+        functions as the pulse processing to find peaks and compute its
+        properties.
+
+        Args:
+            waveforms (np.array): waveforms of all channels stacked.
+        """
+
+        baselines = np.apply_along_axis(
+            func1d = waveform_processing.get_baseline_rough,
+            axis = 1,
+            arr = waveforms,
+            baseline_samples = self.baseline_samples)
+
+        waveforms_pe = peak_processing.apply_waveforms_transform(
+            waveforms, baselines, self.gains, self.ADC_config)
+        sum_waveform = peak_processing.get_sum_waveform(waveforms_pe)
+
+        areas, lengths, positions, amplitudes = waveform_processing.process_waveform(
+                    sum_waveform, self.baseline_samples, self.sigma_level)
+
+
+
     def load_raw_data(self, path_to_raw: str, V: float, T: float, module: int):
         """Raw data loader to pass to the processing scripts.
 
@@ -64,19 +141,19 @@ class simple_processor():
 
         Args:
             ch (str): channel name as in the ROOT file.
-                In files from DAQ_zero/XenoDAQ these will be 'wf#' with # 
-                the number of the channel [0,7]
+        In files from DAQ_zero/XenoDAQ these will be 'wf#' with # the
+        number of the channel [0,7]
 
         Raises:
             AssertionError: if the requested channel
-                is not available on the raw file.
+        is not available on the raw file.
             AssertionError: if the there was a problem
-                in the processing of a waveform
+        in the processing of a waveform
 
         Returns:
             dict: Dictionary of keys module, channel, wf_number
-                area, length, position where the values are lists (order
-                matters) of the processed waveforms.
+        area, length, position where the values are lists (order
+        matters) of the processed waveforms.
         """
         if ch not in self.raw_data.channels:
             raise AssertionError(
@@ -134,7 +211,7 @@ class simple_processor():
 
             except Exception:
                 raise AssertionError(
-                    f'Ups! There was a problem on iteration number: {i}')
+                    'Ups! There was a problem on iteration number: ', i)
 
         return results
 
@@ -154,109 +231,3 @@ class simple_processor():
 
     def purge_processor(self):
         del self.raw_data
-
-
-class run_processor(simple_processor):
-    """The 'run_processor' extends the use of the 'simple_processor'
-    to full run, ie, a set of datasets taken at different operating
-    conditions but with the same setup.
-
-    Args:
-        simple_processor (simple_processor): super class with
-    dataset-level processing methods.
-    """
-
-    def __init__(self, run_to_process: run, processor_type: str,
-                 sigma_level: float, baseline_samples: int):
-        if not isinstance(run_to_process, run):
-            raise TypeError("Needs run type object.")
-        if processor_type != 'simple':
-            raise NotImplementedError(
-                "Only 'simple' is available. Please make a PR to add more.")
-
-        self.run = run_to_process
-
-        super().__init__(sigma_level, baseline_samples)
-
-        self.datasets_df = self.run.get_run_df()
-        self.show_loadbar_run = True
-        self.show_tqdm_run = True
-        self.show_loadbar_channel = True
-        self.show_tqdm_channel = True
-
-    def set_tqdm_run(self, bar: bool, show: bool):
-        """Define the use of tqdm for run level processing.
-
-        Args:
-            bar (bool): show tqdm bar
-            show (bool): use tqdm or not
-        """
-        self.show_loadbar_run = bar
-        self.show_tqdm_run = show
-
-    def print_tqdm_options(self):
-        print(f'show bar channel:{self.show_loadbar_channel}\n' +
-              f'show tqdm channel:{self.show_tqdm_channel}\n' +
-              f'show bar run:{self.show_loadbar_run}\n' +
-              f'show tqdm run:{self.show_tqdm_run}')
-
-    def process_datasets(self, kind: str, vbias: float,
-                         temp: float) -> pd.DataFrame:
-        """Runs the loaded processor through a full dataset, ie,
-        Processes all the channels of all the boards for a set of
-        given operating conditions (kind, vbias, temp).
-
-        Args:
-            kind (str): type of data ('BV' for breakdown voltage/LED
-        ON, 'DCR' for dark count rate data/LED OFF.)
-            vbias (float): bias voltage applied
-            temp (float): temperature of the setup
-
-        Returns:
-            pd.DataFrame: processed data with computed area, length
-        and position, retaining info on module, channel and waveform
-        of the pulse.
-        """
-
-        selection = ((self.datasets_df['kind'] == kind) &
-                     (self.datasets_df['vbias'] == vbias) &
-                     (self.datasets_df['temp'] == temp))
-
-        datasets_to_process = self.datasets_df[selection]
-
-        if len(datasets_to_process) == 0:
-            # prints screw up tqdm and are not that useful
-            # #print(
-            #    f'No datasets found on run with kind = {kind}, '
-            #    f'voltage = {vbias} and temperature = {temp}.')
-            return None
-
-        print(
-            f'Found {len(datasets_to_process)} datasets. '
-            f'Ramping up processor!')
-
-        if self.show_loadbar_run:
-            total = len(datasets_to_process)
-        else:
-            total = None
-
-        results = []
-
-        for dataset in tqdm(datasets_to_process.itertuples(),
-                            'Loading and processing datasets: ',
-                            total=total,
-                            disable=(not self.show_tqdm_run)):
-
-            self.load_raw_data(path_to_raw=dataset.path,
-                               V=dataset.vbias,
-                               T=dataset.temp,
-                               module=dataset.module)
-
-            # this returns a pd.DataFrame
-            _results_of_dataset = self.process_all_channels()
-            results.append(_results_of_dataset)
-            self.purge_processor()
-
-        results = pd.concat(results, ignore_index=True)
-
-        return results
