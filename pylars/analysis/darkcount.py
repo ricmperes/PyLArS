@@ -102,7 +102,7 @@ class DCR_dataset():
                 Defaults to False.
 
         Returns:
-            dict: _description_
+            dict: dictionary with the data df for each voltage as a key.
         """
         self.data = {}
         for _voltage in self.voltages:
