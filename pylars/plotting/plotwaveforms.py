@@ -1,20 +1,20 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from typing import Optional
 
-
-def plot_waveform(waveform_array:np.array, full_y:bool=False,
+def plot_waveform(waveform_array:np.ndarray, full_y:bool=False,
                   full_x:bool=True, pe: bool = False,
-                  ax:plt.Axes=None) -> plt.Axes:
+                  ax: Optional[plt.Axes] = None) -> plt.Axes:
     """Plot a waveform from its array.
 
     Args:
-        waveform_array (np.array): waveform array. Elements of the array
-    correspond to the sample of the waveform and its value the recorded ADC
-    counts.
+        waveform_array (np.ndarray): waveform array. Elements of the array
+            correspond to the sample of the waveform and its value the recorded ADC
+            counts.
         full_y (bool, optional): plot full range of ADC amplitude. Defaults
-    to False.
+            to False.
         full_x (bool, optional): plot full range of ADC samples. Defaults
-    to True.
+            to True.
         pe (bool, optional): parse that the waveform is in PE/s (for peaks). 
             Defaults to False.
         ax (plt.Axes, optional): axes to plot into. Defaults to None.
@@ -52,16 +52,16 @@ def plot_waveform(waveform_array:np.array, full_y:bool=False,
         ax.set_ylabel('PE/s')
     return ax
 
-def plot_pulses(waveform:np.array, pulse_list: list,
-                ax:plt.Axes=None) -> plt.Axes:
+def plot_pulses(waveform:np.ndarray, pulse_list: list,
+                ax: Optional[plt.Axes] = None) -> plt.Axes:
     """Plot the identified pulses in a waveform. 
 
     Args:
-        waveform (np.array): waveform array. Elements of the array
-    correspond to the sample of the waveform and its value the recorded ADC
-    counts.
+        waveform (np.ndarray): waveform array. Elements of the array
+            correspond to the sample of the waveform and its value the recorded ADC
+            counts.
         pulse_list (list): list of pulses, as the output of
-    pulse_processing.find_pulses_simple.
+            pulse_processing.find_pulses_simple.
         ax (plt.Axes, optional): axes to plot into. Defaults to None.
 
     Returns:

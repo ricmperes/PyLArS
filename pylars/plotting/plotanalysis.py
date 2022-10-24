@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from pylars.utils.common import Gaussean, func_linear
-
+from matplotlib.figure import Figure as pltFigure
 from .plotprocessed import *
 
 # LED ON
@@ -38,7 +38,7 @@ def plot_area_LED(bv_dataset, voltage, LED_position=300,
 
 
 def plot_LED_all_voltages(bv_dataset, cmap='winter', ax=None,):
-    cm = plt.get_cmap(cmap)
+    cm = plt.get_cmap(cmap)  # type: ignore
     N_lines = len(bv_dataset.voltages)
 
     if ax is None:
@@ -73,10 +73,12 @@ def plot_DCR_curve(plot, area_hist_x, DCR_values, _x, _y, min_area_x, ax=None):
     ax3.axvline(min_area_x, c='r', ls='--', alpha=0.8,
                 label='1$^{st}$ der. (smoothed)')
     ax3.set_ylabel('1$^{st}$ derivative')
-    fig.legend()
+    
+    if 'fig' in locals():
+        fig.legend() # type: ignore
 
     if isinstance(plot, str):
-        fig.savefig(f'figures/{plot}_stepplot.png')
+        fig.savefig(f'figures/{plot}_stepplot.png')# type: ignore
         plt.close()
     else:
         return ax

@@ -1,5 +1,7 @@
 import numpy as np
 import pylars
+import pylars.utils.input
+import pylars.utils.output
 from matplotlib import pyplot as plt
 from pylars.utils.common import Gaussean
 from scipy.optimize import curve_fit
@@ -27,12 +29,12 @@ class fingerplot_dataset(DCR_dataset):
         self.process = processor
         self.voltages = self.get_voltages_available()
 
-    def get_voltages_available(self) -> np.array:
+    def get_voltages_available(self) -> np.ndarray:
         """Checks the loaded run for which voltages are available for the
         defined temperature.
 
         Returns:
-            np.array: array of the available voltages
+            np.ndarray: array of the available voltages
         """
 
         voltages = []
@@ -43,7 +45,7 @@ class fingerplot_dataset(DCR_dataset):
 
         return voltages
 
-    def load_processed_data(self, force_processing: bool = False) -> dict:
+    def load_processed_data(self, force_processing: bool = False) -> None:
         self.data = {}
         for _voltage in self.voltages:
             processed_data = pylars.utils.output.processed_dataset(
@@ -62,6 +64,7 @@ class fingerplot_dataset(DCR_dataset):
 
             self.data[_voltage] = _df[mask].copy()
 
+    @staticmethod
     def make_finger_plot(df, length_cut_min,
                          length_cut_max, plot=False,
                          ax=None):
@@ -90,12 +93,12 @@ class fingerplot_dataset(DCR_dataset):
             ax.hist(df[_cuts]['area'], bins=1000, histtype='step', color='k')
             ax.plot(_x, Gaussean(_x, A, mu, sigma), c='r')
 
-            ax.yscale('log')
-            ax.ylabel('# Events')
-            ax.title('Module 0 | Channel 0')
-            ax.xlabel('Peak Area [integrated ADC counts]')
+            ax.set_yscale('log')
+            ax.set_ylabel('# Events')
+            ax.set_title('Module 0 | Channel 0')
+            ax.set_xlabel('Peak Area [integrated ADC counts]')
             if isinstance(plot, str):
-                fig.savefig(f'figures/fingerplot_{plot}.png')
+                fig.savefig(f'figures/fingerplot_{plot}.png') # type: ignore
             else:
                 plt.show()
         return mu, sigma

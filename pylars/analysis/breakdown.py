@@ -26,12 +26,12 @@ class BV_dataset():
         self.process = processor
         self.voltages = self.get_voltages_available()
 
-    def get_voltages_available(self) -> np.array:
+    def get_voltages_available(self) -> np.ndarray:
         """Checks the loaded run for which voltages are available for the
         defined temperature.
 
         Returns:
-            np.array: array of the available voltages
+            np.ndarray: array of the available voltages
         """
 
         voltages = []

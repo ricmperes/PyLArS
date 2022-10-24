@@ -10,8 +10,8 @@ class peak_processing():
     """       
 
     @classmethod
-    def apply_ADCcounts_to_e(cls, waveforms_subtracted: np.array, 
-                             ADC_config: dict) -> np.array:
+    def apply_ADCcounts_to_e(cls, waveforms_subtracted: np.ndarray, 
+                             ADC_config: dict) -> np.ndarray:
         """Convert ADC counts/sample to charge.
 
         Applies the charge converting factor to waveforms to turn ADC counts 
@@ -19,7 +19,7 @@ class peak_processing():
         can be one or more channels.
 
         Args:
-            waveforms_subtracted (np.array): value of ADC counts per sample 
+            waveforms_subtracted (np.ndarray): value of ADC counts per sample 
                 above calculate local baseline
             ADC_config (dict): dictionary with the ADC config
 
@@ -28,7 +28,7 @@ class peak_processing():
                 required keys.
 
         Returns:
-            np.array: waveforms in charge.
+            np.ndarray: waveforms in charge.
         """
 
         try:
@@ -50,8 +50,8 @@ class peak_processing():
         return waveforms_charge
 
     @classmethod
-    def apply_e_to_pe(self,waveforms_charge: np.array,
-                      gains: np.array) -> np.array:
+    def apply_e_to_pe(cls,waveforms_charge: np.ndarray,
+                      gains: np.ndarray) -> np.ndarray: 
         """Transform waveforms from charge to pe with gain per channel.
 
         Takes waveforms already converted to charge from ADC counts and an 
@@ -66,7 +66,7 @@ class peak_processing():
             waveforms_charge (_type_): _description_
 
         Returns:
-            np.array: 
+            np.ndarray: 
         """
 
         assert len(gains) == np.shape(waveforms_charge)[0], ('''Size of 
@@ -77,46 +77,46 @@ class peak_processing():
         return waveforms_pe
 
     @classmethod
-    def apply_baseline_subtract(cls, waveforms: np.array, 
-                                baselines:np.array) -> np.array:
+    def apply_baseline_subtract(cls, waveforms: np.ndarray, 
+                                baselines:np.ndarray) -> np.ndarray:
         """Apply baseline subtracting and flipping from negative to positive 
         pulses.
 
         Args:
-             waveforms (np.array): waveforms, all channels stacked by rows.
-            baselines (np.array): computed baselines, all channels stacked 
+             waveforms (np.ndarray): waveforms, all channels stacked by rows.
+            baselines (np.ndarray): computed baselines, all channels stacked 
                 by rows.
 
         Returns:
-            np.array: waveforms flipped and where 0 is local baseline.
+            np.ndarray: waveforms flipped and where 0 is local baseline.
         """
 
         assert len(baselines) == np.shape(waveforms)[0], ('''Size of 
         baseines and channels in waveforms array do not match.''')
 
-        waveforms_subtracted = (baselines - waveforms.T).T
+        waveforms_subtracted = (baselines - waveforms.T).T  # type: ignore
 
         return waveforms_subtracted
 
     @classmethod
-    def apply_waveforms_transform(cls, waveforms: np.array,
-                                  baselines: np.array,
-                                  gains: np.array,
-                                  ADC_config: dict) -> np.array:
+    def apply_waveforms_transform(cls, waveforms: np.ndarray,
+                                  baselines: np.ndarray,
+                                  gains: np.ndarray,
+                                  ADC_config: dict) -> np.ndarray:
         """Converts waveforms from ADC counts/sample to pe/s.
         
         Takes the initials waveforms stacked for all channels and returns 
         the waveforms in converted pe/s space.
 
         Args:
-            waveforms (np.array): waveforms, all channels stacked by rows.
-            baselines (np.array): computed baselines, all channels stacked 
+            waveforms (np.ndarray): waveforms, all channels stacked by rows.
+            baselines (np.ndarray): computed baselines, all channels stacked 
                 by rows.
-            gains (np.array): gains, all channels stacked by rows.
+            gains (np.ndarray): gains, all channels stacked by rows.
             ADC_config (dict): dictionary with the specific digitizer configs.
 
         Returns:
-            np.array: transformed waveforms
+            np.ndarray: transformed waveforms
         """
 
         waveforms_subtracted = cls.apply_baseline_subtract(
@@ -128,15 +128,15 @@ class peak_processing():
         return waveforms_pe
 
     @classmethod
-    def get_sum_waveform(cls, waveforms_pe: np.array) -> np.array:
+    def get_sum_waveform(cls, waveforms_pe: np.ndarray) -> np.ndarray:
         """Sums the (transformed to pe/s) waveforms of all channels.
 
         Args:
-            waveforms_pe (np.array): array with waveforms from all the 
+            waveforms_pe (np.ndarray): array with waveforms from all the 
                 channels.
 
         Returns:
-            np.array: Summed waveform.
+            np.ndarray: Summed waveform.
         """
 
         summed_waveform = np.sum(waveforms_pe, axis = 0)

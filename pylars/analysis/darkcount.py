@@ -74,12 +74,12 @@ class DCR_dataset():
 
         self.SiPM_config = SiPM_config
 
-    def get_voltages_available(self) -> np.array:
+    def get_voltages_available(self) -> np.ndarray:
         """Checks the loaded run for which voltages are available for the
         defined temperature.
 
         Returns:
-            np.array: array of the available voltages
+            np.ndarray: array of the available voltages
         """
 
         voltages = []
@@ -210,7 +210,7 @@ class DCR_dataset():
                 Defaults to 200.
 
         Returns:
-            tuple: pair of np.arrays (area thersholds, DCR values)
+            tuple: pair of np.ndarrays (area thersholds, DCR values)
         """
         area_hist = np.histogram(df[df['length'] > length_cut]['area'],
                                  bins=bins)
@@ -486,11 +486,11 @@ class DCR_run():
         """
         self.plots_flag = flag
 
-    def get_run_temperatures(self) -> np.array:
+    def get_run_temperatures(self) -> np.ndarray:
         """Get all the temperatures available in the DCR run.
 
         Returns:
-            np.array: array with all the available temperatures.
+            np.ndarray: array with all the available temperatures.
         """
         temp_list = np.unique(self.datasets['temp'])
 
