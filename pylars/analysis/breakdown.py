@@ -4,9 +4,11 @@ import numpy as np
 import pandas as pd
 import pylars
 from scipy.optimize import curve_fit
-
+import pylars.utils.input
+import pylars.utils.output
 from pylars.utils.common import func_linear
-
+import pylars.plotting.plotanalysis
+from typing import Union
 
 class BV_dataset():
     """Object class to hold breakdown voltage related instances and
@@ -65,7 +67,7 @@ class BV_dataset():
 
 
 def compute_BV(df_results: pd.DataFrame,
-               plot: bool or str = False) -> pd.DataFrame:
+               plot: Union[bool, str] = False) -> pd.DataFrame:
     """Computes the breakdown voltage with a linear fit of gain over V points.
     Takes a dataframe with the collumns 'T' (temperature), 'V' (voltage) and
     'gain' (self-explanatory, c'mon...)

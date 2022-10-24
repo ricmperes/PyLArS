@@ -11,6 +11,7 @@ import scipy.interpolate as itp
 from pylars.analysis.breakdown import compute_BV
 from scipy.optimize import curve_fit
 from tqdm import tqdm
+from typing import Dict, Union
 
 from pylars.utils.common import Gaussean, load_ADC_config
 
@@ -90,7 +91,7 @@ class DCR_dataset():
 
         return voltages
 
-    def load_processed_data(self, force_processing: bool = False) -> dict:
+    def load_processed_data(self, force_processing: bool = False) -> None:
         """For all the voltages of a DCR_dataset (smae temperature) looks
         for already processed files to load. If force_processing=True and
         no saved file is found, processes the dataset with standard
@@ -126,7 +127,7 @@ class DCR_dataset():
     def get_1pe_value_fit(cls,
                           df: pd.DataFrame,
                           length_cut: int = 5,
-                          plot: bool or str = False) -> tuple:
+                          plot: Union[bool, str] = False) -> tuple:
         """Try to fit the SPE peak in the area histogram and return the
         Gaussian paramenters.
 
@@ -618,7 +619,7 @@ class DCR_run():
 
         self.channel_map = channel_map
 
-    def compute_properties_of_run(self) -> pd.DataFrame:
+    def compute_properties_of_run(self) -> None:
         """Loads and computes the properties of ALL the datasets.
 
         Returns:
@@ -637,18 +638,19 @@ class DCR_run():
                         module=module,
                         channel=channel)
 
-                    self.results_df = pd.concat([self.results_df, _ds_results],
-                                                ignore_index=True)
+                    self.results_df = pd.concat(
+                        [self.results_df, _ds_results],  # type: ignore
+                        ignore_index=True)
 
         datetime.now()
 
     def save_results(self, custom_name) -> None:
         """Save dataframe of results to a hdf5 file. Saved files go to 
-        %s.
+        self.analysis_path.
 
         Args:
             name (str): name to give the file (without extension).
-        """ %self.analysis_path
+        """
         assert isinstance(self.results_df, pd.DataFrame), ("Trying to save "
             "results that do not exist in the object, c'mon, you know better.")
         assert len(self.results_df) > 0, ("Results df is empty, please compute"
