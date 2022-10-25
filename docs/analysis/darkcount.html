@@ -39,6 +39,7 @@ import scipy.interpolate as itp
 from pylars.analysis.breakdown import compute_BV
 from scipy.optimize import curve_fit
 from tqdm import tqdm
+from typing import Dict, Union
 
 from pylars.utils.common import Gaussean, load_ADC_config
 
@@ -102,12 +103,12 @@ class DCR_dataset():
 
         self.SiPM_config = SiPM_config
 
-    def get_voltages_available(self) -&gt; np.array:
+    def get_voltages_available(self) -&gt; np.ndarray:
         &#34;&#34;&#34;Checks the loaded run for which voltages are available for the
         defined temperature.
 
         Returns:
-            np.array: array of the available voltages
+            np.ndarray: array of the available voltages
         &#34;&#34;&#34;
 
         voltages = []
@@ -118,7 +119,7 @@ class DCR_dataset():
 
         return voltages
 
-    def load_processed_data(self, force_processing: bool = False) -&gt; dict:
+    def load_processed_data(self, force_processing: bool = False) -&gt; None:
         &#34;&#34;&#34;For all the voltages of a DCR_dataset (smae temperature) looks
         for already processed files to load. If force_processing=True and
         no saved file is found, processes the dataset with standard
@@ -154,7 +155,7 @@ class DCR_dataset():
     def get_1pe_value_fit(cls,
                           df: pd.DataFrame,
                           length_cut: int = 5,
-                          plot: bool or str = False) -&gt; tuple:
+                          plot: Union[bool, str] = False) -&gt; tuple:
         &#34;&#34;&#34;Try to fit the SPE peak in the area histogram and return the
         Gaussian paramenters.
 
@@ -238,7 +239,7 @@ class DCR_dataset():
                 Defaults to 200.
 
         Returns:
-            tuple: pair of np.arrays (area thersholds, DCR values)
+            tuple: pair of np.ndarrays (area thersholds, DCR values)
         &#34;&#34;&#34;
         area_hist = np.histogram(df[df[&#39;length&#39;] &gt; length_cut][&#39;area&#39;],
                                  bins=bins)
@@ -514,11 +515,11 @@ class DCR_run():
         &#34;&#34;&#34;
         self.plots_flag = flag
 
-    def get_run_temperatures(self) -&gt; np.array:
+    def get_run_temperatures(self) -&gt; np.ndarray:
         &#34;&#34;&#34;Get all the temperatures available in the DCR run.
 
         Returns:
-            np.array: array with all the available temperatures.
+            np.ndarray: array with all the available temperatures.
         &#34;&#34;&#34;
         temp_list = np.unique(self.datasets[&#39;temp&#39;])
 
@@ -646,7 +647,7 @@ class DCR_run():
 
         self.channel_map = channel_map
 
-    def compute_properties_of_run(self) -&gt; pd.DataFrame:
+    def compute_properties_of_run(self) -&gt; None:
         &#34;&#34;&#34;Loads and computes the properties of ALL the datasets.
 
         Returns:
@@ -665,18 +666,19 @@ class DCR_run():
                         module=module,
                         channel=channel)
 
-                    self.results_df = pd.concat([self.results_df, _ds_results],
-                                                ignore_index=True)
+                    self.results_df = pd.concat(
+                        [self.results_df, _ds_results],  # type: ignore
+                        ignore_index=True)
 
         datetime.now()
 
     def save_results(self, custom_name) -&gt; None:
         &#34;&#34;&#34;Save dataframe of results to a hdf5 file. Saved files go to 
-        %s.
+        self.analysis_path.
 
         Args:
             name (str): name to give the file (without extension).
-        &#34;&#34;&#34; %self.analysis_path
+        &#34;&#34;&#34;
         assert isinstance(self.results_df, pd.DataFrame), (&#34;Trying to save &#34;
             &#34;results that do not exist in the object, c&#39;mon, you know better.&#34;)
         assert len(self.results_df) &gt; 0, (&#34;Results df is empty, please compute&#34;
@@ -782,12 +784,12 @@ a certain temperature.</p></div>
 
         self.SiPM_config = SiPM_config
 
-    def get_voltages_available(self) -&gt; np.array:
+    def get_voltages_available(self) -&gt; np.ndarray:
         &#34;&#34;&#34;Checks the loaded run for which voltages are available for the
         defined temperature.
 
         Returns:
-            np.array: array of the available voltages
+            np.ndarray: array of the available voltages
         &#34;&#34;&#34;
 
         voltages = []
@@ -798,7 +800,7 @@ a certain temperature.</p></div>
 
         return voltages
 
-    def load_processed_data(self, force_processing: bool = False) -&gt; dict:
+    def load_processed_data(self, force_processing: bool = False) -&gt; None:
         &#34;&#34;&#34;For all the voltages of a DCR_dataset (smae temperature) looks
         for already processed files to load. If force_processing=True and
         no saved file is found, processes the dataset with standard
@@ -834,7 +836,7 @@ a certain temperature.</p></div>
     def get_1pe_value_fit(cls,
                           df: pd.DataFrame,
                           length_cut: int = 5,
-                          plot: bool or str = False) -&gt; tuple:
+                          plot: Union[bool, str] = False) -&gt; tuple:
         &#34;&#34;&#34;Try to fit the SPE peak in the area histogram and return the
         Gaussian paramenters.
 
@@ -918,7 +920,7 @@ a certain temperature.</p></div>
                 Defaults to 200.
 
         Returns:
-            tuple: pair of np.arrays (area thersholds, DCR values)
+            tuple: pair of np.ndarrays (area thersholds, DCR values)
         &#34;&#34;&#34;
         area_hist = np.histogram(df[df[&#39;length&#39;] &gt; length_cut][&#39;area&#39;],
                                  bins=bins)
@@ -1224,7 +1226,7 @@ def get_1pe_rough(cls, df: pd.DataFrame,
 </details>
 </dd>
 <dt id="pylars.analysis.darkcount.DCR_dataset.get_1pe_value_fit"><code class="name flex">
-<span>def <span class="ident">get_1pe_value_fit</span></span>(<span>df: pandas.core.frame.DataFrame, length_cut: int = 5, plot: bool = False) ‑> tuple</span>
+<span>def <span class="ident">get_1pe_value_fit</span></span>(<span>df: pandas.core.frame.DataFrame, length_cut: int = 5, plot: Union[bool, str] = False) ‑> tuple</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Try to fit the SPE peak in the area histogram and return the
@@ -1252,7 +1254,7 @@ the peaks for noise suppression. Defaults to 5.</dd>
 def get_1pe_value_fit(cls,
                       df: pd.DataFrame,
                       length_cut: int = 5,
-                      plot: bool or str = False) -&gt; tuple:
+                      plot: Union[bool, str] = False) -&gt; tuple:
     &#34;&#34;&#34;Try to fit the SPE peak in the area histogram and return the
     Gaussian paramenters.
 
@@ -1514,7 +1516,7 @@ Defaults to 200.</dd>
 <h2 id="returns">Returns</h2>
 <dl>
 <dt><code>tuple</code></dt>
-<dd>pair of np.arrays (area thersholds, DCR values)</dd>
+<dd>pair of np.ndarrays (area thersholds, DCR values)</dd>
 </dl></div>
 <details class="source">
 <summary>
@@ -1537,7 +1539,7 @@ def get_DCR_above_threshold_values(cls, df: pd.DataFrame,
             Defaults to 200.
 
     Returns:
-        tuple: pair of np.arrays (area thersholds, DCR values)
+        tuple: pair of np.ndarrays (area thersholds, DCR values)
     &#34;&#34;&#34;
     area_hist = np.histogram(df[df[&#39;length&#39;] &gt; length_cut][&#39;area&#39;],
                              bins=bins)
@@ -1818,26 +1820,26 @@ Run dataset.define_ADC_config(&hellip;)</dd>
 </details>
 </dd>
 <dt id="pylars.analysis.darkcount.DCR_dataset.get_voltages_available"><code class="name flex">
-<span>def <span class="ident">get_voltages_available</span></span>(<span>self) ‑> <built-in function array></span>
+<span>def <span class="ident">get_voltages_available</span></span>(<span>self) ‑> numpy.ndarray</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Checks the loaded run for which voltages are available for the
 defined temperature.</p>
 <h2 id="returns">Returns</h2>
 <dl>
-<dt><code>np.array</code></dt>
+<dt><code>np.ndarray</code></dt>
 <dd>array of the available voltages</dd>
 </dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def get_voltages_available(self) -&gt; np.array:
+<pre><code class="python">def get_voltages_available(self) -&gt; np.ndarray:
     &#34;&#34;&#34;Checks the loaded run for which voltages are available for the
     defined temperature.
 
     Returns:
-        np.array: array of the available voltages
+        np.ndarray: array of the available voltages
     &#34;&#34;&#34;
 
     voltages = []
@@ -1850,7 +1852,7 @@ defined temperature.</p>
 </details>
 </dd>
 <dt id="pylars.analysis.darkcount.DCR_dataset.load_processed_data"><code class="name flex">
-<span>def <span class="ident">load_processed_data</span></span>(<span>self, force_processing: bool = False) ‑> dict</span>
+<span>def <span class="ident">load_processed_data</span></span>(<span>self, force_processing: bool = False) ‑> NoneType</span>
 </code></dt>
 <dd>
 <div class="desc"><p>For all the voltages of a DCR_dataset (smae temperature) looks
@@ -1873,7 +1875,7 @@ Defaults to False.</dd>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def load_processed_data(self, force_processing: bool = False) -&gt; dict:
+<pre><code class="python">def load_processed_data(self, force_processing: bool = False) -&gt; None:
     &#34;&#34;&#34;For all the voltages of a DCR_dataset (smae temperature) looks
     for already processed files to load. If force_processing=True and
     no saved file is found, processes the dataset with standard
@@ -1982,11 +1984,11 @@ DCR_run.results_df .</p></div>
         &#34;&#34;&#34;
         self.plots_flag = flag
 
-    def get_run_temperatures(self) -&gt; np.array:
+    def get_run_temperatures(self) -&gt; np.ndarray:
         &#34;&#34;&#34;Get all the temperatures available in the DCR run.
 
         Returns:
-            np.array: array with all the available temperatures.
+            np.ndarray: array with all the available temperatures.
         &#34;&#34;&#34;
         temp_list = np.unique(self.datasets[&#39;temp&#39;])
 
@@ -2114,7 +2116,7 @@ DCR_run.results_df .</p></div>
 
         self.channel_map = channel_map
 
-    def compute_properties_of_run(self) -&gt; pd.DataFrame:
+    def compute_properties_of_run(self) -&gt; None:
         &#34;&#34;&#34;Loads and computes the properties of ALL the datasets.
 
         Returns:
@@ -2133,18 +2135,19 @@ DCR_run.results_df .</p></div>
                         module=module,
                         channel=channel)
 
-                    self.results_df = pd.concat([self.results_df, _ds_results],
-                                                ignore_index=True)
+                    self.results_df = pd.concat(
+                        [self.results_df, _ds_results],  # type: ignore
+                        ignore_index=True)
 
         datetime.now()
 
     def save_results(self, custom_name) -&gt; None:
         &#34;&#34;&#34;Save dataframe of results to a hdf5 file. Saved files go to 
-        %s.
+        self.analysis_path.
 
         Args:
             name (str): name to give the file (without extension).
-        &#34;&#34;&#34; %self.analysis_path
+        &#34;&#34;&#34;
         assert isinstance(self.results_df, pd.DataFrame), (&#34;Trying to save &#34;
             &#34;results that do not exist in the object, c&#39;mon, you know better.&#34;)
         assert len(self.results_df) &gt; 0, (&#34;Results df is empty, please compute&#34;
@@ -2228,7 +2231,7 @@ methods.</p>
 </details>
 </dd>
 <dt id="pylars.analysis.darkcount.DCR_run.compute_properties_of_run"><code class="name flex">
-<span>def <span class="ident">compute_properties_of_run</span></span>(<span>self) ‑> pandas.core.frame.DataFrame</span>
+<span>def <span class="ident">compute_properties_of_run</span></span>(<span>self) ‑> NoneType</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Loads and computes the properties of ALL the datasets.</p>
@@ -2241,7 +2244,7 @@ methods.</p>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def compute_properties_of_run(self) -&gt; pd.DataFrame:
+<pre><code class="python">def compute_properties_of_run(self) -&gt; None:
     &#34;&#34;&#34;Loads and computes the properties of ALL the datasets.
 
     Returns:
@@ -2260,8 +2263,9 @@ methods.</p>
                     module=module,
                     channel=channel)
 
-                self.results_df = pd.concat([self.results_df, _ds_results],
-                                            ignore_index=True)
+                self.results_df = pd.concat(
+                    [self.results_df, _ds_results],  # type: ignore
+                    ignore_index=True)
 
     datetime.now()</code></pre>
 </details>
@@ -2326,24 +2330,24 @@ Defaults to 12*12.</dd>
 </details>
 </dd>
 <dt id="pylars.analysis.darkcount.DCR_run.get_run_temperatures"><code class="name flex">
-<span>def <span class="ident">get_run_temperatures</span></span>(<span>self) ‑> <built-in function array></span>
+<span>def <span class="ident">get_run_temperatures</span></span>(<span>self) ‑> numpy.ndarray</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Get all the temperatures available in the DCR run.</p>
 <h2 id="returns">Returns</h2>
 <dl>
-<dt><code>np.array</code></dt>
+<dt><code>np.ndarray</code></dt>
 <dd>array with all the available temperatures.</dd>
 </dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def get_run_temperatures(self) -&gt; np.array:
+<pre><code class="python">def get_run_temperatures(self) -&gt; np.ndarray:
     &#34;&#34;&#34;Get all the temperatures available in the DCR run.
 
     Returns:
-        np.array: array with all the available temperatures.
+        np.ndarray: array with all the available temperatures.
     &#34;&#34;&#34;
     temp_list = np.unique(self.datasets[&#39;temp&#39;])
 
@@ -2498,18 +2502,24 @@ Define it with self.channel_map = dict(mod:[ch#,&hellip;],&hellip;)</p>
 <span>def <span class="ident">save_results</span></span>(<span>self, custom_name) ‑> NoneType</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Save dataframe of results to a hdf5 file. Saved files go to
+self.analysis_path.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>name</code></strong> :&ensp;<code>str</code></dt>
+<dd>name to give the file (without extension).</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def save_results(self, custom_name) -&gt; None:
     &#34;&#34;&#34;Save dataframe of results to a hdf5 file. Saved files go to 
-    %s.
+    self.analysis_path.
 
     Args:
         name (str): name to give the file (without extension).
-    &#34;&#34;&#34; %self.analysis_path
+    &#34;&#34;&#34;
     assert isinstance(self.results_df, pd.DataFrame), (&#34;Trying to save &#34;
         &#34;results that do not exist in the object, c&#39;mon, you know better.&#34;)
     assert len(self.results_df) &gt; 0, (&#34;Results df is empty, please compute&#34;

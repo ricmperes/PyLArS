@@ -53,7 +53,7 @@ class simple_processor():
         self.show_loadbar_channel = True
         self.show_tqdm_channel = True
 
-    def __hash__(self) -&gt; int:
+    def __hash__(self) -&gt; str:
         return self.hash
 
     def set_tqdm_channel(self, bar: bool, show: bool):
@@ -257,7 +257,7 @@ class run_processor(simple_processor):
             # #print(
             #    f&#39;No datasets found on run with kind = {kind}, &#39;
             #    f&#39;voltage = {vbias} and temperature = {temp}.&#39;)
-            return None
+            return pd.DataFrame({})
 
         print(
             f&#39;Found {len(datasets_to_process)} datasets. &#39;
@@ -390,7 +390,7 @@ conditions but with the same setup.</p>
             # #print(
             #    f&#39;No datasets found on run with kind = {kind}, &#39;
             #    f&#39;voltage = {vbias} and temperature = {temp}.&#39;)
-            return None
+            return pd.DataFrame({})
 
         print(
             f&#39;Found {len(datasets_to_process)} datasets. &#39;
@@ -499,7 +499,7 @@ of the pulse.</p></div>
         # #print(
         #    f&#39;No datasets found on run with kind = {kind}, &#39;
         #    f&#39;voltage = {vbias} and temperature = {temp}.&#39;)
-        return None
+        return pd.DataFrame({})
 
     print(
         f&#39;Found {len(datasets_to_process)} datasets. &#39;
@@ -600,7 +600,7 @@ of the pulse.</p></div>
         self.show_loadbar_channel = True
         self.show_tqdm_channel = True
 
-    def __hash__(self) -&gt; int:
+    def __hash__(self) -&gt; str:
         return self.hash
 
     def set_tqdm_channel(self, bar: bool, show: bool):

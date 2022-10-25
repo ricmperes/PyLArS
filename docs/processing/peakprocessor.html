@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.9.2" />
-<title>pylars.processing.peaksprocessor API documentation</title>
+<title>pylars.processing.peakprocessor API documentation</title>
 <meta name="description" content="" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
@@ -19,7 +19,7 @@
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>pylars.processing.peaksprocessor</code></h1>
+<h1 class="title">Module <code>pylars.processing.peakprocessor</code></h1>
 </header>
 <section id="section-intro">
 <details class="source">
@@ -46,6 +46,9 @@ class peak_processor():
     version = &#39;0.0.1&#39;
     processing_method = &#39;peaks_simple&#39;
 
+    # for run6
+    index_reorder_data_to_layout = [ 9, 4, 5, 6, 11, 10, 8, 0, 2, 3, 7, 1]
+
     def __init__(self, sigma_level: float, baseline_samples: int, 
                  gains_tag: str , gains_path: str) -&gt; None:
 
@@ -69,14 +72,14 @@ class peak_processor():
         &#34;&#34;&#34;Dictionary of gains [e/pe] for each channel.
         &#34;&#34;&#34;
 
-    def __hash__(self) -&gt; int:
+    def __hash__(self) -&gt; str:
         return self.hash
 
-    def load_gains(self) -&gt; np.array:
+    def load_gains(self) -&gt; np.ndarray:
         &#34;&#34;&#34;Load gains of photosensors based on the defined path and tag.
 
         Returns:
-            np.array: array with channel gains [e/pe]) in ascending order (mo
+            np.ndarray: array with channel gains [e/pe]) in ascending order (mo
                 dule-&gt;channel) 
         &#34;&#34;&#34;
 
@@ -94,7 +97,7 @@ class peak_processor():
                               names=[&#39;module&#39;, &#39;channel&#39;,&#39;gain&#39;])
         gain_df = gain_df.sort_values([&#39;module&#39;,&#39;channel&#39;], ignore_index=True)
 
-        return gain_df[&#39;gain&#39;].values
+        return np.array(gain_df[&#39;gain&#39;])
 
     def set_tqdm_channel(self, bar: bool, show: bool):
         &#34;&#34;&#34;Change the tqdm config
@@ -117,16 +120,16 @@ class peak_processor():
 
         self.ADC_config = load_ADC_config(model, F_amp)
 
-    def process_waveform_set(self, waveforms:np.array):
+    def process_waveform_set(self, waveforms:np.ndarray):
         &#34;&#34;&#34;Process an array of waveforms from all channels.
 
-        The waveforms are asusmed to be synchronized and each row of the 
+        The waveforms are assumed to be synchronized and each row of the 
         array is a channel. Once a summed waveform is formed, uses the same
         functions as the pulse processing to find peaks and compute its
         properties.
 
         Args:
-            waveforms (np.array): waveforms of all channels stacked.
+            waveforms (np.ndarray): waveforms of all channels stacked.
         &#34;&#34;&#34;
 
         baselines = np.apply_along_axis(
@@ -141,6 +144,8 @@ class peak_processor():
 
         areas, lengths, positions, amplitudes = waveform_processing.process_waveform(
                     sum_waveform, self.baseline_samples, self.sigma_level)
+
+        return areas, lengths, positions, amplitudes
 
 
 
@@ -159,106 +164,7 @@ class peak_processor():
         raw.load_root()
         raw.get_available_channels()
 
-        self.raw_data = raw
-
-    # Processing functions
-    def process_channel(self, ch: str) -&gt; dict:
-        &#34;&#34;&#34;Process a channel by iterating over all its waveforms, running
-    the pulse finding algorithm and the calculating the following pulse
-    properties: areas, lengths, positions and amplitudes.
-
-        Args:
-            ch (str): channel name as in the ROOT file.
-        In files from DAQ_zero/XenoDAQ these will be &#39;wf#&#39; with # the
-        number of the channel [0,7]
-
-        Raises:
-            AssertionError: if the requested channel
-        is not available on the raw file.
-            AssertionError: if the there was a problem
-        in the processing of a waveform
-
-        Returns:
-            dict: Dictionary of keys module, channel, wf_number
-        area, length, position where the values are lists (order
-        matters) of the processed waveforms.
-        &#34;&#34;&#34;
-        if ch not in self.raw_data.channels:
-            raise AssertionError(
-                f&#39;The requested channel is not available. &#39;
-                f&#39;Loaded channels:{self.raw_data.channels}&#39;)
-
-        module = self.raw_data.module
-        channel_data = self.raw_data.get_channel_data(ch)
-        # converted before to np to speed up ahead
-        #channel_data = np.array(channel_data)
-        results = {&#39;module&#39;: [],
-                   &#39;channel&#39;: [],
-                   &#39;wf_number&#39;: [],
-                   &#39;pulse_number&#39;: [],
-                   &#39;area&#39;: [],
-                   &#39;length&#39;: [],
-                   &#39;position&#39;: [],
-                   &#39;amplitude&#39;: [],
-                   }
-        if self.show_loadbar_channel:
-            total = len(channel_data)
-        else:
-            total = None
-
-        for i, _waveform in tqdm(enumerate(channel_data),
-                                 disable=(not self.show_tqdm_channel),
-                                 total=total,
-                                 desc=(f&#39;Processing module {module} &#39;
-                                       f&#39;channel {ch}&#39;)
-                                 ):
-            try:
-                areas, lengths, positions, amplitudes = waveform_processing.process_waveform(
-                    _waveform, self.baseline_samples, self.sigma_level)
-
-                assert len(areas) == len(positions) == len(
-                    lengths) == len(amplitudes)
-
-                # check if any pulses were found
-                if len(areas) == 0:
-                    continue
-
-                module_number = [module] * len(areas)
-                ch_name = [ch] * len(areas)
-                wf_number = np.ones(len(areas), dtype=int) * i
-                pulse_number = np.arange(len(areas))
-
-                results[&#39;module&#39;] += module_number
-                results[&#39;channel&#39;] += ch_name
-                results[&#39;wf_number&#39;] += list(wf_number)
-                results[&#39;pulse_number&#39;] += list(pulse_number)
-                results[&#39;area&#39;] += list(areas)
-                results[&#39;length&#39;] += list(lengths)
-                results[&#39;position&#39;] += list(positions)
-                results[&#39;amplitude&#39;] += list(amplitudes)
-
-            except Exception:
-                raise AssertionError(
-                    &#39;Ups! There was a problem on iteration number: &#39;, i)
-
-        return results
-
-    def process_all_channels(self) -&gt; pd.DataFrame:
-        &#34;&#34;&#34;Calls the process_channel method of each of
-        the available channels in the dataset.
-
-        Returns:
-            pd.DataFrame: Results for all the channels of a dataset.
-        &#34;&#34;&#34;
-        channels_to_process = self.raw_data.channels
-        results_list = [pd.DataFrame(self.process_channel(
-            _channel)) for _channel in channels_to_process]
-        results_df = pd.concat(results_list, ignore_index=True)
-
-        return results_df
-
-    def purge_processor(self):
-        del self.raw_data</code></pre>
+        self.raw_data = raw</code></pre>
 </details>
 </section>
 <section>
@@ -270,7 +176,7 @@ class peak_processor():
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt id="pylars.processing.peaksprocessor.peak_processor"><code class="flex name class">
+<dt id="pylars.processing.peakprocessor.peak_processor"><code class="flex name class">
 <span>class <span class="ident">peak_processor</span></span>
 <span>(</span><span>sigma_level: float, baseline_samples: int, gains_tag: str, gains_path: str)</span>
 </code></dt>
@@ -292,6 +198,9 @@ channels in the photosensor array.</p></div>
     version = &#39;0.0.1&#39;
     processing_method = &#39;peaks_simple&#39;
 
+    # for run6
+    index_reorder_data_to_layout = [ 9, 4, 5, 6, 11, 10, 8, 0, 2, 3, 7, 1]
+
     def __init__(self, sigma_level: float, baseline_samples: int, 
                  gains_tag: str , gains_path: str) -&gt; None:
 
@@ -315,14 +224,14 @@ channels in the photosensor array.</p></div>
         &#34;&#34;&#34;Dictionary of gains [e/pe] for each channel.
         &#34;&#34;&#34;
 
-    def __hash__(self) -&gt; int:
+    def __hash__(self) -&gt; str:
         return self.hash
 
-    def load_gains(self) -&gt; np.array:
+    def load_gains(self) -&gt; np.ndarray:
         &#34;&#34;&#34;Load gains of photosensors based on the defined path and tag.
 
         Returns:
-            np.array: array with channel gains [e/pe]) in ascending order (mo
+            np.ndarray: array with channel gains [e/pe]) in ascending order (mo
                 dule-&gt;channel) 
         &#34;&#34;&#34;
 
@@ -340,7 +249,7 @@ channels in the photosensor array.</p></div>
                               names=[&#39;module&#39;, &#39;channel&#39;,&#39;gain&#39;])
         gain_df = gain_df.sort_values([&#39;module&#39;,&#39;channel&#39;], ignore_index=True)
 
-        return gain_df[&#39;gain&#39;].values
+        return np.array(gain_df[&#39;gain&#39;])
 
     def set_tqdm_channel(self, bar: bool, show: bool):
         &#34;&#34;&#34;Change the tqdm config
@@ -363,16 +272,16 @@ channels in the photosensor array.</p></div>
 
         self.ADC_config = load_ADC_config(model, F_amp)
 
-    def process_waveform_set(self, waveforms:np.array):
+    def process_waveform_set(self, waveforms:np.ndarray):
         &#34;&#34;&#34;Process an array of waveforms from all channels.
 
-        The waveforms are asusmed to be synchronized and each row of the 
+        The waveforms are assumed to be synchronized and each row of the 
         array is a channel. Once a summed waveform is formed, uses the same
         functions as the pulse processing to find peaks and compute its
         properties.
 
         Args:
-            waveforms (np.array): waveforms of all channels stacked.
+            waveforms (np.ndarray): waveforms of all channels stacked.
         &#34;&#34;&#34;
 
         baselines = np.apply_along_axis(
@@ -387,6 +296,8 @@ channels in the photosensor array.</p></div>
 
         areas, lengths, positions, amplitudes = waveform_processing.process_waveform(
                     sum_waveform, self.baseline_samples, self.sigma_level)
+
+        return areas, lengths, positions, amplitudes
 
 
 
@@ -405,125 +316,30 @@ channels in the photosensor array.</p></div>
         raw.load_root()
         raw.get_available_channels()
 
-        self.raw_data = raw
-
-    # Processing functions
-    def process_channel(self, ch: str) -&gt; dict:
-        &#34;&#34;&#34;Process a channel by iterating over all its waveforms, running
-    the pulse finding algorithm and the calculating the following pulse
-    properties: areas, lengths, positions and amplitudes.
-
-        Args:
-            ch (str): channel name as in the ROOT file.
-        In files from DAQ_zero/XenoDAQ these will be &#39;wf#&#39; with # the
-        number of the channel [0,7]
-
-        Raises:
-            AssertionError: if the requested channel
-        is not available on the raw file.
-            AssertionError: if the there was a problem
-        in the processing of a waveform
-
-        Returns:
-            dict: Dictionary of keys module, channel, wf_number
-        area, length, position where the values are lists (order
-        matters) of the processed waveforms.
-        &#34;&#34;&#34;
-        if ch not in self.raw_data.channels:
-            raise AssertionError(
-                f&#39;The requested channel is not available. &#39;
-                f&#39;Loaded channels:{self.raw_data.channels}&#39;)
-
-        module = self.raw_data.module
-        channel_data = self.raw_data.get_channel_data(ch)
-        # converted before to np to speed up ahead
-        #channel_data = np.array(channel_data)
-        results = {&#39;module&#39;: [],
-                   &#39;channel&#39;: [],
-                   &#39;wf_number&#39;: [],
-                   &#39;pulse_number&#39;: [],
-                   &#39;area&#39;: [],
-                   &#39;length&#39;: [],
-                   &#39;position&#39;: [],
-                   &#39;amplitude&#39;: [],
-                   }
-        if self.show_loadbar_channel:
-            total = len(channel_data)
-        else:
-            total = None
-
-        for i, _waveform in tqdm(enumerate(channel_data),
-                                 disable=(not self.show_tqdm_channel),
-                                 total=total,
-                                 desc=(f&#39;Processing module {module} &#39;
-                                       f&#39;channel {ch}&#39;)
-                                 ):
-            try:
-                areas, lengths, positions, amplitudes = waveform_processing.process_waveform(
-                    _waveform, self.baseline_samples, self.sigma_level)
-
-                assert len(areas) == len(positions) == len(
-                    lengths) == len(amplitudes)
-
-                # check if any pulses were found
-                if len(areas) == 0:
-                    continue
-
-                module_number = [module] * len(areas)
-                ch_name = [ch] * len(areas)
-                wf_number = np.ones(len(areas), dtype=int) * i
-                pulse_number = np.arange(len(areas))
-
-                results[&#39;module&#39;] += module_number
-                results[&#39;channel&#39;] += ch_name
-                results[&#39;wf_number&#39;] += list(wf_number)
-                results[&#39;pulse_number&#39;] += list(pulse_number)
-                results[&#39;area&#39;] += list(areas)
-                results[&#39;length&#39;] += list(lengths)
-                results[&#39;position&#39;] += list(positions)
-                results[&#39;amplitude&#39;] += list(amplitudes)
-
-            except Exception:
-                raise AssertionError(
-                    &#39;Ups! There was a problem on iteration number: &#39;, i)
-
-        return results
-
-    def process_all_channels(self) -&gt; pd.DataFrame:
-        &#34;&#34;&#34;Calls the process_channel method of each of
-        the available channels in the dataset.
-
-        Returns:
-            pd.DataFrame: Results for all the channels of a dataset.
-        &#34;&#34;&#34;
-        channels_to_process = self.raw_data.channels
-        results_list = [pd.DataFrame(self.process_channel(
-            _channel)) for _channel in channels_to_process]
-        results_df = pd.concat(results_list, ignore_index=True)
-
-        return results_df
-
-    def purge_processor(self):
-        del self.raw_data</code></pre>
+        self.raw_data = raw</code></pre>
 </details>
 <h3>Class variables</h3>
 <dl>
-<dt id="pylars.processing.peaksprocessor.peak_processor.processing_method"><code class="name">var <span class="ident">processing_method</span></code></dt>
+<dt id="pylars.processing.peakprocessor.peak_processor.index_reorder_data_to_layout"><code class="name">var <span class="ident">index_reorder_data_to_layout</span></code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
-<dt id="pylars.processing.peaksprocessor.peak_processor.version"><code class="name">var <span class="ident">version</span></code></dt>
+<dt id="pylars.processing.peakprocessor.peak_processor.processing_method"><code class="name">var <span class="ident">processing_method</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="pylars.processing.peakprocessor.peak_processor.version"><code class="name">var <span class="ident">version</span></code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
 </dl>
 <h3>Instance variables</h3>
 <dl>
-<dt id="pylars.processing.peaksprocessor.peak_processor.gains"><code class="name">var <span class="ident">gains</span></code></dt>
+<dt id="pylars.processing.peakprocessor.peak_processor.gains"><code class="name">var <span class="ident">gains</span></code></dt>
 <dd>
 <div class="desc"><p>Dictionary of gains [e/pe] for each channel.</p></div>
 </dd>
-<dt id="pylars.processing.peaksprocessor.peak_processor.gains_path"><code class="name">var <span class="ident">gains_path</span></code></dt>
+<dt id="pylars.processing.peakprocessor.peak_processor.gains_path"><code class="name">var <span class="ident">gains_path</span></code></dt>
 <dd>
 <div class="desc"><p>Path to where the gains are saved. </p>
 <p>In the future this should be defined in a config file.</p></div>
@@ -531,7 +347,7 @@ channels in the photosensor array.</p></div>
 </dl>
 <h3>Methods</h3>
 <dl>
-<dt id="pylars.processing.peaksprocessor.peak_processor.define_ADC_config"><code class="name flex">
+<dt id="pylars.processing.peakprocessor.peak_processor.define_ADC_config"><code class="name flex">
 <span>def <span class="ident">define_ADC_config</span></span>(<span>self, F_amp: float, model: str = 'v1724') ‑> NoneType</span>
 </code></dt>
 <dd>
@@ -556,14 +372,14 @@ external amplification on the rack).</p></div>
     self.ADC_config = load_ADC_config(model, F_amp)</code></pre>
 </details>
 </dd>
-<dt id="pylars.processing.peaksprocessor.peak_processor.load_gains"><code class="name flex">
-<span>def <span class="ident">load_gains</span></span>(<span>self) ‑> <built-in function array></span>
+<dt id="pylars.processing.peakprocessor.peak_processor.load_gains"><code class="name flex">
+<span>def <span class="ident">load_gains</span></span>(<span>self) ‑> numpy.ndarray</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Load gains of photosensors based on the defined path and tag.</p>
 <h2 id="returns">Returns</h2>
 <dl>
-<dt><code>np.array</code></dt>
+<dt><code>np.ndarray</code></dt>
 <dd>array with channel gains [e/pe]) in ascending order (mo
 dule-&gt;channel)</dd>
 </dl></div>
@@ -571,11 +387,11 @@ dule-&gt;channel)</dd>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def load_gains(self) -&gt; np.array:
+<pre><code class="python">def load_gains(self) -&gt; np.ndarray:
     &#34;&#34;&#34;Load gains of photosensors based on the defined path and tag.
 
     Returns:
-        np.array: array with channel gains [e/pe]) in ascending order (mo
+        np.ndarray: array with channel gains [e/pe]) in ascending order (mo
             dule-&gt;channel) 
     &#34;&#34;&#34;
 
@@ -593,10 +409,10 @@ dule-&gt;channel)</dd>
                           names=[&#39;module&#39;, &#39;channel&#39;,&#39;gain&#39;])
     gain_df = gain_df.sort_values([&#39;module&#39;,&#39;channel&#39;], ignore_index=True)
 
-    return gain_df[&#39;gain&#39;].values</code></pre>
+    return np.array(gain_df[&#39;gain&#39;])</code></pre>
 </details>
 </dd>
-<dt id="pylars.processing.peaksprocessor.peak_processor.load_raw_data"><code class="name flex">
+<dt id="pylars.processing.peakprocessor.peak_processor.load_raw_data"><code class="name flex">
 <span>def <span class="ident">load_raw_data</span></span>(<span>self, path_to_raw: str, V: float, T: float, module: int)</span>
 </code></dt>
 <dd>
@@ -637,173 +453,34 @@ dule-&gt;channel)</dd>
     self.raw_data = raw</code></pre>
 </details>
 </dd>
-<dt id="pylars.processing.peaksprocessor.peak_processor.process_all_channels"><code class="name flex">
-<span>def <span class="ident">process_all_channels</span></span>(<span>self) ‑> pandas.core.frame.DataFrame</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Calls the process_channel method of each of
-the available channels in the dataset.</p>
-<h2 id="returns">Returns</h2>
-<dl>
-<dt><code>pd.DataFrame</code></dt>
-<dd>Results for all the channels of a dataset.</dd>
-</dl></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def process_all_channels(self) -&gt; pd.DataFrame:
-    &#34;&#34;&#34;Calls the process_channel method of each of
-    the available channels in the dataset.
-
-    Returns:
-        pd.DataFrame: Results for all the channels of a dataset.
-    &#34;&#34;&#34;
-    channels_to_process = self.raw_data.channels
-    results_list = [pd.DataFrame(self.process_channel(
-        _channel)) for _channel in channels_to_process]
-    results_df = pd.concat(results_list, ignore_index=True)
-
-    return results_df</code></pre>
-</details>
-</dd>
-<dt id="pylars.processing.peaksprocessor.peak_processor.process_channel"><code class="name flex">
-<span>def <span class="ident">process_channel</span></span>(<span>self, ch: str) ‑> dict</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Process a channel by iterating over all its waveforms, running
-the pulse finding algorithm and the calculating the following pulse
-properties: areas, lengths, positions and amplitudes.</p>
-<pre><code>Args:
-    ch (str): channel name as in the ROOT file.
-In files from DAQ_zero/XenoDAQ these will be 'wf#' with # the
-number of the channel [0,7]
-
-Raises:
-    AssertionError: if the requested channel
-is not available on the raw file.
-    AssertionError: if the there was a problem
-in the processing of a waveform
-
-Returns:
-    dict: Dictionary of keys module, channel, wf_number
-area, length, position where the values are lists (order
-matters) of the processed waveforms.
-</code></pre></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def process_channel(self, ch: str) -&gt; dict:
-    &#34;&#34;&#34;Process a channel by iterating over all its waveforms, running
-the pulse finding algorithm and the calculating the following pulse
-properties: areas, lengths, positions and amplitudes.
-
-    Args:
-        ch (str): channel name as in the ROOT file.
-    In files from DAQ_zero/XenoDAQ these will be &#39;wf#&#39; with # the
-    number of the channel [0,7]
-
-    Raises:
-        AssertionError: if the requested channel
-    is not available on the raw file.
-        AssertionError: if the there was a problem
-    in the processing of a waveform
-
-    Returns:
-        dict: Dictionary of keys module, channel, wf_number
-    area, length, position where the values are lists (order
-    matters) of the processed waveforms.
-    &#34;&#34;&#34;
-    if ch not in self.raw_data.channels:
-        raise AssertionError(
-            f&#39;The requested channel is not available. &#39;
-            f&#39;Loaded channels:{self.raw_data.channels}&#39;)
-
-    module = self.raw_data.module
-    channel_data = self.raw_data.get_channel_data(ch)
-    # converted before to np to speed up ahead
-    #channel_data = np.array(channel_data)
-    results = {&#39;module&#39;: [],
-               &#39;channel&#39;: [],
-               &#39;wf_number&#39;: [],
-               &#39;pulse_number&#39;: [],
-               &#39;area&#39;: [],
-               &#39;length&#39;: [],
-               &#39;position&#39;: [],
-               &#39;amplitude&#39;: [],
-               }
-    if self.show_loadbar_channel:
-        total = len(channel_data)
-    else:
-        total = None
-
-    for i, _waveform in tqdm(enumerate(channel_data),
-                             disable=(not self.show_tqdm_channel),
-                             total=total,
-                             desc=(f&#39;Processing module {module} &#39;
-                                   f&#39;channel {ch}&#39;)
-                             ):
-        try:
-            areas, lengths, positions, amplitudes = waveform_processing.process_waveform(
-                _waveform, self.baseline_samples, self.sigma_level)
-
-            assert len(areas) == len(positions) == len(
-                lengths) == len(amplitudes)
-
-            # check if any pulses were found
-            if len(areas) == 0:
-                continue
-
-            module_number = [module] * len(areas)
-            ch_name = [ch] * len(areas)
-            wf_number = np.ones(len(areas), dtype=int) * i
-            pulse_number = np.arange(len(areas))
-
-            results[&#39;module&#39;] += module_number
-            results[&#39;channel&#39;] += ch_name
-            results[&#39;wf_number&#39;] += list(wf_number)
-            results[&#39;pulse_number&#39;] += list(pulse_number)
-            results[&#39;area&#39;] += list(areas)
-            results[&#39;length&#39;] += list(lengths)
-            results[&#39;position&#39;] += list(positions)
-            results[&#39;amplitude&#39;] += list(amplitudes)
-
-        except Exception:
-            raise AssertionError(
-                &#39;Ups! There was a problem on iteration number: &#39;, i)
-
-    return results</code></pre>
-</details>
-</dd>
-<dt id="pylars.processing.peaksprocessor.peak_processor.process_waveform_set"><code class="name flex">
-<span>def <span class="ident">process_waveform_set</span></span>(<span>self, waveforms: <built-in function array>)</span>
+<dt id="pylars.processing.peakprocessor.peak_processor.process_waveform_set"><code class="name flex">
+<span>def <span class="ident">process_waveform_set</span></span>(<span>self, waveforms: numpy.ndarray)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Process an array of waveforms from all channels.</p>
-<p>The waveforms are asusmed to be synchronized and each row of the
+<p>The waveforms are assumed to be synchronized and each row of the
 array is a channel. Once a summed waveform is formed, uses the same
 functions as the pulse processing to find peaks and compute its
 properties.</p>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>waveforms</code></strong> :&ensp;<code>np.array</code></dt>
+<dt><strong><code>waveforms</code></strong> :&ensp;<code>np.ndarray</code></dt>
 <dd>waveforms of all channels stacked.</dd>
 </dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def process_waveform_set(self, waveforms:np.array):
+<pre><code class="python">def process_waveform_set(self, waveforms:np.ndarray):
     &#34;&#34;&#34;Process an array of waveforms from all channels.
 
-    The waveforms are asusmed to be synchronized and each row of the 
+    The waveforms are assumed to be synchronized and each row of the 
     array is a channel. Once a summed waveform is formed, uses the same
     functions as the pulse processing to find peaks and compute its
     properties.
 
     Args:
-        waveforms (np.array): waveforms of all channels stacked.
+        waveforms (np.ndarray): waveforms of all channels stacked.
     &#34;&#34;&#34;
 
     baselines = np.apply_along_axis(
@@ -817,23 +494,12 @@ properties.</p>
     sum_waveform = peak_processing.get_sum_waveform(waveforms_pe)
 
     areas, lengths, positions, amplitudes = waveform_processing.process_waveform(
-                sum_waveform, self.baseline_samples, self.sigma_level)</code></pre>
+                sum_waveform, self.baseline_samples, self.sigma_level)
+
+    return areas, lengths, positions, amplitudes</code></pre>
 </details>
 </dd>
-<dt id="pylars.processing.peaksprocessor.peak_processor.purge_processor"><code class="name flex">
-<span>def <span class="ident">purge_processor</span></span>(<span>self)</span>
-</code></dt>
-<dd>
-<div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def purge_processor(self):
-    del self.raw_data</code></pre>
-</details>
-</dd>
-<dt id="pylars.processing.peaksprocessor.peak_processor.set_tqdm_channel"><code class="name flex">
+<dt id="pylars.processing.peakprocessor.peak_processor.set_tqdm_channel"><code class="name flex">
 <span>def <span class="ident">set_tqdm_channel</span></span>(<span>self, bar: bool, show: bool)</span>
 </code></dt>
 <dd>
@@ -879,20 +545,18 @@ properties.</p>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
-<h4><code><a title="pylars.processing.peaksprocessor.peak_processor" href="#pylars.processing.peaksprocessor.peak_processor">peak_processor</a></code></h4>
+<h4><code><a title="pylars.processing.peakprocessor.peak_processor" href="#pylars.processing.peakprocessor.peak_processor">peak_processor</a></code></h4>
 <ul class="">
-<li><code><a title="pylars.processing.peaksprocessor.peak_processor.define_ADC_config" href="#pylars.processing.peaksprocessor.peak_processor.define_ADC_config">define_ADC_config</a></code></li>
-<li><code><a title="pylars.processing.peaksprocessor.peak_processor.gains" href="#pylars.processing.peaksprocessor.peak_processor.gains">gains</a></code></li>
-<li><code><a title="pylars.processing.peaksprocessor.peak_processor.gains_path" href="#pylars.processing.peaksprocessor.peak_processor.gains_path">gains_path</a></code></li>
-<li><code><a title="pylars.processing.peaksprocessor.peak_processor.load_gains" href="#pylars.processing.peaksprocessor.peak_processor.load_gains">load_gains</a></code></li>
-<li><code><a title="pylars.processing.peaksprocessor.peak_processor.load_raw_data" href="#pylars.processing.peaksprocessor.peak_processor.load_raw_data">load_raw_data</a></code></li>
-<li><code><a title="pylars.processing.peaksprocessor.peak_processor.process_all_channels" href="#pylars.processing.peaksprocessor.peak_processor.process_all_channels">process_all_channels</a></code></li>
-<li><code><a title="pylars.processing.peaksprocessor.peak_processor.process_channel" href="#pylars.processing.peaksprocessor.peak_processor.process_channel">process_channel</a></code></li>
-<li><code><a title="pylars.processing.peaksprocessor.peak_processor.process_waveform_set" href="#pylars.processing.peaksprocessor.peak_processor.process_waveform_set">process_waveform_set</a></code></li>
-<li><code><a title="pylars.processing.peaksprocessor.peak_processor.processing_method" href="#pylars.processing.peaksprocessor.peak_processor.processing_method">processing_method</a></code></li>
-<li><code><a title="pylars.processing.peaksprocessor.peak_processor.purge_processor" href="#pylars.processing.peaksprocessor.peak_processor.purge_processor">purge_processor</a></code></li>
-<li><code><a title="pylars.processing.peaksprocessor.peak_processor.set_tqdm_channel" href="#pylars.processing.peaksprocessor.peak_processor.set_tqdm_channel">set_tqdm_channel</a></code></li>
-<li><code><a title="pylars.processing.peaksprocessor.peak_processor.version" href="#pylars.processing.peaksprocessor.peak_processor.version">version</a></code></li>
+<li><code><a title="pylars.processing.peakprocessor.peak_processor.define_ADC_config" href="#pylars.processing.peakprocessor.peak_processor.define_ADC_config">define_ADC_config</a></code></li>
+<li><code><a title="pylars.processing.peakprocessor.peak_processor.gains" href="#pylars.processing.peakprocessor.peak_processor.gains">gains</a></code></li>
+<li><code><a title="pylars.processing.peakprocessor.peak_processor.gains_path" href="#pylars.processing.peakprocessor.peak_processor.gains_path">gains_path</a></code></li>
+<li><code><a title="pylars.processing.peakprocessor.peak_processor.index_reorder_data_to_layout" href="#pylars.processing.peakprocessor.peak_processor.index_reorder_data_to_layout">index_reorder_data_to_layout</a></code></li>
+<li><code><a title="pylars.processing.peakprocessor.peak_processor.load_gains" href="#pylars.processing.peakprocessor.peak_processor.load_gains">load_gains</a></code></li>
+<li><code><a title="pylars.processing.peakprocessor.peak_processor.load_raw_data" href="#pylars.processing.peakprocessor.peak_processor.load_raw_data">load_raw_data</a></code></li>
+<li><code><a title="pylars.processing.peakprocessor.peak_processor.process_waveform_set" href="#pylars.processing.peakprocessor.peak_processor.process_waveform_set">process_waveform_set</a></code></li>
+<li><code><a title="pylars.processing.peakprocessor.peak_processor.processing_method" href="#pylars.processing.peakprocessor.peak_processor.processing_method">processing_method</a></code></li>
+<li><code><a title="pylars.processing.peakprocessor.peak_processor.set_tqdm_channel" href="#pylars.processing.peakprocessor.peak_processor.set_tqdm_channel">set_tqdm_channel</a></code></li>
+<li><code><a title="pylars.processing.peakprocessor.peak_processor.version" href="#pylars.processing.peakprocessor.peak_processor.version">version</a></code></li>
 </ul>
 </li>
 </ul>

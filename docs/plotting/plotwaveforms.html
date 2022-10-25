@@ -28,21 +28,21 @@
 </summary>
 <pre><code class="python">import numpy as np
 import matplotlib.pyplot as plt
+from typing import Optional
 
-
-def plot_waveform(waveform_array:np.array, full_y:bool=False,
+def plot_waveform(waveform_array:np.ndarray, full_y:bool=False,
                   full_x:bool=True, pe: bool = False,
-                  ax:plt.Axes=None) -&gt; plt.Axes:
+                  ax: Optional[plt.Axes] = None) -&gt; plt.Axes:
     &#34;&#34;&#34;Plot a waveform from its array.
 
     Args:
-        waveform_array (np.array): waveform array. Elements of the array
-    correspond to the sample of the waveform and its value the recorded ADC
-    counts.
+        waveform_array (np.ndarray): waveform array. Elements of the array
+            correspond to the sample of the waveform and its value the recorded ADC
+            counts.
         full_y (bool, optional): plot full range of ADC amplitude. Defaults
-    to False.
+            to False.
         full_x (bool, optional): plot full range of ADC samples. Defaults
-    to True.
+            to True.
         pe (bool, optional): parse that the waveform is in PE/s (for peaks). 
             Defaults to False.
         ax (plt.Axes, optional): axes to plot into. Defaults to None.
@@ -80,16 +80,16 @@ def plot_waveform(waveform_array:np.array, full_y:bool=False,
         ax.set_ylabel(&#39;PE/s&#39;)
     return ax
 
-def plot_pulses(waveform:np.array, pulse_list: list,
-                ax:plt.Axes=None) -&gt; plt.Axes:
+def plot_pulses(waveform:np.ndarray, pulse_list: list,
+                ax: Optional[plt.Axes] = None) -&gt; plt.Axes:
     &#34;&#34;&#34;Plot the identified pulses in a waveform. 
 
     Args:
-        waveform (np.array): waveform array. Elements of the array
-    correspond to the sample of the waveform and its value the recorded ADC
-    counts.
+        waveform (np.ndarray): waveform array. Elements of the array
+            correspond to the sample of the waveform and its value the recorded ADC
+            counts.
         pulse_list (list): list of pulses, as the output of
-    pulse_processing.find_pulses_simple.
+            pulse_processing.find_pulses_simple.
         ax (plt.Axes, optional): axes to plot into. Defaults to None.
 
     Returns:
@@ -116,20 +116,22 @@ def plot_pulses(waveform:np.array, pulse_list: list,
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
 <dt id="pylars.plotting.plotwaveforms.plot_pulses"><code class="name flex">
-<span>def <span class="ident">plot_pulses</span></span>(<span>waveform: <built-in function array>, pulse_list: list, ax: matplotlib.axes._axes.Axes = None) ‑> matplotlib.axes._axes.Axes</span>
+<span>def <span class="ident">plot_pulses</span></span>(<span>waveform: numpy.ndarray, pulse_list: list, ax: Union[matplotlib.axes._axes.Axes, NoneType] = None) ‑> matplotlib.axes._axes.Axes</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Plot the identified pulses in a waveform. </p>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>waveform</code></strong> :&ensp;<code>np.array</code></dt>
-<dd>waveform array. Elements of the array</dd>
+<dt><strong><code>waveform</code></strong> :&ensp;<code>np.ndarray</code></dt>
+<dd>waveform array. Elements of the array
+correspond to the sample of the waveform and its value the recorded ADC
+counts.</dd>
+<dt><strong><code>pulse_list</code></strong> :&ensp;<code>list</code></dt>
+<dd>list of pulses, as the output of
+pulse_processing.find_pulses_simple.</dd>
+<dt><strong><code>ax</code></strong> :&ensp;<code>plt.Axes</code>, optional</dt>
+<dd>axes to plot into. Defaults to None.</dd>
 </dl>
-<p>correspond to the sample of the waveform and its value the recorded ADC
-counts.
-pulse_list (list): list of pulses, as the output of
-pulse_processing.find_pulses_simple.
-ax (plt.Axes, optional): axes to plot into. Defaults to None.</p>
 <h2 id="returns">Returns</h2>
 <dl>
 <dt><code>plt.Axes</code></dt>
@@ -139,16 +141,16 @@ ax (plt.Axes, optional): axes to plot into. Defaults to None.</p>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def plot_pulses(waveform:np.array, pulse_list: list,
-                ax:plt.Axes=None) -&gt; plt.Axes:
+<pre><code class="python">def plot_pulses(waveform:np.ndarray, pulse_list: list,
+                ax: Optional[plt.Axes] = None) -&gt; plt.Axes:
     &#34;&#34;&#34;Plot the identified pulses in a waveform. 
 
     Args:
-        waveform (np.array): waveform array. Elements of the array
-    correspond to the sample of the waveform and its value the recorded ADC
-    counts.
+        waveform (np.ndarray): waveform array. Elements of the array
+            correspond to the sample of the waveform and its value the recorded ADC
+            counts.
         pulse_list (list): list of pulses, as the output of
-    pulse_processing.find_pulses_simple.
+            pulse_processing.find_pulses_simple.
         ax (plt.Axes, optional): axes to plot into. Defaults to None.
 
     Returns:
@@ -167,24 +169,28 @@ ax (plt.Axes, optional): axes to plot into. Defaults to None.</p>
 </details>
 </dd>
 <dt id="pylars.plotting.plotwaveforms.plot_waveform"><code class="name flex">
-<span>def <span class="ident">plot_waveform</span></span>(<span>waveform_array: <built-in function array>, full_y: bool = False, full_x: bool = True, pe: bool = False, ax: matplotlib.axes._axes.Axes = None) ‑> matplotlib.axes._axes.Axes</span>
+<span>def <span class="ident">plot_waveform</span></span>(<span>waveform_array: numpy.ndarray, full_y: bool = False, full_x: bool = True, pe: bool = False, ax: Union[matplotlib.axes._axes.Axes, NoneType] = None) ‑> matplotlib.axes._axes.Axes</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Plot a waveform from its array.</p>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>waveform_array</code></strong> :&ensp;<code>np.array</code></dt>
-<dd>waveform array. Elements of the array</dd>
+<dt><strong><code>waveform_array</code></strong> :&ensp;<code>np.ndarray</code></dt>
+<dd>waveform array. Elements of the array
+correspond to the sample of the waveform and its value the recorded ADC
+counts.</dd>
+<dt><strong><code>full_y</code></strong> :&ensp;<code>bool</code>, optional</dt>
+<dd>plot full range of ADC amplitude. Defaults
+to False.</dd>
+<dt><strong><code>full_x</code></strong> :&ensp;<code>bool</code>, optional</dt>
+<dd>plot full range of ADC samples. Defaults
+to True.</dd>
+<dt><strong><code>pe</code></strong> :&ensp;<code>bool</code>, optional</dt>
+<dd>parse that the waveform is in PE/s (for peaks).
+Defaults to False.</dd>
+<dt><strong><code>ax</code></strong> :&ensp;<code>plt.Axes</code>, optional</dt>
+<dd>axes to plot into. Defaults to None.</dd>
 </dl>
-<p>correspond to the sample of the waveform and its value the recorded ADC
-counts.
-full_y (bool, optional): plot full range of ADC amplitude. Defaults
-to False.
-full_x (bool, optional): plot full range of ADC samples. Defaults
-to True.
-pe (bool, optional): parse that the waveform is in PE/s (for peaks).
-Defaults to False.
-ax (plt.Axes, optional): axes to plot into. Defaults to None.</p>
 <h2 id="returns">Returns</h2>
 <dl>
 <dt><code>plt.Axes</code></dt>
@@ -194,19 +200,19 @@ ax (plt.Axes, optional): axes to plot into. Defaults to None.</p>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def plot_waveform(waveform_array:np.array, full_y:bool=False,
+<pre><code class="python">def plot_waveform(waveform_array:np.ndarray, full_y:bool=False,
                   full_x:bool=True, pe: bool = False,
-                  ax:plt.Axes=None) -&gt; plt.Axes:
+                  ax: Optional[plt.Axes] = None) -&gt; plt.Axes:
     &#34;&#34;&#34;Plot a waveform from its array.
 
     Args:
-        waveform_array (np.array): waveform array. Elements of the array
-    correspond to the sample of the waveform and its value the recorded ADC
-    counts.
+        waveform_array (np.ndarray): waveform array. Elements of the array
+            correspond to the sample of the waveform and its value the recorded ADC
+            counts.
         full_y (bool, optional): plot full range of ADC amplitude. Defaults
-    to False.
+            to False.
         full_x (bool, optional): plot full range of ADC samples. Defaults
-    to True.
+            to True.
         pe (bool, optional): parse that the waveform is in PE/s (for peaks). 
             Defaults to False.
         ax (plt.Axes, optional): axes to plot into. Defaults to None.

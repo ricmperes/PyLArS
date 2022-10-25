@@ -28,6 +28,7 @@
 </summary>
 <pre><code class="python">import numpy as np
 import numba as nb
+from typing import Tuple, List
 
 class peak_processing():
     &#34;&#34;&#34;All the things peaks. Peaks are sums of pulses found in waveforms.
@@ -36,10 +37,14 @@ class peak_processing():
     to peak processing to be used in `peakprocessor`, where a processor 
     object is then constructed.
     &#34;&#34;&#34;       
+    
+    __version__ = &#39;0.0.1&#39;
+
+    available_posrec_algos = [&#39;CoG&#39;]
 
     @classmethod
-    def apply_ADCcounts_to_e(cls, waveforms_subtracted: np.array, 
-                             ADC_config: dict) -&gt; np.array:
+    def apply_ADCcounts_to_e(cls, waveforms_subtracted: np.ndarray, 
+                             ADC_config: dict) -&gt; np.ndarray:
         &#34;&#34;&#34;Convert ADC counts/sample to charge.
 
         Applies the charge converting factor to waveforms to turn ADC counts 
@@ -47,7 +52,7 @@ class peak_processing():
         can be one or more channels.
 
         Args:
-            waveforms_subtracted (np.array): value of ADC counts per sample 
+            waveforms_subtracted (np.ndarray): value of ADC counts per sample 
                 above calculate local baseline
             ADC_config (dict): dictionary with the ADC config
 
@@ -56,7 +61,7 @@ class peak_processing():
                 required keys.
 
         Returns:
-            np.array: waveforms in charge.
+            np.ndarray: waveforms in charge.
         &#34;&#34;&#34;
 
         try:
@@ -78,8 +83,8 @@ class peak_processing():
         return waveforms_charge
 
     @classmethod
-    def apply_e_to_pe(self,waveforms_charge: np.array,
-                      gains: np.array) -&gt; np.array:
+    def apply_e_to_pe(cls,waveforms_charge: np.ndarray,
+                      gains: np.ndarray) -&gt; np.ndarray: 
         &#34;&#34;&#34;Transform waveforms from charge to pe with gain per channel.
 
         Takes waveforms already converted to charge from ADC counts and an 
@@ -94,7 +99,7 @@ class peak_processing():
             waveforms_charge (_type_): _description_
 
         Returns:
-            np.array: 
+            np.ndarray: 
         &#34;&#34;&#34;
 
         assert len(gains) == np.shape(waveforms_charge)[0], (&#39;&#39;&#39;Size of 
@@ -105,46 +110,46 @@ class peak_processing():
         return waveforms_pe
 
     @classmethod
-    def apply_baseline_subtract(cls, waveforms: np.array, 
-                                baselines:np.array) -&gt; np.array:
+    def apply_baseline_subtract(cls, waveforms: np.ndarray, 
+                                baselines:np.ndarray) -&gt; np.ndarray:
         &#34;&#34;&#34;Apply baseline subtracting and flipping from negative to positive 
         pulses.
 
         Args:
-             waveforms (np.array): waveforms, all channels stacked by rows.
-            baselines (np.array): computed baselines, all channels stacked 
+             waveforms (np.ndarray): waveforms, all channels stacked by rows.
+            baselines (np.ndarray): computed baselines, all channels stacked 
                 by rows.
 
         Returns:
-            np.array: waveforms flipped and where 0 is local baseline.
+            np.ndarray: waveforms flipped and where 0 is local baseline.
         &#34;&#34;&#34;
 
         assert len(baselines) == np.shape(waveforms)[0], (&#39;&#39;&#39;Size of 
         baseines and channels in waveforms array do not match.&#39;&#39;&#39;)
 
-        waveforms_subtracted = (baselines - waveforms.T).T
+        waveforms_subtracted = (baselines - waveforms.T).T  # type: ignore
 
         return waveforms_subtracted
 
     @classmethod
-    def apply_waveforms_transform(cls, waveforms: np.array,
-                                  baselines: np.array,
-                                  gains: np.array,
-                                  ADC_config: dict) -&gt; np.array:
+    def apply_waveforms_transform(cls, waveforms: np.ndarray,
+                                  baselines: np.ndarray,
+                                  gains: np.ndarray,
+                                  ADC_config: dict) -&gt; np.ndarray:
         &#34;&#34;&#34;Converts waveforms from ADC counts/sample to pe/s.
         
         Takes the initials waveforms stacked for all channels and returns 
         the waveforms in converted pe/s space.
 
         Args:
-            waveforms (np.array): waveforms, all channels stacked by rows.
-            baselines (np.array): computed baselines, all channels stacked 
+            waveforms (np.ndarray): waveforms, all channels stacked by rows.
+            baselines (np.ndarray): computed baselines, all channels stacked 
                 by rows.
-            gains (np.array): gains, all channels stacked by rows.
+            gains (np.ndarray): gains, all channels stacked by rows.
             ADC_config (dict): dictionary with the specific digitizer configs.
 
         Returns:
-            np.array: transformed waveforms
+            np.ndarray: transformed waveforms
         &#34;&#34;&#34;
 
         waveforms_subtracted = cls.apply_baseline_subtract(
@@ -154,22 +159,151 @@ class peak_processing():
         waveforms_pe = cls.apply_e_to_pe(waveforms_charge, gains)
 
         return waveforms_pe
+    
+    @classmethod
+    def reorder_channel(cls, data_array: np.ndarray, 
+                        index_reorder: list) -&gt; np.ndarray:
+        &#34;&#34;&#34;Reorder columns of an ndarray, corresponding to changing the order 
+        of channels to match the order in the sensor layout.
+        
+        Based on the following stack overflow thread: https://stackoverflow.
+        com/questions/20265229/rearrange-columns-of-numpy-2d-array
+
+        Args:
+            data_array (np.ndarray): array where columns are different 
+                channels
+            index_reorder (list): list of indexes where the change in 
+                `data_array` is i-&gt;index_reorder[i].
+
+        Returns:
+            np.ndarray: the original array with reordered collumns following 
+                `index_reorder`.
+        &#34;&#34;&#34;
+
+        if len(np.shape(data_array)) == 1:
+            data_array = np.array(data_array).reshape(1,len(data_array))
+            
+        idx = np.empty_like(index_reorder)
+        idx[index_reorder] = np.arange(len(index_reorder))
+        data_array[:] = data_array[:, idx]  # in-place modification of array
+
+        return data_array
 
     @classmethod
-    def get_sum_waveform(cls, waveforms_pe: np.array) -&gt; np.array:
+    def get_sum_waveform(cls, waveforms_pe: np.ndarray) -&gt; np.ndarray:
         &#34;&#34;&#34;Sums the (transformed to pe/s) waveforms of all channels.
 
         Args:
-            waveforms_pe (np.array): array with waveforms from all the 
+            waveforms_pe (np.ndarray): array with waveforms from all the 
                 channels.
 
         Returns:
-            np.array: Summed waveform.
+            np.ndarray: Summed waveform.
         &#34;&#34;&#34;
 
         summed_waveform = np.sum(waveforms_pe, axis = 0)
 
-        return summed_waveform</code></pre>
+        return summed_waveform
+
+    @classmethod
+    def get_sum_peak_start_end_above_min_area(cls, areas: List[float], 
+        positions: List[int], lengths: List[int], 
+        area_min: float) -&gt; Tuple[List[int], List[int]]:
+        &#34;&#34;&#34;Determine the indexes of start and end of a peak, considering 
+        only peaks with area above `area_min`.
+
+        Returns:
+            Tuple[List, List]: lists with the indexes of begin of peaks and 
+                end of peaks.
+        &#34;&#34;&#34;
+        good_peaks_start = []
+        good_peaks_end = []
+        for _area, _position, _length in zip(areas, positions, lengths):
+            if _area &gt; area_min:
+                good_peaks_start.append(_position)
+                good_peaks_end.append(_position + _length)
+        return (good_peaks_start, good_peaks_end)
+
+    @classmethod
+    def get_area_per_sensor(cls, waveforms_pe: np.ndarray, 
+                            peaks_start:List[int], 
+                            peaks_end: List[int]) -&gt; np.ndarray:
+        &#34;&#34;&#34;Computes the area per sensor of a given waveform set to be used 
+        for hitpattern needs.
+
+        Args:
+            waveforms_pe (np.ndarray): waveforms in pe, one row per channel.
+            peaks_start (List[int]): list with the start of peaks in the 
+                summed waveform.
+            peaks_end (List[int]): list with the end of peaks in the 
+                summed waveform.
+
+        Returns:
+            np.ndarray: array with the area per channel for the peaks, each 
+                row a peak.
+        &#34;&#34;&#34;
+        
+        
+        area_per_sensor = np.zeros((len(peaks_start), 
+                                    np.shape(waveforms_pe)[0]))
+        for i, (_p_start, _p_end) in enumerate(zip(peaks_start,peaks_end)):
+            area_per_sensor[i,:] = np.sum(waveforms_pe[:,_p_start:_p_end],
+                                        axis = 1)
+        return area_per_sensor
+
+    @classmethod
+    def reconstruct_xy_position(cls, area_per_sensor: np.ndarray,
+                                sensor_layout: np.ndarray,
+                                algo: str = &#39;CoG&#39;) -&gt; np.ndarray:
+        &#34;&#34;&#34;Computes xy position of event given a hitpattern from 
+        area_per_sensor.
+
+        Args:
+            algo (str, optional): The algorithm to use in position 
+                reconstruction. Defaults to &#39;CoG&#39;.
+
+        Returns:
+            np.ndarray: array with x,y reconstructed position. Each row a 
+                different peak. pos[:,0] is the list of x, pos[:,1] the 
+                list of y.
+        &#34;&#34;&#34;
+
+        if algo is not &#39;CoG&#39;:
+            raise NotImplementedError(f&#39;&#39;&#39;The requested reconstruction 
+            algorithm ({algo}) is not yet implemented, 
+            try: {cls.available_posrec_algos}&#39;&#39;&#39;)
+
+        area_tot = np.sum(area_per_sensor, axis = 1)
+        # might not be exactly the same as calculated in `process_waveform`
+        
+        x = np.sum((area_per_sensor * sensor_layout[0,:].T)) / area_tot
+        y = np.sum((area_per_sensor * sensor_layout[1,:].T)) / area_tot
+
+        return np.vstack([x,y])
+
+
+class peak():
+    &#34;&#34;&#34;This is a peak (gipfel).
+    &#34;&#34;&#34;
+
+
+    def __init__(self, timestamp: int,
+                 wf_number: int,
+                 area: float,
+                 length: int,
+                 position: int,
+                 amplitude: float,
+                 area_per_sensor: np.ndarray):
+
+        self.timestamp = timestamp
+        self.wf_number = wf_number
+        self.area = area
+        self.length = length
+        self.position = position
+        self.amplitude = amplitude
+        self.area_per_sensor = area_per_sensor
+
+    </code></pre>
 </details>
 </section>
 <section>
@@ -181,6 +315,38 @@ class peak_processing():
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
+<dt id="pylars.processing.peaks.peak"><code class="flex name class">
+<span>class <span class="ident">peak</span></span>
+<span>(</span><span>timestamp: int, wf_number: int, area: float, length: int, position: int, amplitude: float, area_per_sensor: numpy.ndarray)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>This is a peak (gipfel).</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class peak():
+    &#34;&#34;&#34;This is a peak (gipfel).
+    &#34;&#34;&#34;
+
+
+    def __init__(self, timestamp: int,
+                 wf_number: int,
+                 area: float,
+                 length: int,
+                 position: int,
+                 amplitude: float,
+                 area_per_sensor: np.ndarray):
+
+        self.timestamp = timestamp
+        self.wf_number = wf_number
+        self.area = area
+        self.length = length
+        self.position = position
+        self.amplitude = amplitude
+        self.area_per_sensor = area_per_sensor</code></pre>
+</details>
+</dd>
 <dt id="pylars.processing.peaks.peak_processing"><code class="flex name class">
 <span>class <span class="ident">peak_processing</span></span>
 </code></dt>
@@ -200,10 +366,14 @@ object is then constructed.</p></div>
     to peak processing to be used in `peakprocessor`, where a processor 
     object is then constructed.
     &#34;&#34;&#34;       
+    
+    __version__ = &#39;0.0.1&#39;
+
+    available_posrec_algos = [&#39;CoG&#39;]
 
     @classmethod
-    def apply_ADCcounts_to_e(cls, waveforms_subtracted: np.array, 
-                             ADC_config: dict) -&gt; np.array:
+    def apply_ADCcounts_to_e(cls, waveforms_subtracted: np.ndarray, 
+                             ADC_config: dict) -&gt; np.ndarray:
         &#34;&#34;&#34;Convert ADC counts/sample to charge.
 
         Applies the charge converting factor to waveforms to turn ADC counts 
@@ -211,7 +381,7 @@ object is then constructed.</p></div>
         can be one or more channels.
 
         Args:
-            waveforms_subtracted (np.array): value of ADC counts per sample 
+            waveforms_subtracted (np.ndarray): value of ADC counts per sample 
                 above calculate local baseline
             ADC_config (dict): dictionary with the ADC config
 
@@ -220,7 +390,7 @@ object is then constructed.</p></div>
                 required keys.
 
         Returns:
-            np.array: waveforms in charge.
+            np.ndarray: waveforms in charge.
         &#34;&#34;&#34;
 
         try:
@@ -242,8 +412,8 @@ object is then constructed.</p></div>
         return waveforms_charge
 
     @classmethod
-    def apply_e_to_pe(self,waveforms_charge: np.array,
-                      gains: np.array) -&gt; np.array:
+    def apply_e_to_pe(cls,waveforms_charge: np.ndarray,
+                      gains: np.ndarray) -&gt; np.ndarray: 
         &#34;&#34;&#34;Transform waveforms from charge to pe with gain per channel.
 
         Takes waveforms already converted to charge from ADC counts and an 
@@ -258,7 +428,7 @@ object is then constructed.</p></div>
             waveforms_charge (_type_): _description_
 
         Returns:
-            np.array: 
+            np.ndarray: 
         &#34;&#34;&#34;
 
         assert len(gains) == np.shape(waveforms_charge)[0], (&#39;&#39;&#39;Size of 
@@ -269,46 +439,46 @@ object is then constructed.</p></div>
         return waveforms_pe
 
     @classmethod
-    def apply_baseline_subtract(cls, waveforms: np.array, 
-                                baselines:np.array) -&gt; np.array:
+    def apply_baseline_subtract(cls, waveforms: np.ndarray, 
+                                baselines:np.ndarray) -&gt; np.ndarray:
         &#34;&#34;&#34;Apply baseline subtracting and flipping from negative to positive 
         pulses.
 
         Args:
-             waveforms (np.array): waveforms, all channels stacked by rows.
-            baselines (np.array): computed baselines, all channels stacked 
+             waveforms (np.ndarray): waveforms, all channels stacked by rows.
+            baselines (np.ndarray): computed baselines, all channels stacked 
                 by rows.
 
         Returns:
-            np.array: waveforms flipped and where 0 is local baseline.
+            np.ndarray: waveforms flipped and where 0 is local baseline.
         &#34;&#34;&#34;
 
         assert len(baselines) == np.shape(waveforms)[0], (&#39;&#39;&#39;Size of 
         baseines and channels in waveforms array do not match.&#39;&#39;&#39;)
 
-        waveforms_subtracted = (baselines - waveforms.T).T
+        waveforms_subtracted = (baselines - waveforms.T).T  # type: ignore
 
         return waveforms_subtracted
 
     @classmethod
-    def apply_waveforms_transform(cls, waveforms: np.array,
-                                  baselines: np.array,
-                                  gains: np.array,
-                                  ADC_config: dict) -&gt; np.array:
+    def apply_waveforms_transform(cls, waveforms: np.ndarray,
+                                  baselines: np.ndarray,
+                                  gains: np.ndarray,
+                                  ADC_config: dict) -&gt; np.ndarray:
         &#34;&#34;&#34;Converts waveforms from ADC counts/sample to pe/s.
         
         Takes the initials waveforms stacked for all channels and returns 
         the waveforms in converted pe/s space.
 
         Args:
-            waveforms (np.array): waveforms, all channels stacked by rows.
-            baselines (np.array): computed baselines, all channels stacked 
+            waveforms (np.ndarray): waveforms, all channels stacked by rows.
+            baselines (np.ndarray): computed baselines, all channels stacked 
                 by rows.
-            gains (np.array): gains, all channels stacked by rows.
+            gains (np.ndarray): gains, all channels stacked by rows.
             ADC_config (dict): dictionary with the specific digitizer configs.
 
         Returns:
-            np.array: transformed waveforms
+            np.ndarray: transformed waveforms
         &#34;&#34;&#34;
 
         waveforms_subtracted = cls.apply_baseline_subtract(
@@ -318,27 +488,139 @@ object is then constructed.</p></div>
         waveforms_pe = cls.apply_e_to_pe(waveforms_charge, gains)
 
         return waveforms_pe
+    
+    @classmethod
+    def reorder_channel(cls, data_array: np.ndarray, 
+                        index_reorder: list) -&gt; np.ndarray:
+        &#34;&#34;&#34;Reorder columns of an ndarray, corresponding to changing the order 
+        of channels to match the order in the sensor layout.
+        
+        Based on the following stack overflow thread: https://stackoverflow.
+        com/questions/20265229/rearrange-columns-of-numpy-2d-array
+
+        Args:
+            data_array (np.ndarray): array where columns are different 
+                channels
+            index_reorder (list): list of indexes where the change in 
+                `data_array` is i-&gt;index_reorder[i].
+
+        Returns:
+            np.ndarray: the original array with reordered collumns following 
+                `index_reorder`.
+        &#34;&#34;&#34;
+
+        if len(np.shape(data_array)) == 1:
+            data_array = np.array(data_array).reshape(1,len(data_array))
+            
+        idx = np.empty_like(index_reorder)
+        idx[index_reorder] = np.arange(len(index_reorder))
+        data_array[:] = data_array[:, idx]  # in-place modification of array
+
+        return data_array
 
     @classmethod
-    def get_sum_waveform(cls, waveforms_pe: np.array) -&gt; np.array:
+    def get_sum_waveform(cls, waveforms_pe: np.ndarray) -&gt; np.ndarray:
         &#34;&#34;&#34;Sums the (transformed to pe/s) waveforms of all channels.
 
         Args:
-            waveforms_pe (np.array): array with waveforms from all the 
+            waveforms_pe (np.ndarray): array with waveforms from all the 
                 channels.
 
         Returns:
-            np.array: Summed waveform.
+            np.ndarray: Summed waveform.
         &#34;&#34;&#34;
 
         summed_waveform = np.sum(waveforms_pe, axis = 0)
 
-        return summed_waveform</code></pre>
+        return summed_waveform
+
+    @classmethod
+    def get_sum_peak_start_end_above_min_area(cls, areas: List[float], 
+        positions: List[int], lengths: List[int], 
+        area_min: float) -&gt; Tuple[List[int], List[int]]:
+        &#34;&#34;&#34;Determine the indexes of start and end of a peak, considering 
+        only peaks with area above `area_min`.
+
+        Returns:
+            Tuple[List, List]: lists with the indexes of begin of peaks and 
+                end of peaks.
+        &#34;&#34;&#34;
+        good_peaks_start = []
+        good_peaks_end = []
+        for _area, _position, _length in zip(areas, positions, lengths):
+            if _area &gt; area_min:
+                good_peaks_start.append(_position)
+                good_peaks_end.append(_position + _length)
+        return (good_peaks_start, good_peaks_end)
+
+    @classmethod
+    def get_area_per_sensor(cls, waveforms_pe: np.ndarray, 
+                            peaks_start:List[int], 
+                            peaks_end: List[int]) -&gt; np.ndarray:
+        &#34;&#34;&#34;Computes the area per sensor of a given waveform set to be used 
+        for hitpattern needs.
+
+        Args:
+            waveforms_pe (np.ndarray): waveforms in pe, one row per channel.
+            peaks_start (List[int]): list with the start of peaks in the 
+                summed waveform.
+            peaks_end (List[int]): list with the end of peaks in the 
+                summed waveform.
+
+        Returns:
+            np.ndarray: array with the area per channel for the peaks, each 
+                row a peak.
+        &#34;&#34;&#34;
+        
+        
+        area_per_sensor = np.zeros((len(peaks_start), 
+                                    np.shape(waveforms_pe)[0]))
+        for i, (_p_start, _p_end) in enumerate(zip(peaks_start,peaks_end)):
+            area_per_sensor[i,:] = np.sum(waveforms_pe[:,_p_start:_p_end],
+                                        axis = 1)
+        return area_per_sensor
+
+    @classmethod
+    def reconstruct_xy_position(cls, area_per_sensor: np.ndarray,
+                                sensor_layout: np.ndarray,
+                                algo: str = &#39;CoG&#39;) -&gt; np.ndarray:
+        &#34;&#34;&#34;Computes xy position of event given a hitpattern from 
+        area_per_sensor.
+
+        Args:
+            algo (str, optional): The algorithm to use in position 
+                reconstruction. Defaults to &#39;CoG&#39;.
+
+        Returns:
+            np.ndarray: array with x,y reconstructed position. Each row a 
+                different peak. pos[:,0] is the list of x, pos[:,1] the 
+                list of y.
+        &#34;&#34;&#34;
+
+        if algo is not &#39;CoG&#39;:
+            raise NotImplementedError(f&#39;&#39;&#39;The requested reconstruction 
+            algorithm ({algo}) is not yet implemented, 
+            try: {cls.available_posrec_algos}&#39;&#39;&#39;)
+
+        area_tot = np.sum(area_per_sensor, axis = 1)
+        # might not be exactly the same as calculated in `process_waveform`
+        
+        x = np.sum((area_per_sensor * sensor_layout[0,:].T)) / area_tot
+        y = np.sum((area_per_sensor * sensor_layout[1,:].T)) / area_tot
+
+        return np.vstack([x,y])</code></pre>
 </details>
+<h3>Class variables</h3>
+<dl>
+<dt id="pylars.processing.peaks.peak_processing.available_posrec_algos"><code class="name">var <span class="ident">available_posrec_algos</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
 <h3>Static methods</h3>
 <dl>
 <dt id="pylars.processing.peaks.peak_processing.apply_ADCcounts_to_e"><code class="name flex">
-<span>def <span class="ident">apply_ADCcounts_to_e</span></span>(<span>waveforms_subtracted: <built-in function array>, ADC_config: dict) ‑> <built-in function array></span>
+<span>def <span class="ident">apply_ADCcounts_to_e</span></span>(<span>waveforms_subtracted: numpy.ndarray, ADC_config: dict) ‑> numpy.ndarray</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Convert ADC counts/sample to charge.</p>
@@ -347,7 +629,7 @@ object is then constructed.</p></div>
 can be one or more channels.</p>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>waveforms_subtracted</code></strong> :&ensp;<code>np.array</code></dt>
+<dt><strong><code>waveforms_subtracted</code></strong> :&ensp;<code>np.ndarray</code></dt>
 <dd>value of ADC counts per sample
 above calculate local baseline</dd>
 <dt><strong><code>ADC_config</code></strong> :&ensp;<code>dict</code></dt>
@@ -361,7 +643,7 @@ required keys.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
-<dt><code>np.array</code></dt>
+<dt><code>np.ndarray</code></dt>
 <dd>waveforms in charge.</dd>
 </dl></div>
 <details class="source">
@@ -369,8 +651,8 @@ required keys.</dd>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">@classmethod
-def apply_ADCcounts_to_e(cls, waveforms_subtracted: np.array, 
-                         ADC_config: dict) -&gt; np.array:
+def apply_ADCcounts_to_e(cls, waveforms_subtracted: np.ndarray, 
+                         ADC_config: dict) -&gt; np.ndarray:
     &#34;&#34;&#34;Convert ADC counts/sample to charge.
 
     Applies the charge converting factor to waveforms to turn ADC counts 
@@ -378,7 +660,7 @@ def apply_ADCcounts_to_e(cls, waveforms_subtracted: np.array,
     can be one or more channels.
 
     Args:
-        waveforms_subtracted (np.array): value of ADC counts per sample 
+        waveforms_subtracted (np.ndarray): value of ADC counts per sample 
             above calculate local baseline
         ADC_config (dict): dictionary with the ADC config
 
@@ -387,7 +669,7 @@ def apply_ADCcounts_to_e(cls, waveforms_subtracted: np.array,
             required keys.
 
     Returns:
-        np.array: waveforms in charge.
+        np.ndarray: waveforms in charge.
     &#34;&#34;&#34;
 
     try:
@@ -410,21 +692,21 @@ def apply_ADCcounts_to_e(cls, waveforms_subtracted: np.array,
 </details>
 </dd>
 <dt id="pylars.processing.peaks.peak_processing.apply_baseline_subtract"><code class="name flex">
-<span>def <span class="ident">apply_baseline_subtract</span></span>(<span>waveforms: <built-in function array>, baselines: <built-in function array>) ‑> <built-in function array></span>
+<span>def <span class="ident">apply_baseline_subtract</span></span>(<span>waveforms: numpy.ndarray, baselines: numpy.ndarray) ‑> numpy.ndarray</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Apply baseline subtracting and flipping from negative to positive
 pulses.</p>
 <h2 id="args">Args</h2>
 <dl>
-<dt>waveforms (np.array): waveforms, all channels stacked by rows.</dt>
-<dt><strong><code>baselines</code></strong> :&ensp;<code>np.array</code></dt>
+<dt>waveforms (np.ndarray): waveforms, all channels stacked by rows.</dt>
+<dt><strong><code>baselines</code></strong> :&ensp;<code>np.ndarray</code></dt>
 <dd>computed baselines, all channels stacked
 by rows.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
-<dt><code>np.array</code></dt>
+<dt><code>np.ndarray</code></dt>
 <dd>waveforms flipped and where 0 is local baseline.</dd>
 </dl></div>
 <details class="source">
@@ -432,30 +714,30 @@ by rows.</dd>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">@classmethod
-def apply_baseline_subtract(cls, waveforms: np.array, 
-                            baselines:np.array) -&gt; np.array:
+def apply_baseline_subtract(cls, waveforms: np.ndarray, 
+                            baselines:np.ndarray) -&gt; np.ndarray:
     &#34;&#34;&#34;Apply baseline subtracting and flipping from negative to positive 
     pulses.
 
     Args:
-         waveforms (np.array): waveforms, all channels stacked by rows.
-        baselines (np.array): computed baselines, all channels stacked 
+         waveforms (np.ndarray): waveforms, all channels stacked by rows.
+        baselines (np.ndarray): computed baselines, all channels stacked 
             by rows.
 
     Returns:
-        np.array: waveforms flipped and where 0 is local baseline.
+        np.ndarray: waveforms flipped and where 0 is local baseline.
     &#34;&#34;&#34;
 
     assert len(baselines) == np.shape(waveforms)[0], (&#39;&#39;&#39;Size of 
     baseines and channels in waveforms array do not match.&#39;&#39;&#39;)
 
-    waveforms_subtracted = (baselines - waveforms.T).T
+    waveforms_subtracted = (baselines - waveforms.T).T  # type: ignore
 
     return waveforms_subtracted</code></pre>
 </details>
 </dd>
 <dt id="pylars.processing.peaks.peak_processing.apply_e_to_pe"><code class="name flex">
-<span>def <span class="ident">apply_e_to_pe</span></span>(<span>waveforms_charge: <built-in function array>, gains: <built-in function array>) ‑> <built-in function array></span>
+<span>def <span class="ident">apply_e_to_pe</span></span>(<span>waveforms_charge: numpy.ndarray, gains: numpy.ndarray) ‑> numpy.ndarray</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Transform waveforms from charge to pe with gain per channel.</p>
@@ -471,14 +753,14 @@ the order of channels in waveforms_charge.</p>
 <dd><em>description</em></dd>
 </dl>
 <h2 id="returns">Returns</h2>
-<p>np.array:</p></div>
+<p>np.ndarray:</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">@classmethod
-def apply_e_to_pe(self,waveforms_charge: np.array,
-                  gains: np.array) -&gt; np.array:
+def apply_e_to_pe(cls,waveforms_charge: np.ndarray,
+                  gains: np.ndarray) -&gt; np.ndarray: 
     &#34;&#34;&#34;Transform waveforms from charge to pe with gain per channel.
 
     Takes waveforms already converted to charge from ADC counts and an 
@@ -493,7 +775,7 @@ def apply_e_to_pe(self,waveforms_charge: np.array,
         waveforms_charge (_type_): _description_
 
     Returns:
-        np.array: 
+        np.ndarray: 
     &#34;&#34;&#34;
 
     assert len(gains) == np.shape(waveforms_charge)[0], (&#39;&#39;&#39;Size of 
@@ -505,7 +787,7 @@ def apply_e_to_pe(self,waveforms_charge: np.array,
 </details>
 </dd>
 <dt id="pylars.processing.peaks.peak_processing.apply_waveforms_transform"><code class="name flex">
-<span>def <span class="ident">apply_waveforms_transform</span></span>(<span>waveforms: <built-in function array>, baselines: <built-in function array>, gains: <built-in function array>, ADC_config: dict) ‑> <built-in function array></span>
+<span>def <span class="ident">apply_waveforms_transform</span></span>(<span>waveforms: numpy.ndarray, baselines: numpy.ndarray, gains: numpy.ndarray, ADC_config: dict) ‑> numpy.ndarray</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Converts waveforms from ADC counts/sample to pe/s.</p>
@@ -513,19 +795,19 @@ def apply_e_to_pe(self,waveforms_charge: np.array,
 the waveforms in converted pe/s space.</p>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>waveforms</code></strong> :&ensp;<code>np.array</code></dt>
+<dt><strong><code>waveforms</code></strong> :&ensp;<code>np.ndarray</code></dt>
 <dd>waveforms, all channels stacked by rows.</dd>
-<dt><strong><code>baselines</code></strong> :&ensp;<code>np.array</code></dt>
+<dt><strong><code>baselines</code></strong> :&ensp;<code>np.ndarray</code></dt>
 <dd>computed baselines, all channels stacked
 by rows.</dd>
-<dt><strong><code>gains</code></strong> :&ensp;<code>np.array</code></dt>
+<dt><strong><code>gains</code></strong> :&ensp;<code>np.ndarray</code></dt>
 <dd>gains, all channels stacked by rows.</dd>
 <dt><strong><code>ADC_config</code></strong> :&ensp;<code>dict</code></dt>
 <dd>dictionary with the specific digitizer configs.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
-<dt><code>np.array</code></dt>
+<dt><code>np.ndarray</code></dt>
 <dd>transformed waveforms</dd>
 </dl></div>
 <details class="source">
@@ -533,24 +815,24 @@ by rows.</dd>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">@classmethod
-def apply_waveforms_transform(cls, waveforms: np.array,
-                              baselines: np.array,
-                              gains: np.array,
-                              ADC_config: dict) -&gt; np.array:
+def apply_waveforms_transform(cls, waveforms: np.ndarray,
+                              baselines: np.ndarray,
+                              gains: np.ndarray,
+                              ADC_config: dict) -&gt; np.ndarray:
     &#34;&#34;&#34;Converts waveforms from ADC counts/sample to pe/s.
     
     Takes the initials waveforms stacked for all channels and returns 
     the waveforms in converted pe/s space.
 
     Args:
-        waveforms (np.array): waveforms, all channels stacked by rows.
-        baselines (np.array): computed baselines, all channels stacked 
+        waveforms (np.ndarray): waveforms, all channels stacked by rows.
+        baselines (np.ndarray): computed baselines, all channels stacked 
             by rows.
-        gains (np.array): gains, all channels stacked by rows.
+        gains (np.ndarray): gains, all channels stacked by rows.
         ADC_config (dict): dictionary with the specific digitizer configs.
 
     Returns:
-        np.array: transformed waveforms
+        np.ndarray: transformed waveforms
     &#34;&#34;&#34;
 
     waveforms_subtracted = cls.apply_baseline_subtract(
@@ -562,20 +844,111 @@ def apply_waveforms_transform(cls, waveforms: np.array,
     return waveforms_pe</code></pre>
 </details>
 </dd>
+<dt id="pylars.processing.peaks.peak_processing.get_area_per_sensor"><code class="name flex">
+<span>def <span class="ident">get_area_per_sensor</span></span>(<span>waveforms_pe: numpy.ndarray, peaks_start: List[int], peaks_end: List[int]) ‑> numpy.ndarray</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Computes the area per sensor of a given waveform set to be used
+for hitpattern needs.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>waveforms_pe</code></strong> :&ensp;<code>np.ndarray</code></dt>
+<dd>waveforms in pe, one row per channel.</dd>
+<dt><strong><code>peaks_start</code></strong> :&ensp;<code>List[int]</code></dt>
+<dd>list with the start of peaks in the
+summed waveform.</dd>
+<dt><strong><code>peaks_end</code></strong> :&ensp;<code>List[int]</code></dt>
+<dd>list with the end of peaks in the
+summed waveform.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>np.ndarray</code></dt>
+<dd>array with the area per channel for the peaks, each
+row a peak.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@classmethod
+def get_area_per_sensor(cls, waveforms_pe: np.ndarray, 
+                        peaks_start:List[int], 
+                        peaks_end: List[int]) -&gt; np.ndarray:
+    &#34;&#34;&#34;Computes the area per sensor of a given waveform set to be used 
+    for hitpattern needs.
+
+    Args:
+        waveforms_pe (np.ndarray): waveforms in pe, one row per channel.
+        peaks_start (List[int]): list with the start of peaks in the 
+            summed waveform.
+        peaks_end (List[int]): list with the end of peaks in the 
+            summed waveform.
+
+    Returns:
+        np.ndarray: array with the area per channel for the peaks, each 
+            row a peak.
+    &#34;&#34;&#34;
+    
+    
+    area_per_sensor = np.zeros((len(peaks_start), 
+                                np.shape(waveforms_pe)[0]))
+    for i, (_p_start, _p_end) in enumerate(zip(peaks_start,peaks_end)):
+        area_per_sensor[i,:] = np.sum(waveforms_pe[:,_p_start:_p_end],
+                                    axis = 1)
+    return area_per_sensor</code></pre>
+</details>
+</dd>
+<dt id="pylars.processing.peaks.peak_processing.get_sum_peak_start_end_above_min_area"><code class="name flex">
+<span>def <span class="ident">get_sum_peak_start_end_above_min_area</span></span>(<span>areas: List[float], positions: List[int], lengths: List[int], area_min: float) ‑> Tuple[List[int], List[int]]</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Determine the indexes of start and end of a peak, considering
+only peaks with area above <code>area_min</code>.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Tuple[List, List]</code></dt>
+<dd>lists with the indexes of begin of peaks and
+end of peaks.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@classmethod
+def get_sum_peak_start_end_above_min_area(cls, areas: List[float], 
+    positions: List[int], lengths: List[int], 
+    area_min: float) -&gt; Tuple[List[int], List[int]]:
+    &#34;&#34;&#34;Determine the indexes of start and end of a peak, considering 
+    only peaks with area above `area_min`.
+
+    Returns:
+        Tuple[List, List]: lists with the indexes of begin of peaks and 
+            end of peaks.
+    &#34;&#34;&#34;
+    good_peaks_start = []
+    good_peaks_end = []
+    for _area, _position, _length in zip(areas, positions, lengths):
+        if _area &gt; area_min:
+            good_peaks_start.append(_position)
+            good_peaks_end.append(_position + _length)
+    return (good_peaks_start, good_peaks_end)</code></pre>
+</details>
+</dd>
 <dt id="pylars.processing.peaks.peak_processing.get_sum_waveform"><code class="name flex">
-<span>def <span class="ident">get_sum_waveform</span></span>(<span>waveforms_pe: <built-in function array>) ‑> <built-in function array></span>
+<span>def <span class="ident">get_sum_waveform</span></span>(<span>waveforms_pe: numpy.ndarray) ‑> numpy.ndarray</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Sums the (transformed to pe/s) waveforms of all channels.</p>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>waveforms_pe</code></strong> :&ensp;<code>np.array</code></dt>
+<dt><strong><code>waveforms_pe</code></strong> :&ensp;<code>np.ndarray</code></dt>
 <dd>array with waveforms from all the
 channels.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
-<dt><code>np.array</code></dt>
+<dt><code>np.ndarray</code></dt>
 <dd>Summed waveform.</dd>
 </dl></div>
 <details class="source">
@@ -583,20 +956,131 @@ channels.</dd>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">@classmethod
-def get_sum_waveform(cls, waveforms_pe: np.array) -&gt; np.array:
+def get_sum_waveform(cls, waveforms_pe: np.ndarray) -&gt; np.ndarray:
     &#34;&#34;&#34;Sums the (transformed to pe/s) waveforms of all channels.
 
     Args:
-        waveforms_pe (np.array): array with waveforms from all the 
+        waveforms_pe (np.ndarray): array with waveforms from all the 
             channels.
 
     Returns:
-        np.array: Summed waveform.
+        np.ndarray: Summed waveform.
     &#34;&#34;&#34;
 
     summed_waveform = np.sum(waveforms_pe, axis = 0)
 
     return summed_waveform</code></pre>
+</details>
+</dd>
+<dt id="pylars.processing.peaks.peak_processing.reconstruct_xy_position"><code class="name flex">
+<span>def <span class="ident">reconstruct_xy_position</span></span>(<span>area_per_sensor: numpy.ndarray, sensor_layout: numpy.ndarray, algo: str = 'CoG') ‑> numpy.ndarray</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Computes xy position of event given a hitpattern from
+area_per_sensor.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>algo</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>The algorithm to use in position
+reconstruction. Defaults to 'CoG'.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>np.ndarray</code></dt>
+<dd>array with x,y reconstructed position. Each row a
+different peak. pos[:,0] is the list of x, pos[:,1] the
+list of y.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@classmethod
+def reconstruct_xy_position(cls, area_per_sensor: np.ndarray,
+                            sensor_layout: np.ndarray,
+                            algo: str = &#39;CoG&#39;) -&gt; np.ndarray:
+    &#34;&#34;&#34;Computes xy position of event given a hitpattern from 
+    area_per_sensor.
+
+    Args:
+        algo (str, optional): The algorithm to use in position 
+            reconstruction. Defaults to &#39;CoG&#39;.
+
+    Returns:
+        np.ndarray: array with x,y reconstructed position. Each row a 
+            different peak. pos[:,0] is the list of x, pos[:,1] the 
+            list of y.
+    &#34;&#34;&#34;
+
+    if algo is not &#39;CoG&#39;:
+        raise NotImplementedError(f&#39;&#39;&#39;The requested reconstruction 
+        algorithm ({algo}) is not yet implemented, 
+        try: {cls.available_posrec_algos}&#39;&#39;&#39;)
+
+    area_tot = np.sum(area_per_sensor, axis = 1)
+    # might not be exactly the same as calculated in `process_waveform`
+    
+    x = np.sum((area_per_sensor * sensor_layout[0,:].T)) / area_tot
+    y = np.sum((area_per_sensor * sensor_layout[1,:].T)) / area_tot
+
+    return np.vstack([x,y])</code></pre>
+</details>
+</dd>
+<dt id="pylars.processing.peaks.peak_processing.reorder_channel"><code class="name flex">
+<span>def <span class="ident">reorder_channel</span></span>(<span>data_array: numpy.ndarray, index_reorder: list) ‑> numpy.ndarray</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Reorder columns of an ndarray, corresponding to changing the order
+of channels to match the order in the sensor layout.</p>
+<p>Based on the following stack overflow thread: <a href="https://stackoverflow.">https://stackoverflow.</a>
+com/questions/20265229/rearrange-columns-of-numpy-2d-array</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>data_array</code></strong> :&ensp;<code>np.ndarray</code></dt>
+<dd>array where columns are different
+channels</dd>
+<dt><strong><code>index_reorder</code></strong> :&ensp;<code>list</code></dt>
+<dd>list of indexes where the change in
+<code>data_array</code> is i-&gt;index_reorder[i].</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>np.ndarray</code></dt>
+<dd>the original array with reordered collumns following
+<code>index_reorder</code>.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@classmethod
+def reorder_channel(cls, data_array: np.ndarray, 
+                    index_reorder: list) -&gt; np.ndarray:
+    &#34;&#34;&#34;Reorder columns of an ndarray, corresponding to changing the order 
+    of channels to match the order in the sensor layout.
+    
+    Based on the following stack overflow thread: https://stackoverflow.
+    com/questions/20265229/rearrange-columns-of-numpy-2d-array
+
+    Args:
+        data_array (np.ndarray): array where columns are different 
+            channels
+        index_reorder (list): list of indexes where the change in 
+            `data_array` is i-&gt;index_reorder[i].
+
+    Returns:
+        np.ndarray: the original array with reordered collumns following 
+            `index_reorder`.
+    &#34;&#34;&#34;
+
+    if len(np.shape(data_array)) == 1:
+        data_array = np.array(data_array).reshape(1,len(data_array))
+        
+    idx = np.empty_like(index_reorder)
+    idx[index_reorder] = np.arange(len(index_reorder))
+    data_array[:] = data_array[:, idx]  # in-place modification of array
+
+    return data_array</code></pre>
 </details>
 </dd>
 </dl>
@@ -618,13 +1102,21 @@ def get_sum_waveform(cls, waveforms_pe: np.array) -&gt; np.array:
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
+<h4><code><a title="pylars.processing.peaks.peak" href="#pylars.processing.peaks.peak">peak</a></code></h4>
+</li>
+<li>
 <h4><code><a title="pylars.processing.peaks.peak_processing" href="#pylars.processing.peaks.peak_processing">peak_processing</a></code></h4>
 <ul class="">
 <li><code><a title="pylars.processing.peaks.peak_processing.apply_ADCcounts_to_e" href="#pylars.processing.peaks.peak_processing.apply_ADCcounts_to_e">apply_ADCcounts_to_e</a></code></li>
 <li><code><a title="pylars.processing.peaks.peak_processing.apply_baseline_subtract" href="#pylars.processing.peaks.peak_processing.apply_baseline_subtract">apply_baseline_subtract</a></code></li>
 <li><code><a title="pylars.processing.peaks.peak_processing.apply_e_to_pe" href="#pylars.processing.peaks.peak_processing.apply_e_to_pe">apply_e_to_pe</a></code></li>
 <li><code><a title="pylars.processing.peaks.peak_processing.apply_waveforms_transform" href="#pylars.processing.peaks.peak_processing.apply_waveforms_transform">apply_waveforms_transform</a></code></li>
+<li><code><a title="pylars.processing.peaks.peak_processing.available_posrec_algos" href="#pylars.processing.peaks.peak_processing.available_posrec_algos">available_posrec_algos</a></code></li>
+<li><code><a title="pylars.processing.peaks.peak_processing.get_area_per_sensor" href="#pylars.processing.peaks.peak_processing.get_area_per_sensor">get_area_per_sensor</a></code></li>
+<li><code><a title="pylars.processing.peaks.peak_processing.get_sum_peak_start_end_above_min_area" href="#pylars.processing.peaks.peak_processing.get_sum_peak_start_end_above_min_area">get_sum_peak_start_end_above_min_area</a></code></li>
 <li><code><a title="pylars.processing.peaks.peak_processing.get_sum_waveform" href="#pylars.processing.peaks.peak_processing.get_sum_waveform">get_sum_waveform</a></code></li>
+<li><code><a title="pylars.processing.peaks.peak_processing.reconstruct_xy_position" href="#pylars.processing.peaks.peak_processing.reconstruct_xy_position">reconstruct_xy_position</a></code></li>
+<li><code><a title="pylars.processing.peaks.peak_processing.reorder_channel" href="#pylars.processing.peaks.peak_processing.reorder_channel">reorder_channel</a></code></li>
 </ul>
 </li>
 </ul>

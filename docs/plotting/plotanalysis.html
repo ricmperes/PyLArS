@@ -29,7 +29,7 @@
 <pre><code class="python">import matplotlib.pyplot as plt
 import numpy as np
 from pylars.utils.common import Gaussean, func_linear
-
+from matplotlib.figure import Figure as pltFigure
 from .plotprocessed import *
 
 # LED ON
@@ -66,7 +66,7 @@ def plot_area_LED(bv_dataset, voltage, LED_position=300,
 
 
 def plot_LED_all_voltages(bv_dataset, cmap=&#39;winter&#39;, ax=None,):
-    cm = plt.get_cmap(cmap)
+    cm = plt.get_cmap(cmap)  # type: ignore
     N_lines = len(bv_dataset.voltages)
 
     if ax is None:
@@ -101,10 +101,12 @@ def plot_DCR_curve(plot, area_hist_x, DCR_values, _x, _y, min_area_x, ax=None):
     ax3.axvline(min_area_x, c=&#39;r&#39;, ls=&#39;--&#39;, alpha=0.8,
                 label=&#39;1$^{st}$ der. (smoothed)&#39;)
     ax3.set_ylabel(&#39;1$^{st}$ derivative&#39;)
-    fig.legend()
+    
+    if &#39;fig&#39; in locals():
+        fig.legend() # type: ignore
 
     if isinstance(plot, str):
-        fig.savefig(f&#39;figures/{plot}_stepplot.png&#39;)
+        fig.savefig(f&#39;figures/{plot}_stepplot.png&#39;)# type: ignore
         plt.close()
     else:
         return ax
@@ -219,10 +221,12 @@ def plot_BV_fit(plot, temperature, voltages, gains,
     ax3.axvline(min_area_x, c=&#39;r&#39;, ls=&#39;--&#39;, alpha=0.8,
                 label=&#39;1$^{st}$ der. (smoothed)&#39;)
     ax3.set_ylabel(&#39;1$^{st}$ derivative&#39;)
-    fig.legend()
+    
+    if &#39;fig&#39; in locals():
+        fig.legend() # type: ignore
 
     if isinstance(plot, str):
-        fig.savefig(f&#39;figures/{plot}_stepplot.png&#39;)
+        fig.savefig(f&#39;figures/{plot}_stepplot.png&#39;)# type: ignore
         plt.close()
     else:
         return ax</code></pre>
@@ -238,7 +242,7 @@ def plot_BV_fit(plot, temperature, voltages, gains,
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def plot_LED_all_voltages(bv_dataset, cmap=&#39;winter&#39;, ax=None,):
-    cm = plt.get_cmap(cmap)
+    cm = plt.get_cmap(cmap)  # type: ignore
     N_lines = len(bv_dataset.voltages)
 
     if ax is None:

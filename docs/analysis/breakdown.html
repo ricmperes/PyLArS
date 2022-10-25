@@ -32,9 +32,11 @@ import numpy as np
 import pandas as pd
 import pylars
 from scipy.optimize import curve_fit
-
+import pylars.utils.input
+import pylars.utils.output
 from pylars.utils.common import func_linear
-
+import pylars.plotting.plotanalysis
+from typing import Union
 
 class BV_dataset():
     &#34;&#34;&#34;Object class to hold breakdown voltage related instances and
@@ -54,12 +56,12 @@ class BV_dataset():
         self.process = processor
         self.voltages = self.get_voltages_available()
 
-    def get_voltages_available(self) -&gt; np.array:
+    def get_voltages_available(self) -&gt; np.ndarray:
         &#34;&#34;&#34;Checks the loaded run for which voltages are available for the
         defined temperature.
 
         Returns:
-            np.array: array of the available voltages
+            np.ndarray: array of the available voltages
         &#34;&#34;&#34;
 
         voltages = []
@@ -93,7 +95,7 @@ class BV_dataset():
 
 
 def compute_BV(df_results: pd.DataFrame,
-               plot: bool or str = False) -&gt; pd.DataFrame:
+               plot: Union[bool, str] = False) -&gt; pd.DataFrame:
     &#34;&#34;&#34;Computes the breakdown voltage with a linear fit of gain over V points.
     Takes a dataframe with the collumns &#39;T&#39; (temperature), &#39;V&#39; (voltage) and
     &#39;gain&#39; (self-explanatory, c&#39;mon...)
@@ -145,7 +147,7 @@ def compute_BV(df_results: pd.DataFrame,
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
 <dt id="pylars.analysis.breakdown.compute_BV"><code class="name flex">
-<span>def <span class="ident">compute_BV</span></span>(<span>df_results: pandas.core.frame.DataFrame, plot: bool = False) ‑> pandas.core.frame.DataFrame</span>
+<span>def <span class="ident">compute_BV</span></span>(<span>df_results: pandas.core.frame.DataFrame, plot: Union[bool, str] = False) ‑> pandas.core.frame.DataFrame</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Computes the breakdown voltage with a linear fit of gain over V points.
@@ -171,7 +173,7 @@ False.</dd>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def compute_BV(df_results: pd.DataFrame,
-               plot: bool or str = False) -&gt; pd.DataFrame:
+               plot: Union[bool, str] = False) -&gt; pd.DataFrame:
     &#34;&#34;&#34;Computes the breakdown voltage with a linear fit of gain over V points.
     Takes a dataframe with the collumns &#39;T&#39; (temperature), &#39;V&#39; (voltage) and
     &#39;gain&#39; (self-explanatory, c&#39;mon...)
@@ -251,12 +253,12 @@ a certain temperature.</p></div>
         self.process = processor
         self.voltages = self.get_voltages_available()
 
-    def get_voltages_available(self) -&gt; np.array:
+    def get_voltages_available(self) -&gt; np.ndarray:
         &#34;&#34;&#34;Checks the loaded run for which voltages are available for the
         defined temperature.
 
         Returns:
-            np.array: array of the available voltages
+            np.ndarray: array of the available voltages
         &#34;&#34;&#34;
 
         voltages = []
@@ -291,26 +293,26 @@ a certain temperature.</p></div>
 <h3>Methods</h3>
 <dl>
 <dt id="pylars.analysis.breakdown.BV_dataset.get_voltages_available"><code class="name flex">
-<span>def <span class="ident">get_voltages_available</span></span>(<span>self) ‑> <built-in function array></span>
+<span>def <span class="ident">get_voltages_available</span></span>(<span>self) ‑> numpy.ndarray</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Checks the loaded run for which voltages are available for the
 defined temperature.</p>
 <h2 id="returns">Returns</h2>
 <dl>
-<dt><code>np.array</code></dt>
+<dt><code>np.ndarray</code></dt>
 <dd>array of the available voltages</dd>
 </dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def get_voltages_available(self) -&gt; np.array:
+<pre><code class="python">def get_voltages_available(self) -&gt; np.ndarray:
     &#34;&#34;&#34;Checks the loaded run for which voltages are available for the
     defined temperature.
 
     Returns:
-        np.array: array of the available voltages
+        np.ndarray: array of the available voltages
     &#34;&#34;&#34;
 
     voltages = []

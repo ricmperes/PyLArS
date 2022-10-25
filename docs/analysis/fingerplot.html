@@ -28,6 +28,8 @@
 </summary>
 <pre><code class="python">import numpy as np
 import pylars
+import pylars.utils.input
+import pylars.utils.output
 from matplotlib import pyplot as plt
 from pylars.utils.common import Gaussean
 from scipy.optimize import curve_fit
@@ -55,12 +57,12 @@ class fingerplot_dataset(DCR_dataset):
         self.process = processor
         self.voltages = self.get_voltages_available()
 
-    def get_voltages_available(self) -&gt; np.array:
+    def get_voltages_available(self) -&gt; np.ndarray:
         &#34;&#34;&#34;Checks the loaded run for which voltages are available for the
         defined temperature.
 
         Returns:
-            np.array: array of the available voltages
+            np.ndarray: array of the available voltages
         &#34;&#34;&#34;
 
         voltages = []
@@ -71,7 +73,7 @@ class fingerplot_dataset(DCR_dataset):
 
         return voltages
 
-    def load_processed_data(self, force_processing: bool = False) -&gt; dict:
+    def load_processed_data(self, force_processing: bool = False) -&gt; None:
         self.data = {}
         for _voltage in self.voltages:
             processed_data = pylars.utils.output.processed_dataset(
@@ -90,6 +92,7 @@ class fingerplot_dataset(DCR_dataset):
 
             self.data[_voltage] = _df[mask].copy()
 
+    @staticmethod
     def make_finger_plot(df, length_cut_min,
                          length_cut_max, plot=False,
                          ax=None):
@@ -118,12 +121,12 @@ class fingerplot_dataset(DCR_dataset):
             ax.hist(df[_cuts][&#39;area&#39;], bins=1000, histtype=&#39;step&#39;, color=&#39;k&#39;)
             ax.plot(_x, Gaussean(_x, A, mu, sigma), c=&#39;r&#39;)
 
-            ax.yscale(&#39;log&#39;)
-            ax.ylabel(&#39;# Events&#39;)
-            ax.title(&#39;Module 0 | Channel 0&#39;)
-            ax.xlabel(&#39;Peak Area [integrated ADC counts]&#39;)
+            ax.set_yscale(&#39;log&#39;)
+            ax.set_ylabel(&#39;# Events&#39;)
+            ax.set_title(&#39;Module 0 | Channel 0&#39;)
+            ax.set_xlabel(&#39;Peak Area [integrated ADC counts]&#39;)
             if isinstance(plot, str):
-                fig.savefig(f&#39;figures/fingerplot_{plot}.png&#39;)
+                fig.savefig(f&#39;figures/fingerplot_{plot}.png&#39;) # type: ignore
             else:
                 plt.show()
         return mu, sigma</code></pre>
@@ -171,12 +174,12 @@ a certain temperature.</p></div>
         self.process = processor
         self.voltages = self.get_voltages_available()
 
-    def get_voltages_available(self) -&gt; np.array:
+    def get_voltages_available(self) -&gt; np.ndarray:
         &#34;&#34;&#34;Checks the loaded run for which voltages are available for the
         defined temperature.
 
         Returns:
-            np.array: array of the available voltages
+            np.ndarray: array of the available voltages
         &#34;&#34;&#34;
 
         voltages = []
@@ -187,7 +190,7 @@ a certain temperature.</p></div>
 
         return voltages
 
-    def load_processed_data(self, force_processing: bool = False) -&gt; dict:
+    def load_processed_data(self, force_processing: bool = False) -&gt; None:
         self.data = {}
         for _voltage in self.voltages:
             processed_data = pylars.utils.output.processed_dataset(
@@ -206,6 +209,7 @@ a certain temperature.</p></div>
 
             self.data[_voltage] = _df[mask].copy()
 
+    @staticmethod
     def make_finger_plot(df, length_cut_min,
                          length_cut_max, plot=False,
                          ax=None):
@@ -234,12 +238,12 @@ a certain temperature.</p></div>
             ax.hist(df[_cuts][&#39;area&#39;], bins=1000, histtype=&#39;step&#39;, color=&#39;k&#39;)
             ax.plot(_x, Gaussean(_x, A, mu, sigma), c=&#39;r&#39;)
 
-            ax.yscale(&#39;log&#39;)
-            ax.ylabel(&#39;# Events&#39;)
-            ax.title(&#39;Module 0 | Channel 0&#39;)
-            ax.xlabel(&#39;Peak Area [integrated ADC counts]&#39;)
+            ax.set_yscale(&#39;log&#39;)
+            ax.set_ylabel(&#39;# Events&#39;)
+            ax.set_title(&#39;Module 0 | Channel 0&#39;)
+            ax.set_xlabel(&#39;Peak Area [integrated ADC counts]&#39;)
             if isinstance(plot, str):
-                fig.savefig(f&#39;figures/fingerplot_{plot}.png&#39;)
+                fig.savefig(f&#39;figures/fingerplot_{plot}.png&#39;) # type: ignore
             else:
                 plt.show()
         return mu, sigma</code></pre>
@@ -248,7 +252,7 @@ a certain temperature.</p></div>
 <ul class="hlist">
 <li><a title="pylars.analysis.darkcount.DCR_dataset" href="darkcount.html#pylars.analysis.darkcount.DCR_dataset">DCR_dataset</a></li>
 </ul>
-<h3>Methods</h3>
+<h3>Static methods</h3>
 <dl>
 <dt id="pylars.analysis.fingerplot.fingerplot_dataset.make_finger_plot"><code class="name flex">
 <span>def <span class="ident">make_finger_plot</span></span>(<span>df, length_cut_min, length_cut_max, plot=False, ax=None)</span>
@@ -259,7 +263,8 @@ a certain temperature.</p></div>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def make_finger_plot(df, length_cut_min,
+<pre><code class="python">@staticmethod
+def make_finger_plot(df, length_cut_min,
                      length_cut_max, plot=False,
                      ax=None):
     _cuts = ((df[&#39;length&#39;] &gt; length_cut_min) &amp;
@@ -287,12 +292,12 @@ a certain temperature.</p></div>
         ax.hist(df[_cuts][&#39;area&#39;], bins=1000, histtype=&#39;step&#39;, color=&#39;k&#39;)
         ax.plot(_x, Gaussean(_x, A, mu, sigma), c=&#39;r&#39;)
 
-        ax.yscale(&#39;log&#39;)
-        ax.ylabel(&#39;# Events&#39;)
-        ax.title(&#39;Module 0 | Channel 0&#39;)
-        ax.xlabel(&#39;Peak Area [integrated ADC counts]&#39;)
+        ax.set_yscale(&#39;log&#39;)
+        ax.set_ylabel(&#39;# Events&#39;)
+        ax.set_title(&#39;Module 0 | Channel 0&#39;)
+        ax.set_xlabel(&#39;Peak Area [integrated ADC counts]&#39;)
         if isinstance(plot, str):
-            fig.savefig(f&#39;figures/fingerplot_{plot}.png&#39;)
+            fig.savefig(f&#39;figures/fingerplot_{plot}.png&#39;) # type: ignore
         else:
             plt.show()
     return mu, sigma</code></pre>
