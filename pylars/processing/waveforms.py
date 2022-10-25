@@ -46,7 +46,8 @@ class waveform_processing():
         std_rough = cls.get_std_rough(waveform, baseline_samples)
 
         pulses = pulse_processing.find_pulses_simple(
-            waveform, baseline_rough, std_rough, sigma_level)
+            waveform, baseline_rough, std_rough, sigma_level, 
+            negative_polarity= True, baseline_subtracted = False)
 
         # handle case where no pulses were found
         if len(pulses[0]) == 0:

@@ -1,5 +1,6 @@
 import numpy as np
 import numba as nb
+from typing import Tuple, List
 
 class peak_processing():
     """All the things peaks. Peaks are sums of pulses found in waveforms.
@@ -8,6 +9,10 @@ class peak_processing():
     to peak processing to be used in `peakprocessor`, where a processor 
     object is then constructed.
     """       
+    
+    __version__ = '0.0.1'
+
+    available_posrec_algos = ['CoG']
 
     @classmethod
     def apply_ADCcounts_to_e(cls, waveforms_subtracted: np.ndarray, 
@@ -126,6 +131,35 @@ class peak_processing():
         waveforms_pe = cls.apply_e_to_pe(waveforms_charge, gains)
 
         return waveforms_pe
+    
+    @classmethod
+    def reorder_channel(cls, data_array: np.ndarray, 
+                        index_reorder: list) -> np.ndarray:
+        """Reorder columns of an ndarray, corresponding to changing the order 
+        of channels to match the order in the sensor layout.
+        
+        Based on the following stack overflow thread: https://stackoverflow.
+        com/questions/20265229/rearrange-columns-of-numpy-2d-array
+
+        Args:
+            data_array (np.ndarray): array where columns are different 
+                channels
+            index_reorder (list): list of indexes where the change in 
+                `data_array` is i->index_reorder[i].
+
+        Returns:
+            np.ndarray: the original array with reordered collumns following 
+                `index_reorder`.
+        """
+
+        if len(np.shape(data_array)) == 1:
+            data_array = np.array(data_array).reshape(1,len(data_array))
+            
+        idx = np.empty_like(index_reorder)
+        idx[index_reorder] = np.arange(len(index_reorder))
+        data_array[:] = data_array[:, idx]  # in-place modification of array
+
+        return data_array
 
     @classmethod
     def get_sum_waveform(cls, waveforms_pe: np.ndarray) -> np.ndarray:
@@ -142,3 +176,103 @@ class peak_processing():
         summed_waveform = np.sum(waveforms_pe, axis = 0)
 
         return summed_waveform
+
+    @classmethod
+    def get_sum_peak_start_end_above_min_area(cls, areas: List[float], 
+        positions: List[int], lengths: List[int], 
+        area_min: float) -> Tuple[List[int], List[int]]:
+        """Determine the indexes of start and end of a peak, considering 
+        only peaks with area above `area_min`.
+
+        Returns:
+            Tuple[List, List]: lists with the indexes of begin of peaks and 
+                end of peaks.
+        """
+        good_peaks_start = []
+        good_peaks_end = []
+        for _area, _position, _length in zip(areas, positions, lengths):
+            if _area > area_min:
+                good_peaks_start.append(_position)
+                good_peaks_end.append(_position + _length)
+        return (good_peaks_start, good_peaks_end)
+
+    @classmethod
+    def get_area_per_sensor(cls, waveforms_pe: np.ndarray, 
+                            peaks_start:List[int], 
+                            peaks_end: List[int]) -> np.ndarray:
+        """Computes the area per sensor of a given waveform set to be used 
+        for hitpattern needs.
+
+        Args:
+            waveforms_pe (np.ndarray): waveforms in pe, one row per channel.
+            peaks_start (List[int]): list with the start of peaks in the 
+                summed waveform.
+            peaks_end (List[int]): list with the end of peaks in the 
+                summed waveform.
+
+        Returns:
+            np.ndarray: array with the area per channel for the peaks, each 
+                row a peak.
+        """
+        
+        
+        area_per_sensor = np.zeros((len(peaks_start), 
+                                    np.shape(waveforms_pe)[0]))
+        for i, (_p_start, _p_end) in enumerate(zip(peaks_start,peaks_end)):
+            area_per_sensor[i,:] = np.sum(waveforms_pe[:,_p_start:_p_end],
+                                        axis = 1)
+        return area_per_sensor
+
+    @classmethod
+    def reconstruct_xy_position(cls, area_per_sensor: np.ndarray,
+                                sensor_layout: np.ndarray,
+                                algo: str = 'CoG') -> np.ndarray:
+        """Computes xy position of event given a hitpattern from 
+        area_per_sensor.
+
+        Args:
+            algo (str, optional): The algorithm to use in position 
+                reconstruction. Defaults to 'CoG'.
+
+        Returns:
+            np.ndarray: array with x,y reconstructed position. Each row a 
+                different peak. pos[:,0] is the list of x, pos[:,1] the 
+                list of y.
+        """
+
+        if algo is not 'CoG':
+            raise NotImplementedError(f'''The requested reconstruction 
+            algorithm ({algo}) is not yet implemented, 
+            try: {cls.available_posrec_algos}''')
+
+        area_tot = np.sum(area_per_sensor, axis = 1)
+        # might not be exactly the same as calculated in `process_waveform`
+        
+        x = np.sum((area_per_sensor * sensor_layout[0,:].T)) / area_tot
+        y = np.sum((area_per_sensor * sensor_layout[1,:].T)) / area_tot
+
+        return np.vstack([x,y])
+
+
+class peak():
+    """This is a peak (gipfel).
+    """
+
+
+    def __init__(self, timestamp: int,
+                 wf_number: int,
+                 area: float,
+                 length: int,
+                 position: int,
+                 amplitude: float,
+                 area_per_sensor: np.ndarray):
+
+        self.timestamp = timestamp
+        self.wf_number = wf_number
+        self.area = area
+        self.length = length
+        self.position = position
+        self.amplitude = amplitude
+        self.area_per_sensor = area_per_sensor
+
+    

@@ -25,7 +25,7 @@ class simple_processor():
         self.show_loadbar_channel = True
         self.show_tqdm_channel = True
 
-    def __hash__(self) -> int:
+    def __hash__(self) -> str:
         return self.hash
 
     def set_tqdm_channel(self, bar: bool, show: bool):
@@ -229,7 +229,7 @@ class run_processor(simple_processor):
             # #print(
             #    f'No datasets found on run with kind = {kind}, '
             #    f'voltage = {vbias} and temperature = {temp}.')
-            return None
+            return pd.DataFrame({})
 
         print(
             f'Found {len(datasets_to_process)} datasets. '
