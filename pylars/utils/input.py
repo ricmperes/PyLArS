@@ -47,7 +47,7 @@ class raw_data():
         try:
             raw_file = uproot.open(self.raw_path)
             self.raw_file = raw_file
-        except Exception:
+        except:
             raise f'No root file found for {self.raw_path}'
 
     def get_available_channels(self):
@@ -138,7 +138,7 @@ class run():
 
         Returns:
             list: list of all the datasets of a given run. Elements
-                are type dataset
+                are type dataset.
         """
         all_root_files = self.root_files
         datasets = []
@@ -192,7 +192,7 @@ class run():
 
                 datasets.append(dataset(file, _kind, _module, _temp, _vbias))
 
-        elif self.run_number == 2:
+        elif self.run_number in (2, 3):
             for file in all_root_files:
                 file_split = file.split('/')
                 f_split = file_split[-1].split('_')
