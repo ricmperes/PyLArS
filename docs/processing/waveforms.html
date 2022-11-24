@@ -74,18 +74,19 @@ class waveform_processing():
         std_rough = cls.get_std_rough(waveform, baseline_samples)
 
         pulses = pulse_processing.find_pulses_simple(
-            waveform, baseline_rough, std_rough, sigma_level, 
-            negative_polarity= True, baseline_subtracted = False)
+            waveform, baseline_rough, std_rough, sigma_level,
+            negative_polarity=True, baseline_subtracted=False)
 
         # handle case where no pulses were found
         if len(pulses[0]) == 0:
             return [], [], [], []
 
-        areas = pulse_processing.get_all_areas(waveform, pulses, baseline_rough)
+        areas = pulse_processing.get_all_areas(
+            waveform, pulses, baseline_rough)
         lengths = pulse_processing.get_all_lengths(pulses)
         positions = pulse_processing.get_all_positions(pulses)
         amplitudes = pulse_processing.get_all_amplitudes(waveform, pulses,
-                                                        baseline_rough)
+                                                         baseline_rough)
 
         return areas, lengths, positions, amplitudes</code></pre>
 </details>
@@ -152,18 +153,19 @@ class waveform_processing():
         std_rough = cls.get_std_rough(waveform, baseline_samples)
 
         pulses = pulse_processing.find_pulses_simple(
-            waveform, baseline_rough, std_rough, sigma_level, 
-            negative_polarity= True, baseline_subtracted = False)
+            waveform, baseline_rough, std_rough, sigma_level,
+            negative_polarity=True, baseline_subtracted=False)
 
         # handle case where no pulses were found
         if len(pulses[0]) == 0:
             return [], [], [], []
 
-        areas = pulse_processing.get_all_areas(waveform, pulses, baseline_rough)
+        areas = pulse_processing.get_all_areas(
+            waveform, pulses, baseline_rough)
         lengths = pulse_processing.get_all_lengths(pulses)
         positions = pulse_processing.get_all_positions(pulses)
         amplitudes = pulse_processing.get_all_amplitudes(waveform, pulses,
-                                                        baseline_rough)
+                                                         baseline_rough)
 
         return areas, lengths, positions, amplitudes</code></pre>
 </details>
@@ -257,18 +259,19 @@ def process_waveform(cls, waveform: np.ndarray, baseline_samples: int,
     std_rough = cls.get_std_rough(waveform, baseline_samples)
 
     pulses = pulse_processing.find_pulses_simple(
-        waveform, baseline_rough, std_rough, sigma_level, 
-        negative_polarity= True, baseline_subtracted = False)
+        waveform, baseline_rough, std_rough, sigma_level,
+        negative_polarity=True, baseline_subtracted=False)
 
     # handle case where no pulses were found
     if len(pulses[0]) == 0:
         return [], [], [], []
 
-    areas = pulse_processing.get_all_areas(waveform, pulses, baseline_rough)
+    areas = pulse_processing.get_all_areas(
+        waveform, pulses, baseline_rough)
     lengths = pulse_processing.get_all_lengths(pulses)
     positions = pulse_processing.get_all_positions(pulses)
     amplitudes = pulse_processing.get_all_amplitudes(waveform, pulses,
-                                                    baseline_rough)
+                                                     baseline_rough)
 
     return areas, lengths, positions, amplitudes</code></pre>
 </details>

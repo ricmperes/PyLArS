@@ -27,16 +27,21 @@
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">import copy
+from typing import Union
 
 import numpy as np
 import pandas as pd
 import pylars
-from scipy.optimize import curve_fit
+import pylars.plotting.plotanalysis
 import pylars.utils.input
 import pylars.utils.output
-from pylars.utils.common import func_linear
-import pylars.plotting.plotanalysis
-from typing import Union
+from pylars.utils.common import func_linear, find_minmax
+import scipy.ndimage
+from scipy.optimize import curve_fit
+from scipy.signal import find_peaks
+from scipy import stats
+from tqdm.autonotebook import tqdm
+
 
 class BV_dataset():
     &#34;&#34;&#34;Object class to hold breakdown voltage related instances and
@@ -55,6 +60,18 @@ class BV_dataset():
         self.channel = channel
         self.process = processor
         self.voltages = self.get_voltages_available()
+        self.plots_flag = False
+
+    def set_plots_flag(self, flag: bool) -&gt; None:
+        &#34;&#34;&#34;Set if computing properties makes plots (True) or not (False).
+        Assumes a ./figures/ directory exists.
+
+        Args:
+            flag (bool): True for plotting stuff, False for not making nice
+                pictures (plots) to hang on the wall. Yes, I hang plots on
+                my bedroom wall and it looks nice.
+        &#34;&#34;&#34;
+        self.plots_flag = flag
 
     def get_voltages_available(self) -&gt; np.ndarray:
         &#34;&#34;&#34;Checks the loaded run for which voltages are available for the
@@ -72,9 +89,25 @@ class BV_dataset():
 
         return voltages
 
-    def load_processed_data(self, force_processing: bool = False) -&gt; dict:
+    def load_processed_data(self, force_processing: bool = False) -&gt; None:
+        &#34;&#34;&#34;For all the voltages of a BV_dataset (same temperature) looks
+        for already processed files to load. If force_processing=True and
+        no saved file is found, processes the dataset with standard
+        options (sigma = 5, N_baseline = 50).
+
+        Args:
+            force_processing (bool, optional): Flag to force processing
+                of raw data in case the processed dataset is not found.
+                Defaults to False.
+
+        Returns:
+            dict: dictionary with the data df for each voltage as a key.
+        &#34;&#34;&#34;
         self.data = {}
-        for _voltage in self.voltages:
+        for _voltage in tqdm(self.voltages,
+                             desc=f&#39;Loading processed data for BV &#39; +
+                             f&#39;data at {self.temp}K: &#39;,
+                             total=len(self.voltages)):
             processed_data = pylars.utils.output.processed_dataset(
                 run=self.run,
                 kind=&#39;BV&#39;,
@@ -89,21 +122,121 @@ class BV_dataset():
             mask = ((_df[&#39;module&#39;] == self.module) &amp;
                     (_df[&#39;channel&#39;] == self.channel))
 
-            self.data[_voltage] = _df[mask].copy()
+            self.data[_voltage] = copy.deepcopy(_df[mask])
 
-        return self.data  # not needed but doesn&#39;t harm and can be useful
+    @classmethod
+    def get_peak_rough_positions(cls, area_array: np.ndarray,
+                                 cut_mask,
+                                 bins: Union[int, np.ndarray, list] = 1000,
+                                 filt=scipy.ndimage.gaussian_filter1d,
+                                 filter_options=3,
+                                 plot: Union[bool, str] = False) -&gt; tuple:
+        &#39;&#39;&#39;Takes the area histogram (fingerplot) and looks for peaks
+        and valeys. SPE should be the 2nd peak on most cases. Higher
+        PE values might be properly unrecognized
+        Returns two lists: list of the x value of the peaks, list of
+        the x value of the valeys.
+        Optional plot feature:
+        - False: no plot
+        - True: displays plot in notebook
+        - string - sufix on the name of the file&#39;&#39;&#39;
+
+        area_hist = np.histogram(
+            area_array[cut_mask], bins=bins)
+
+        area_x = area_hist[1]
+        area_x = (area_x + (area_x[1] - area_x[0]) / 2)[:-1]
+        area_y = area_hist[0]
+
+        area_filt = filt(area_y, filter_options)
+        area_peaks_x, peak_properties = find_peaks(area_filt,
+                                                   prominence=20,
+                                                   distance=50)
+
+        if plot != False:
+            pylars.plotting.plotanalysis.plot_peaks(
+                area_x, area_y, area_filt, area_peaks_x)
+
+        return area_x[area_peaks_x], peak_properties
+
+    def compute_BV_LED_simple(self, LED_position: int,
+                              plot: bool = False) -&gt; tuple:
+        &#34;&#34;&#34;Comute BV for a given T dataset with the first no-noise peak
+        of the area spectrum given width and position cut.
+
+        Args:
+            LED_position (int): number of sample where to center the
+                position cut.
+            plot (bool, optional): Show the plot, save the plot or only
+                compute output. Defaults to False.
+
+        Returns:
+            tuple: Calculated BV, error on the fit and r2 of the linear
+                regression. Returns on the form `(BV, BV_std, r2)`.
+        &#34;&#34;&#34;
+
+        bias_voltage = []
+        good_peaks = []
+        v_list = self.voltages
+
+        for i, v in enumerate(v_list):
+            _df = self.data[v]
+            _cuts = _cuts = (
+                            (_df[&#39;length&#39;] &gt; 3) &amp;
+                            (_df[&#39;position&#39;] &gt; LED_position - 10) &amp;
+                            (_df[&#39;position&#39;] &lt; LED_position + 20)
+            )
+            peaks, peak_prop = BV_dataset.get_peak_rough_positions(
+                _df[&#39;area&#39;],
+                _cuts,
+                bins=np.linspace(0, np.percentile(_df[&#39;area&#39;], 95), 500),
+                plot=False)
+
+            if len(peaks) == 0:
+                print(&#39;Could not compute LED area for V=&#39;, v)
+                continue
+            if len(peaks) &gt; 0:
+                if (peaks[0] &gt; 3500) or (len(peaks) == 1):
+                    first_good_peak = peaks[0]
+                else:
+                    first_good_peak = peaks[1]
+            # elif len(peaks) == 0 and peaks[0] &gt; 10000:
+            #    spe = peaks[0]
+            else:
+                print(&#39;Could not compute LED area for V=&#39;, v)
+                continue
+
+            bias_voltage.append(v)
+            good_peaks.append(first_good_peak)
+
+        linres = stats.linregress(good_peaks, bias_voltage)
+
+        if plot != False:
+            pylars.plotting.plotanalysis.plot_BV_fit(
+                plot=f&#39;{self.module}_{self.channel}&#39;,
+                temperature=self.temp,
+                voltages=bias_voltage,
+                gains=good_peaks,
+                a=linres.slope,  # type: ignore
+                b=linres.intercept,  # type: ignore
+                _breakdown_v=linres.intercept)  # type: ignore
+
+        return (linres.intercept, linres.intercept_stderr,
+                linres.rvalue**2)  # type: ignore
 
 
 def compute_BV(df_results: pd.DataFrame,
                plot: Union[bool, str] = False) -&gt; pd.DataFrame:
-    &#34;&#34;&#34;Computes the breakdown voltage with a linear fit of gain over V points.
-    Takes a dataframe with the collumns &#39;T&#39; (temperature), &#39;V&#39; (voltage) and
-    &#39;gain&#39; (self-explanatory, c&#39;mon...)
+    &#34;&#34;&#34;Computes the breakdown voltage with a linear fit of gain over
+    V points.
+
+    Takes a dataframe with the collumns &#39;T&#39; (temperature), &#39;V&#39; (voltage)
+    and &#39;gain&#39; (self-explanatory, c&#39;mon...)
 
     Args:
         df_results (pd.DataFrame): dataframe with the processed datasets
             calculated gains.
-        plot (boolorstr, optional): flag for plotting choice. Defaults to 
+        plot (boolorstr, optional): flag for plotting choice. Defaults to
             False.
 
     Returns:
@@ -131,7 +264,8 @@ def compute_BV(df_results: pd.DataFrame,
         if plot != False:
             pylars.plotting.plotanalysis.plot_BV_fit(plot, _temp,
                                                      volt_list_in_temp,
-                                                     gain_list_in_temp, a, b,
+                                                     gain_list_in_temp,
+                                                     a, b,
                                                      _breakdown_v)
 
     df_results[&#39;OV&#39;] = df_results[&#39;V&#39;] - df_results[&#39;BV&#39;]
@@ -150,9 +284,10 @@ def compute_BV(df_results: pd.DataFrame,
 <span>def <span class="ident">compute_BV</span></span>(<span>df_results: pandas.core.frame.DataFrame, plot: Union[bool, str] = False) ‑> pandas.core.frame.DataFrame</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Computes the breakdown voltage with a linear fit of gain over V points.
-Takes a dataframe with the collumns 'T' (temperature), 'V' (voltage) and
-'gain' (self-explanatory, c'mon&hellip;)</p>
+<div class="desc"><p>Computes the breakdown voltage with a linear fit of gain over
+V points.</p>
+<p>Takes a dataframe with the collumns 'T' (temperature), 'V' (voltage)
+and 'gain' (self-explanatory, c'mon&hellip;)</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>df_results</code></strong> :&ensp;<code>pd.DataFrame</code></dt>
@@ -174,14 +309,16 @@ False.</dd>
 </summary>
 <pre><code class="python">def compute_BV(df_results: pd.DataFrame,
                plot: Union[bool, str] = False) -&gt; pd.DataFrame:
-    &#34;&#34;&#34;Computes the breakdown voltage with a linear fit of gain over V points.
-    Takes a dataframe with the collumns &#39;T&#39; (temperature), &#39;V&#39; (voltage) and
-    &#39;gain&#39; (self-explanatory, c&#39;mon...)
+    &#34;&#34;&#34;Computes the breakdown voltage with a linear fit of gain over
+    V points.
+
+    Takes a dataframe with the collumns &#39;T&#39; (temperature), &#39;V&#39; (voltage)
+    and &#39;gain&#39; (self-explanatory, c&#39;mon...)
 
     Args:
         df_results (pd.DataFrame): dataframe with the processed datasets
             calculated gains.
-        plot (boolorstr, optional): flag for plotting choice. Defaults to 
+        plot (boolorstr, optional): flag for plotting choice. Defaults to
             False.
 
     Returns:
@@ -209,7 +346,8 @@ False.</dd>
         if plot != False:
             pylars.plotting.plotanalysis.plot_BV_fit(plot, _temp,
                                                      volt_list_in_temp,
-                                                     gain_list_in_temp, a, b,
+                                                     gain_list_in_temp,
+                                                     a, b,
                                                      _breakdown_v)
 
     df_results[&#39;OV&#39;] = df_results[&#39;V&#39;] - df_results[&#39;BV&#39;]
@@ -252,6 +390,18 @@ a certain temperature.</p></div>
         self.channel = channel
         self.process = processor
         self.voltages = self.get_voltages_available()
+        self.plots_flag = False
+
+    def set_plots_flag(self, flag: bool) -&gt; None:
+        &#34;&#34;&#34;Set if computing properties makes plots (True) or not (False).
+        Assumes a ./figures/ directory exists.
+
+        Args:
+            flag (bool): True for plotting stuff, False for not making nice
+                pictures (plots) to hang on the wall. Yes, I hang plots on
+                my bedroom wall and it looks nice.
+        &#34;&#34;&#34;
+        self.plots_flag = flag
 
     def get_voltages_available(self) -&gt; np.ndarray:
         &#34;&#34;&#34;Checks the loaded run for which voltages are available for the
@@ -269,9 +419,25 @@ a certain temperature.</p></div>
 
         return voltages
 
-    def load_processed_data(self, force_processing: bool = False) -&gt; dict:
+    def load_processed_data(self, force_processing: bool = False) -&gt; None:
+        &#34;&#34;&#34;For all the voltages of a BV_dataset (same temperature) looks
+        for already processed files to load. If force_processing=True and
+        no saved file is found, processes the dataset with standard
+        options (sigma = 5, N_baseline = 50).
+
+        Args:
+            force_processing (bool, optional): Flag to force processing
+                of raw data in case the processed dataset is not found.
+                Defaults to False.
+
+        Returns:
+            dict: dictionary with the data df for each voltage as a key.
+        &#34;&#34;&#34;
         self.data = {}
-        for _voltage in self.voltages:
+        for _voltage in tqdm(self.voltages,
+                             desc=f&#39;Loading processed data for BV &#39; +
+                             f&#39;data at {self.temp}K: &#39;,
+                             total=len(self.voltages)):
             processed_data = pylars.utils.output.processed_dataset(
                 run=self.run,
                 kind=&#39;BV&#39;,
@@ -286,12 +452,257 @@ a certain temperature.</p></div>
             mask = ((_df[&#39;module&#39;] == self.module) &amp;
                     (_df[&#39;channel&#39;] == self.channel))
 
-            self.data[_voltage] = _df[mask].copy()
+            self.data[_voltage] = copy.deepcopy(_df[mask])
 
-        return self.data  # not needed but doesn&#39;t harm and can be useful</code></pre>
+    @classmethod
+    def get_peak_rough_positions(cls, area_array: np.ndarray,
+                                 cut_mask,
+                                 bins: Union[int, np.ndarray, list] = 1000,
+                                 filt=scipy.ndimage.gaussian_filter1d,
+                                 filter_options=3,
+                                 plot: Union[bool, str] = False) -&gt; tuple:
+        &#39;&#39;&#39;Takes the area histogram (fingerplot) and looks for peaks
+        and valeys. SPE should be the 2nd peak on most cases. Higher
+        PE values might be properly unrecognized
+        Returns two lists: list of the x value of the peaks, list of
+        the x value of the valeys.
+        Optional plot feature:
+        - False: no plot
+        - True: displays plot in notebook
+        - string - sufix on the name of the file&#39;&#39;&#39;
+
+        area_hist = np.histogram(
+            area_array[cut_mask], bins=bins)
+
+        area_x = area_hist[1]
+        area_x = (area_x + (area_x[1] - area_x[0]) / 2)[:-1]
+        area_y = area_hist[0]
+
+        area_filt = filt(area_y, filter_options)
+        area_peaks_x, peak_properties = find_peaks(area_filt,
+                                                   prominence=20,
+                                                   distance=50)
+
+        if plot != False:
+            pylars.plotting.plotanalysis.plot_peaks(
+                area_x, area_y, area_filt, area_peaks_x)
+
+        return area_x[area_peaks_x], peak_properties
+
+    def compute_BV_LED_simple(self, LED_position: int,
+                              plot: bool = False) -&gt; tuple:
+        &#34;&#34;&#34;Comute BV for a given T dataset with the first no-noise peak
+        of the area spectrum given width and position cut.
+
+        Args:
+            LED_position (int): number of sample where to center the
+                position cut.
+            plot (bool, optional): Show the plot, save the plot or only
+                compute output. Defaults to False.
+
+        Returns:
+            tuple: Calculated BV, error on the fit and r2 of the linear
+                regression. Returns on the form `(BV, BV_std, r2)`.
+        &#34;&#34;&#34;
+
+        bias_voltage = []
+        good_peaks = []
+        v_list = self.voltages
+
+        for i, v in enumerate(v_list):
+            _df = self.data[v]
+            _cuts = _cuts = (
+                            (_df[&#39;length&#39;] &gt; 3) &amp;
+                            (_df[&#39;position&#39;] &gt; LED_position - 10) &amp;
+                            (_df[&#39;position&#39;] &lt; LED_position + 20)
+            )
+            peaks, peak_prop = BV_dataset.get_peak_rough_positions(
+                _df[&#39;area&#39;],
+                _cuts,
+                bins=np.linspace(0, np.percentile(_df[&#39;area&#39;], 95), 500),
+                plot=False)
+
+            if len(peaks) == 0:
+                print(&#39;Could not compute LED area for V=&#39;, v)
+                continue
+            if len(peaks) &gt; 0:
+                if (peaks[0] &gt; 3500) or (len(peaks) == 1):
+                    first_good_peak = peaks[0]
+                else:
+                    first_good_peak = peaks[1]
+            # elif len(peaks) == 0 and peaks[0] &gt; 10000:
+            #    spe = peaks[0]
+            else:
+                print(&#39;Could not compute LED area for V=&#39;, v)
+                continue
+
+            bias_voltage.append(v)
+            good_peaks.append(first_good_peak)
+
+        linres = stats.linregress(good_peaks, bias_voltage)
+
+        if plot != False:
+            pylars.plotting.plotanalysis.plot_BV_fit(
+                plot=f&#39;{self.module}_{self.channel}&#39;,
+                temperature=self.temp,
+                voltages=bias_voltage,
+                gains=good_peaks,
+                a=linres.slope,  # type: ignore
+                b=linres.intercept,  # type: ignore
+                _breakdown_v=linres.intercept)  # type: ignore
+
+        return (linres.intercept, linres.intercept_stderr,
+                linres.rvalue**2)  # type: ignore</code></pre>
 </details>
+<h3>Static methods</h3>
+<dl>
+<dt id="pylars.analysis.breakdown.BV_dataset.get_peak_rough_positions"><code class="name flex">
+<span>def <span class="ident">get_peak_rough_positions</span></span>(<span>area_array: numpy.ndarray, cut_mask, bins: Union[int, numpy.ndarray, list] = 1000, filt=&lt;function gaussian_filter1d&gt;, filter_options=3, plot: Union[bool, str] = False) ‑> tuple</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Takes the area histogram (fingerplot) and looks for peaks
+and valeys. SPE should be the 2nd peak on most cases. Higher
+PE values might be properly unrecognized
+Returns two lists: list of the x value of the peaks, list of
+the x value of the valeys.
+Optional plot feature:
+- False: no plot
+- True: displays plot in notebook
+- string - sufix on the name of the file</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@classmethod
+def get_peak_rough_positions(cls, area_array: np.ndarray,
+                             cut_mask,
+                             bins: Union[int, np.ndarray, list] = 1000,
+                             filt=scipy.ndimage.gaussian_filter1d,
+                             filter_options=3,
+                             plot: Union[bool, str] = False) -&gt; tuple:
+    &#39;&#39;&#39;Takes the area histogram (fingerplot) and looks for peaks
+    and valeys. SPE should be the 2nd peak on most cases. Higher
+    PE values might be properly unrecognized
+    Returns two lists: list of the x value of the peaks, list of
+    the x value of the valeys.
+    Optional plot feature:
+    - False: no plot
+    - True: displays plot in notebook
+    - string - sufix on the name of the file&#39;&#39;&#39;
+
+    area_hist = np.histogram(
+        area_array[cut_mask], bins=bins)
+
+    area_x = area_hist[1]
+    area_x = (area_x + (area_x[1] - area_x[0]) / 2)[:-1]
+    area_y = area_hist[0]
+
+    area_filt = filt(area_y, filter_options)
+    area_peaks_x, peak_properties = find_peaks(area_filt,
+                                               prominence=20,
+                                               distance=50)
+
+    if plot != False:
+        pylars.plotting.plotanalysis.plot_peaks(
+            area_x, area_y, area_filt, area_peaks_x)
+
+    return area_x[area_peaks_x], peak_properties</code></pre>
+</details>
+</dd>
+</dl>
 <h3>Methods</h3>
 <dl>
+<dt id="pylars.analysis.breakdown.BV_dataset.compute_BV_LED_simple"><code class="name flex">
+<span>def <span class="ident">compute_BV_LED_simple</span></span>(<span>self, LED_position: int, plot: bool = False) ‑> tuple</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Comute BV for a given T dataset with the first no-noise peak
+of the area spectrum given width and position cut.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>LED_position</code></strong> :&ensp;<code>int</code></dt>
+<dd>number of sample where to center the
+position cut.</dd>
+<dt><strong><code>plot</code></strong> :&ensp;<code>bool</code>, optional</dt>
+<dd>Show the plot, save the plot or only
+compute output. Defaults to False.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tuple</code></dt>
+<dd>Calculated BV, error on the fit and r2 of the linear
+regression. Returns on the form <code>(BV, BV_std, r2)</code>.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def compute_BV_LED_simple(self, LED_position: int,
+                          plot: bool = False) -&gt; tuple:
+    &#34;&#34;&#34;Comute BV for a given T dataset with the first no-noise peak
+    of the area spectrum given width and position cut.
+
+    Args:
+        LED_position (int): number of sample where to center the
+            position cut.
+        plot (bool, optional): Show the plot, save the plot or only
+            compute output. Defaults to False.
+
+    Returns:
+        tuple: Calculated BV, error on the fit and r2 of the linear
+            regression. Returns on the form `(BV, BV_std, r2)`.
+    &#34;&#34;&#34;
+
+    bias_voltage = []
+    good_peaks = []
+    v_list = self.voltages
+
+    for i, v in enumerate(v_list):
+        _df = self.data[v]
+        _cuts = _cuts = (
+                        (_df[&#39;length&#39;] &gt; 3) &amp;
+                        (_df[&#39;position&#39;] &gt; LED_position - 10) &amp;
+                        (_df[&#39;position&#39;] &lt; LED_position + 20)
+        )
+        peaks, peak_prop = BV_dataset.get_peak_rough_positions(
+            _df[&#39;area&#39;],
+            _cuts,
+            bins=np.linspace(0, np.percentile(_df[&#39;area&#39;], 95), 500),
+            plot=False)
+
+        if len(peaks) == 0:
+            print(&#39;Could not compute LED area for V=&#39;, v)
+            continue
+        if len(peaks) &gt; 0:
+            if (peaks[0] &gt; 3500) or (len(peaks) == 1):
+                first_good_peak = peaks[0]
+            else:
+                first_good_peak = peaks[1]
+        # elif len(peaks) == 0 and peaks[0] &gt; 10000:
+        #    spe = peaks[0]
+        else:
+            print(&#39;Could not compute LED area for V=&#39;, v)
+            continue
+
+        bias_voltage.append(v)
+        good_peaks.append(first_good_peak)
+
+    linres = stats.linregress(good_peaks, bias_voltage)
+
+    if plot != False:
+        pylars.plotting.plotanalysis.plot_BV_fit(
+            plot=f&#39;{self.module}_{self.channel}&#39;,
+            temperature=self.temp,
+            voltages=bias_voltage,
+            gains=good_peaks,
+            a=linres.slope,  # type: ignore
+            b=linres.intercept,  # type: ignore
+            _breakdown_v=linres.intercept)  # type: ignore
+
+    return (linres.intercept, linres.intercept_stderr,
+            linres.rvalue**2)  # type: ignore</code></pre>
+</details>
+</dd>
 <dt id="pylars.analysis.breakdown.BV_dataset.get_voltages_available"><code class="name flex">
 <span>def <span class="ident">get_voltages_available</span></span>(<span>self) ‑> numpy.ndarray</span>
 </code></dt>
@@ -325,17 +736,48 @@ defined temperature.</p>
 </details>
 </dd>
 <dt id="pylars.analysis.breakdown.BV_dataset.load_processed_data"><code class="name flex">
-<span>def <span class="ident">load_processed_data</span></span>(<span>self, force_processing: bool = False) ‑> dict</span>
+<span>def <span class="ident">load_processed_data</span></span>(<span>self, force_processing: bool = False) ‑> NoneType</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>For all the voltages of a BV_dataset (same temperature) looks
+for already processed files to load. If force_processing=True and
+no saved file is found, processes the dataset with standard
+options (sigma = 5, N_baseline = 50).</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>force_processing</code></strong> :&ensp;<code>bool</code>, optional</dt>
+<dd>Flag to force processing
+of raw data in case the processed dataset is not found.
+Defaults to False.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>dict</code></dt>
+<dd>dictionary with the data df for each voltage as a key.</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def load_processed_data(self, force_processing: bool = False) -&gt; dict:
+<pre><code class="python">def load_processed_data(self, force_processing: bool = False) -&gt; None:
+    &#34;&#34;&#34;For all the voltages of a BV_dataset (same temperature) looks
+    for already processed files to load. If force_processing=True and
+    no saved file is found, processes the dataset with standard
+    options (sigma = 5, N_baseline = 50).
+
+    Args:
+        force_processing (bool, optional): Flag to force processing
+            of raw data in case the processed dataset is not found.
+            Defaults to False.
+
+    Returns:
+        dict: dictionary with the data df for each voltage as a key.
+    &#34;&#34;&#34;
     self.data = {}
-    for _voltage in self.voltages:
+    for _voltage in tqdm(self.voltages,
+                         desc=f&#39;Loading processed data for BV &#39; +
+                         f&#39;data at {self.temp}K: &#39;,
+                         total=len(self.voltages)):
         processed_data = pylars.utils.output.processed_dataset(
             run=self.run,
             kind=&#39;BV&#39;,
@@ -350,9 +792,36 @@ defined temperature.</p>
         mask = ((_df[&#39;module&#39;] == self.module) &amp;
                 (_df[&#39;channel&#39;] == self.channel))
 
-        self.data[_voltage] = _df[mask].copy()
+        self.data[_voltage] = copy.deepcopy(_df[mask])</code></pre>
+</details>
+</dd>
+<dt id="pylars.analysis.breakdown.BV_dataset.set_plots_flag"><code class="name flex">
+<span>def <span class="ident">set_plots_flag</span></span>(<span>self, flag: bool) ‑> NoneType</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Set if computing properties makes plots (True) or not (False).
+Assumes a ./figures/ directory exists.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>flag</code></strong> :&ensp;<code>bool</code></dt>
+<dd>True for plotting stuff, False for not making nice
+pictures (plots) to hang on the wall. Yes, I hang plots on
+my bedroom wall and it looks nice.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def set_plots_flag(self, flag: bool) -&gt; None:
+    &#34;&#34;&#34;Set if computing properties makes plots (True) or not (False).
+    Assumes a ./figures/ directory exists.
 
-    return self.data  # not needed but doesn&#39;t harm and can be useful</code></pre>
+    Args:
+        flag (bool): True for plotting stuff, False for not making nice
+            pictures (plots) to hang on the wall. Yes, I hang plots on
+            my bedroom wall and it looks nice.
+    &#34;&#34;&#34;
+    self.plots_flag = flag</code></pre>
 </details>
 </dd>
 </dl>
@@ -381,8 +850,11 @@ defined temperature.</p>
 <li>
 <h4><code><a title="pylars.analysis.breakdown.BV_dataset" href="#pylars.analysis.breakdown.BV_dataset">BV_dataset</a></code></h4>
 <ul class="">
+<li><code><a title="pylars.analysis.breakdown.BV_dataset.compute_BV_LED_simple" href="#pylars.analysis.breakdown.BV_dataset.compute_BV_LED_simple">compute_BV_LED_simple</a></code></li>
+<li><code><a title="pylars.analysis.breakdown.BV_dataset.get_peak_rough_positions" href="#pylars.analysis.breakdown.BV_dataset.get_peak_rough_positions">get_peak_rough_positions</a></code></li>
 <li><code><a title="pylars.analysis.breakdown.BV_dataset.get_voltages_available" href="#pylars.analysis.breakdown.BV_dataset.get_voltages_available">get_voltages_available</a></code></li>
 <li><code><a title="pylars.analysis.breakdown.BV_dataset.load_processed_data" href="#pylars.analysis.breakdown.BV_dataset.load_processed_data">load_processed_data</a></code></li>
+<li><code><a title="pylars.analysis.breakdown.BV_dataset.set_plots_flag" href="#pylars.analysis.breakdown.BV_dataset.set_plots_flag">set_plots_flag</a></code></li>
 </ul>
 </li>
 </ul>

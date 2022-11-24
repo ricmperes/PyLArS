@@ -36,11 +36,11 @@ from matplotlib.patches import Rectangle
 from typing import (Union, Optional, List)
 
 
-def plot_sensor_layout(layout: np.ndarray, 
+def plot_sensor_layout(layout: np.ndarray,
                        r_tpc: Optional[float] = None,
                        labels: Optional[List[str]] = None,
-                       ax = None):
-    &#34;&#34;&#34;Generate the rectangles of where sensors are, the basis of a 
+                       ax=None):
+    &#34;&#34;&#34;Generate the rectangles of where sensors are, the basis of a
     hitpattern.
 
     Args:
@@ -53,81 +53,83 @@ def plot_sensor_layout(layout: np.ndarray,
         fig, ax = plt.subplots(1, 1)
 
     for i, _sensor in enumerate(layout):
-        xy = (_sensor[0],_sensor[2])
-        width = _sensor[1]-_sensor[0]
-        height = _sensor[3]-_sensor[2]
-        ax.add_patch(Rectangle(xy,width,height, fill = False, 
-                               color = &#39;k&#39;, zorder = 10))
+        xy = (_sensor[0], _sensor[2])
+        width = _sensor[1] - _sensor[0]
+        height = _sensor[3] - _sensor[2]
+        ax.add_patch(Rectangle(xy, width, height, fill=False,
+                               color=&#39;k&#39;, zorder=10))
         if labels is not None:
-            ax.text(xy[0]+width/2, xy[1]+height/2, labels[i], 
-                    ha = &#39;center&#39;, va = &#39;center&#39;, zorder = 10)
-    
-    if r_tpc is not None: 
-        ax.add_patch(Circle((0,0), r_tpc, color = &#39;r&#39;,fill = False, 
-                            label = &#39;TPC edge&#39;))
-    
+            ax.text(xy[0] + width / 2, xy[1] + height / 2, labels[i],
+                    ha=&#39;center&#39;, va=&#39;center&#39;, zorder=10)
+
+    if r_tpc is not None:
+        ax.add_patch(Circle((0, 0), r_tpc, color=&#39;r&#39;, fill=False,
+                            label=&#39;TPC edge&#39;))
+
     return ax
 
+
 def plot_hitpattern(hitpattern: Union[np.ndarray, List[float]],
-                    layout: np.ndarray, 
+                    layout: np.ndarray,
                     labels: Optional[List[str]] = None,
                     r_tpc: Optional[float] = None,
                     cmap: str = &#39;gnuplot&#39;,
                     log: bool = False,
-                    ax = None):
+                    ax=None):
     &#34;&#34;&#34;Plot a beautiful hitpattern.
 
     Args:
-        hitpattern (Union[np.ndarray, List[float]]): array with the are per 
+        hitpattern (Union[np.ndarray, List[float]]): array with the are per
             sensor.
         layout (np.ndarray): layout of the sensor array (x1,x2,y1,y2) corners.
-        labels (Optional[List[str]], optional): ordered labels to put in the 
+        labels (Optional[List[str]], optional): ordered labels to put in the
             center of each sensor. Defaults to None.
-        r_tpc (Optional[float], optional): plot a line at the tpc edge. 
+        r_tpc (Optional[float], optional): plot a line at the tpc edge.
             Defaults to None.
         cmap (str, optional): name of colormap to use. Defaults to &#39;gnuplot&#39;.
-        log (bool, optional): plot the log10 of pe instead of pe. Defaults 
+        log (bool, optional): plot the log10 of pe instead of pe. Defaults
             to False.
-        ax (_type_, optional): axis where to draw the hitpattern. Defaults 
+        ax (_type_, optional): axis where to draw the hitpattern. Defaults
             to None.
 
     Returns:
-        (axis, mappable): axis with the hitpattern drawned and the mappable 
+        (axis, mappable): axis with the hitpattern drawned and the mappable
             for a colorbar.
     &#34;&#34;&#34;
 
     if ax is None:
         fig, ax = plt.subplots(1, 1)
-    
-    cm = plt.get_cmap(cmap) # type: ignore
+
+    cm = plt.get_cmap(cmap)  # type: ignore
 
     if log == True:
         hitpattern = np.log10(hitpattern)
-    
+
     color_max = max(hitpattern)
     color_min = min(hitpattern)
 
     for i, _sensor in enumerate(layout):
         pe = hitpattern[i]
 
-        xy = (_sensor[0],_sensor[2])
-        width = _sensor[1]-_sensor[0]
-        height = _sensor[3]-_sensor[2]
-        ax.add_patch(Rectangle(xy,width,height, fill = True, 
-                               edgecolor = &#39;k&#39;,
-                               facecolor = cm((pe-color_min)/
-                                              (color_max-color_min))))
+        xy = (_sensor[0], _sensor[2])
+        width = _sensor[1] - _sensor[0]
+        height = _sensor[3] - _sensor[2]
+        ax.add_patch(Rectangle(xy, width, height, fill=True,
+                               edgecolor=&#39;k&#39;,
+                               facecolor=cm((pe - color_min) /
+                                            (color_max - color_min))))
         if labels is not None:
-            ax.text(xy[0]+width/2, xy[1]+height/2, labels[i], 
-                    ha = &#39;center&#39;, va = &#39;center&#39;, zorder = 10)
-    
-    if r_tpc is not None: 
-        ax.add_patch(Circle((0,0), r_tpc, color = &#39;r&#39;,fill = False, 
-                            label = &#39;TPC edge&#39;))
+            ax.text(xy[0] + width / 2, xy[1] + height / 2, labels[i],
+                    ha=&#39;center&#39;, va=&#39;center&#39;, zorder=10)
 
-    norm = matplotlib.colors.Normalize(vmin=color_min,vmax=color_max)
+    if r_tpc is not None:
+        ax.add_patch(Circle((0, 0), r_tpc, color=&#39;r&#39;, fill=False,
+                            label=&#39;TPC edge&#39;))
 
-    mappable = matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap)  # type: ignore
+    norm = matplotlib.colors.Normalize(vmin=color_min, vmax=color_max)
+
+    mappable = matplotlib.cm.ScalarMappable(
+        norm=norm, cmap=cmap)  # type: ignore
 
     return (ax, mappable)</code></pre>
 </details>
@@ -174,65 +176,66 @@ for a colorbar.</p></div>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def plot_hitpattern(hitpattern: Union[np.ndarray, List[float]],
-                    layout: np.ndarray, 
+                    layout: np.ndarray,
                     labels: Optional[List[str]] = None,
                     r_tpc: Optional[float] = None,
                     cmap: str = &#39;gnuplot&#39;,
                     log: bool = False,
-                    ax = None):
+                    ax=None):
     &#34;&#34;&#34;Plot a beautiful hitpattern.
 
     Args:
-        hitpattern (Union[np.ndarray, List[float]]): array with the are per 
+        hitpattern (Union[np.ndarray, List[float]]): array with the are per
             sensor.
         layout (np.ndarray): layout of the sensor array (x1,x2,y1,y2) corners.
-        labels (Optional[List[str]], optional): ordered labels to put in the 
+        labels (Optional[List[str]], optional): ordered labels to put in the
             center of each sensor. Defaults to None.
-        r_tpc (Optional[float], optional): plot a line at the tpc edge. 
+        r_tpc (Optional[float], optional): plot a line at the tpc edge.
             Defaults to None.
         cmap (str, optional): name of colormap to use. Defaults to &#39;gnuplot&#39;.
-        log (bool, optional): plot the log10 of pe instead of pe. Defaults 
+        log (bool, optional): plot the log10 of pe instead of pe. Defaults
             to False.
-        ax (_type_, optional): axis where to draw the hitpattern. Defaults 
+        ax (_type_, optional): axis where to draw the hitpattern. Defaults
             to None.
 
     Returns:
-        (axis, mappable): axis with the hitpattern drawned and the mappable 
+        (axis, mappable): axis with the hitpattern drawned and the mappable
             for a colorbar.
     &#34;&#34;&#34;
 
     if ax is None:
         fig, ax = plt.subplots(1, 1)
-    
-    cm = plt.get_cmap(cmap) # type: ignore
+
+    cm = plt.get_cmap(cmap)  # type: ignore
 
     if log == True:
         hitpattern = np.log10(hitpattern)
-    
+
     color_max = max(hitpattern)
     color_min = min(hitpattern)
 
     for i, _sensor in enumerate(layout):
         pe = hitpattern[i]
 
-        xy = (_sensor[0],_sensor[2])
-        width = _sensor[1]-_sensor[0]
-        height = _sensor[3]-_sensor[2]
-        ax.add_patch(Rectangle(xy,width,height, fill = True, 
-                               edgecolor = &#39;k&#39;,
-                               facecolor = cm((pe-color_min)/
-                                              (color_max-color_min))))
+        xy = (_sensor[0], _sensor[2])
+        width = _sensor[1] - _sensor[0]
+        height = _sensor[3] - _sensor[2]
+        ax.add_patch(Rectangle(xy, width, height, fill=True,
+                               edgecolor=&#39;k&#39;,
+                               facecolor=cm((pe - color_min) /
+                                            (color_max - color_min))))
         if labels is not None:
-            ax.text(xy[0]+width/2, xy[1]+height/2, labels[i], 
-                    ha = &#39;center&#39;, va = &#39;center&#39;, zorder = 10)
-    
-    if r_tpc is not None: 
-        ax.add_patch(Circle((0,0), r_tpc, color = &#39;r&#39;,fill = False, 
-                            label = &#39;TPC edge&#39;))
+            ax.text(xy[0] + width / 2, xy[1] + height / 2, labels[i],
+                    ha=&#39;center&#39;, va=&#39;center&#39;, zorder=10)
 
-    norm = matplotlib.colors.Normalize(vmin=color_min,vmax=color_max)
+    if r_tpc is not None:
+        ax.add_patch(Circle((0, 0), r_tpc, color=&#39;r&#39;, fill=False,
+                            label=&#39;TPC edge&#39;))
 
-    mappable = matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap)  # type: ignore
+    norm = matplotlib.colors.Normalize(vmin=color_min, vmax=color_max)
+
+    mappable = matplotlib.cm.ScalarMappable(
+        norm=norm, cmap=cmap)  # type: ignore
 
     return (ax, mappable)</code></pre>
 </details>
@@ -256,11 +259,11 @@ hitpattern.</p>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def plot_sensor_layout(layout: np.ndarray, 
+<pre><code class="python">def plot_sensor_layout(layout: np.ndarray,
                        r_tpc: Optional[float] = None,
                        labels: Optional[List[str]] = None,
-                       ax = None):
-    &#34;&#34;&#34;Generate the rectangles of where sensors are, the basis of a 
+                       ax=None):
+    &#34;&#34;&#34;Generate the rectangles of where sensors are, the basis of a
     hitpattern.
 
     Args:
@@ -273,19 +276,19 @@ hitpattern.</p>
         fig, ax = plt.subplots(1, 1)
 
     for i, _sensor in enumerate(layout):
-        xy = (_sensor[0],_sensor[2])
-        width = _sensor[1]-_sensor[0]
-        height = _sensor[3]-_sensor[2]
-        ax.add_patch(Rectangle(xy,width,height, fill = False, 
-                               color = &#39;k&#39;, zorder = 10))
+        xy = (_sensor[0], _sensor[2])
+        width = _sensor[1] - _sensor[0]
+        height = _sensor[3] - _sensor[2]
+        ax.add_patch(Rectangle(xy, width, height, fill=False,
+                               color=&#39;k&#39;, zorder=10))
         if labels is not None:
-            ax.text(xy[0]+width/2, xy[1]+height/2, labels[i], 
-                    ha = &#39;center&#39;, va = &#39;center&#39;, zorder = 10)
-    
-    if r_tpc is not None: 
-        ax.add_patch(Circle((0,0), r_tpc, color = &#39;r&#39;,fill = False, 
-                            label = &#39;TPC edge&#39;))
-    
+            ax.text(xy[0] + width / 2, xy[1] + height / 2, labels[i],
+                    ha=&#39;center&#39;, va=&#39;center&#39;, zorder=10)
+
+    if r_tpc is not None:
+        ax.add_patch(Circle((0, 0), r_tpc, color=&#39;r&#39;, fill=False,
+                            label=&#39;TPC edge&#39;))
+
     return ax</code></pre>
 </details>
 </dd>

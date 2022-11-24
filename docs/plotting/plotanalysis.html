@@ -101,12 +101,12 @@ def plot_DCR_curve(plot, area_hist_x, DCR_values, _x, _y, min_area_x, ax=None):
     ax3.axvline(min_area_x, c=&#39;r&#39;, ls=&#39;--&#39;, alpha=0.8,
                 label=&#39;1$^{st}$ der. (smoothed)&#39;)
     ax3.set_ylabel(&#39;1$^{st}$ derivative&#39;)
-    
+
     if &#39;fig&#39; in locals():
-        fig.legend() # type: ignore
+        fig.legend()  # type: ignore
 
     if isinstance(plot, str):
-        fig.savefig(f&#39;figures/{plot}_stepplot.png&#39;)# type: ignore
+        fig.savefig(f&#39;figures/{plot}_stepplot.png&#39;)  # type: ignore
         plt.close()
     else:
         return ax
@@ -140,22 +140,45 @@ def plot_BV_fit(plot, temperature, voltages, gains,
                 a, b, _breakdown_v, ax=None):
 
     if ax is None:
-        fig, ax = plt.subplots(1, 1, figsize=(12, 5), facecolor=&#39;white&#39;)
+        fig, ax = plt.subplots(1, 1, figsize=(6, 3), facecolor=&#39;white&#39;)
 
-    ax.plot(voltages, gains,
+    ax.plot(gains, voltages,
             ls=&#39;&#39;, marker=&#39;x&#39;, c=&#39;k&#39;,
             label=f&#39;{temperature}K: {_breakdown_v:.2f} V&#39;)
-    _x = np.linspace(min(voltages), max(voltages), 100)
+    _x = np.linspace(min(gains), max(gains), 100)
     ax.plot(_x, func_linear(_x, a, b), c=&#39;r&#39;, alpha=0.9)
-    ax.set_ylabel(&#39;Gain&#39;)
-    ax.set_xlabel(&#39;V&#39;)
+    ax.set_xlabel(&#39;Area&#39;)
+    ax.set_ylabel(&#39;V&#39;)
     ax.legend()
+    ax.set_title(plot)
 
     if isinstance(plot, str):
-        plt.savefig(f&#39;figures/{plot}_{temperature}_BV_fit.png&#39;)
+        plt.tight_layout()
+        plt.savefig(f&#39;figures/{plot}_{temperature}_BV_fit.pdf&#39;)
         plt.close()
     else:
-        return ax</code></pre>
+        return ax
+
+
+def plot_peaks(area_x, area_y, area_filt, area_peaks_x,
+               plot=None, ax=None):
+
+    if ax is None:
+        fig, ax = plt.subplots(1, 1, figsize=(12, 5), facecolor=&#39;white&#39;)
+
+    ax.plot(area_x, area_y, color=&#39;k&#39;, alpha=0.7)  # , range = (100,1e4))
+
+    ax.plot(area_x, area_filt, color=&#39;blue&#39;, ls=&#39;-&#39;, lw=1, alpha=1)
+
+    ax.vlines(area_x[area_peaks_x], 0, 1e6, color=&#39;green&#39;, alpha=0.5)
+    ax.set_xlabel(&#39;Area&#39;)
+    ax.set_yscale(&#39;log&#39;)
+
+    if isinstance(plot, str):
+        plt.savefig(f&#39;figures/{plot}_paeks_and_valeys.png&#39;)
+        plt.close()
+    elif plot is True:
+        plt.show()</code></pre>
 </details>
 </section>
 <section>
@@ -178,19 +201,21 @@ def plot_BV_fit(plot, temperature, voltages, gains,
                 a, b, _breakdown_v, ax=None):
 
     if ax is None:
-        fig, ax = plt.subplots(1, 1, figsize=(12, 5), facecolor=&#39;white&#39;)
+        fig, ax = plt.subplots(1, 1, figsize=(6, 3), facecolor=&#39;white&#39;)
 
-    ax.plot(voltages, gains,
+    ax.plot(gains, voltages,
             ls=&#39;&#39;, marker=&#39;x&#39;, c=&#39;k&#39;,
             label=f&#39;{temperature}K: {_breakdown_v:.2f} V&#39;)
-    _x = np.linspace(min(voltages), max(voltages), 100)
+    _x = np.linspace(min(gains), max(gains), 100)
     ax.plot(_x, func_linear(_x, a, b), c=&#39;r&#39;, alpha=0.9)
-    ax.set_ylabel(&#39;Gain&#39;)
-    ax.set_xlabel(&#39;V&#39;)
+    ax.set_xlabel(&#39;Area&#39;)
+    ax.set_ylabel(&#39;V&#39;)
     ax.legend()
+    ax.set_title(plot)
 
     if isinstance(plot, str):
-        plt.savefig(f&#39;figures/{plot}_{temperature}_BV_fit.png&#39;)
+        plt.tight_layout()
+        plt.savefig(f&#39;figures/{plot}_{temperature}_BV_fit.pdf&#39;)
         plt.close()
     else:
         return ax</code></pre>
@@ -221,12 +246,12 @@ def plot_BV_fit(plot, temperature, voltages, gains,
     ax3.axvline(min_area_x, c=&#39;r&#39;, ls=&#39;--&#39;, alpha=0.8,
                 label=&#39;1$^{st}$ der. (smoothed)&#39;)
     ax3.set_ylabel(&#39;1$^{st}$ derivative&#39;)
-    
+
     if &#39;fig&#39; in locals():
-        fig.legend() # type: ignore
+        fig.legend()  # type: ignore
 
     if isinstance(plot, str):
-        fig.savefig(f&#39;figures/{plot}_stepplot.png&#39;)# type: ignore
+        fig.savefig(f&#39;figures/{plot}_stepplot.png&#39;)  # type: ignore
         plt.close()
     else:
         return ax</code></pre>
@@ -330,6 +355,36 @@ def plot_BV_fit(plot, temperature, voltages, gains,
     return med, med_err, ax</code></pre>
 </details>
 </dd>
+<dt id="pylars.plotting.plotanalysis.plot_peaks"><code class="name flex">
+<span>def <span class="ident">plot_peaks</span></span>(<span>area_x, area_y, area_filt, area_peaks_x, plot=None, ax=None)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plot_peaks(area_x, area_y, area_filt, area_peaks_x,
+               plot=None, ax=None):
+
+    if ax is None:
+        fig, ax = plt.subplots(1, 1, figsize=(12, 5), facecolor=&#39;white&#39;)
+
+    ax.plot(area_x, area_y, color=&#39;k&#39;, alpha=0.7)  # , range = (100,1e4))
+
+    ax.plot(area_x, area_filt, color=&#39;blue&#39;, ls=&#39;-&#39;, lw=1, alpha=1)
+
+    ax.vlines(area_x[area_peaks_x], 0, 1e6, color=&#39;green&#39;, alpha=0.5)
+    ax.set_xlabel(&#39;Area&#39;)
+    ax.set_yscale(&#39;log&#39;)
+
+    if isinstance(plot, str):
+        plt.savefig(f&#39;figures/{plot}_paeks_and_valeys.png&#39;)
+        plt.close()
+    elif plot is True:
+        plt.show()</code></pre>
+</details>
+</dd>
 </dl>
 </section>
 <section>
@@ -353,6 +408,7 @@ def plot_BV_fit(plot, temperature, voltages, gains,
 <li><code><a title="pylars.plotting.plotanalysis.plot_LED_all_voltages" href="#pylars.plotting.plotanalysis.plot_LED_all_voltages">plot_LED_all_voltages</a></code></li>
 <li><code><a title="pylars.plotting.plotanalysis.plot_SPE_fit" href="#pylars.plotting.plotanalysis.plot_SPE_fit">plot_SPE_fit</a></code></li>
 <li><code><a title="pylars.plotting.plotanalysis.plot_area_LED" href="#pylars.plotting.plotanalysis.plot_area_LED">plot_area_LED</a></code></li>
+<li><code><a title="pylars.plotting.plotanalysis.plot_peaks" href="#pylars.plotting.plotanalysis.plot_peaks">plot_peaks</a></code></li>
 </ul>
 </li>
 </ul>

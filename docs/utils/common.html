@@ -28,36 +28,44 @@
 </summary>
 <pre><code class="python">import base64
 import hashlib
+import itertools
 import json
+from typing import Dict, List, Union
+
 import numpy as np
+import pylars.utils.input
+
 
 def Gaussean(x, A, mu, sigma):
     y = A * np.exp(-((x - mu) / sigma)**2 / 2) / np.sqrt(2 * np.pi * sigma**2)
     return y
 
+
 def func_linear(x, a, b):
     return a * x + b
 
+
 def get_deterministic_hash(id: str) -&gt; str:
-        &#34;&#34;&#34;Return an hash with 7 characters from a string.
-        
-        In detail, returns a base32 lowercase string of length determined 
-        from hashing the configs. Based on 
-        https://github.com/AxFoundation/strax/blob/
-        156254287c2037876a7040460b3551d590bf5589/strax/utils.py#L303
+    &#34;&#34;&#34;Return an hash with 7 characters from a string.
 
-        Args:
-            id (str): thing to hash
+    In detail, returns a base32 lowercase string of length determined
+    from hashing the configs. Based on
+    https://github.com/AxFoundation/strax/blob/
+    156254287c2037876a7040460b3551d590bf5589/strax/utils.py#L303
 
-        Returns:
-            str: hashed version of the thing
-        &#34;&#34;&#34;
-        jsonned = json.dumps(id)
-        digest = hashlib.sha1(jsonned.encode(&#39;ascii&#39;)).digest()
-        readable_hash = base64.b32encode(digest)[:7].decode(&#39;ascii&#39;).lower()
-        return readable_hash
+    Args:
+        id (str): thing to hash
 
-def load_ADC_config(model: str, F_amp: float) -&gt; dict:
+    Returns:
+        str: hashed version of the thing
+    &#34;&#34;&#34;
+    jsonned = json.dumps(id)
+    digest = hashlib.sha1(jsonned.encode(&#39;ascii&#39;)).digest()
+    readable_hash = base64.b32encode(digest)[:7].decode(&#39;ascii&#39;).lower()
+    return readable_hash
+
+
+def load_ADC_config(model: str, F_amp: float) -&gt; Dict[str, Union[int, float]]:
     &#34;&#34;&#34;Load the ADC related quantities depending on the model.
 
     Args:
@@ -66,7 +74,7 @@ def load_ADC_config(model: str, F_amp: float) -&gt; dict:
             external amplification on the rack).
 
     Raises:
-        NotImplementedError: Raised if the requested model is not yet 
+        NotImplementedError: Raised if the requested model is not yet
             implemented
 
     Returns:
@@ -75,32 +83,65 @@ def load_ADC_config(model: str, F_amp: float) -&gt; dict:
 
     available_model_configs = [&#39;v1724&#39;, &#39;v1730&#39;]
 
-    if model not in available_model_configs:
-        raise NotImplementedError(f&#39;&#39;&#39;The requested model ({model}) is not 
-            implemented. Choose from {available_model_configs}.&#39;&#39;&#39;)
-
     if model == &#39;v1724&#39;:
         &#34;&#34;&#34; More info at https://www.caen.it/products/v1724/&#34;&#34;&#34;
 
-        ADC_config = {&#39;ADC_range&#39;: 2.25, #V
-                      &#39;ADC_impedance&#39;: 50, #ohm
-                      &#39;F_amp&#39;: F_amp, #external amplification
-                      &#39;ADC_res&#39;: 2**14, #bit-wise resolution
-                      &#39;q_e&#39;: 1.602176634e-19, # electron charge
-                      &#39;dt&#39;:10e-9} # sampling time length
-    
+        ADC_config = {&#39;ADC_range&#39;: 2.25,  # V
+                      &#39;ADC_impedance&#39;: 50,  # ohm
+                      &#39;F_amp&#39;: F_amp,  # external amplification
+                      &#39;ADC_res&#39;: 2**14,  # bit-wise resolution
+                      &#39;q_e&#39;: 1.602176634e-19,  # electron charge
+                      &#39;dt&#39;: 10e-9}  # sampling time length
+
     elif model == &#39;v1730&#39;:
         &#34;&#34;&#34;More info at https://www.caen.it/products/v1730/&#34;&#34;&#34;
 
-        ADC_config = {&#39;ADC_range&#39;: 2.00, #V
-                      &#39;ADC_impedance&#39;: 50, #ohm
-                      &#39;F_amp&#39;: F_amp, #external amplification
-                      &#39;ADC_res&#39;: 2**14, #bit-wise resolution
-                      &#39;q_e&#39;: 1.602176634e-19, # electron charge
-                      &#39;dt&#39;:2e-9} # sampling time length
-    
+        ADC_config = {&#39;ADC_range&#39;: 2.00,  # V
+                      &#39;ADC_impedance&#39;: 50,  # ohm
+                      &#39;F_amp&#39;: F_amp,  # external amplification
+                      &#39;ADC_res&#39;: 2**14,  # bit-wise resolution
+                      &#39;q_e&#39;: 1.602176634e-19,  # electron charge
+                      &#39;dt&#39;: 2e-9}  # sampling time length
+    else:
+        raise NotImplementedError(f&#39;&#39;&#39;The requested model ({model}) is not
+            implemented. Choose from {available_model_configs}.&#39;&#39;&#39;)
+
     return ADC_config
-    </code></pre>
+
+
+def find_minmax(array: np.ndarray) -&gt; List[np.ndarray]:
+    &#34;&#34;&#34;Return local peaks and valeys of an 1d array.
+
+    Args:
+        array (np.ndarray): 1d array to compute peaks and valeys
+
+    Returns:
+        List[np.ndarray]: res[0] is an array with the indexes of where peaks
+            were identified, valeys at res[1].
+    &#34;&#34;&#34;
+    peaks = np.where(
+        (array[1:-1] &gt; array[0:-2]) * (array[1:-1] &gt; array[2:]))[0] + 1
+    valeys = np.where(
+        (array[1:-1] &lt; array[0:-2]) * (array[1:-1] &lt; array[2:]))[0] + 1
+    return [peaks, valeys]
+
+
+def get_channel_list(process):
+    _datasets = process.datasets_df
+    modules = np.unique(_datasets[&#39;module&#39;])
+    ch_list = []
+    for mod in modules:
+        raw = pylars.utils.input.raw_data(
+            _datasets[_datasets[&#39;module&#39;] == mod].sample(1)[&#39;path&#39;].values[0],
+            V=123,
+            T=123,
+            module=mod)
+
+        raw.load_root()
+        raw.get_available_channels()
+        channels = raw.channels
+        ch_list += list(itertools.product([mod], channels))
+    return ch_list</code></pre>
 </details>
 </section>
 <section>
@@ -124,6 +165,43 @@ def load_ADC_config(model: str, F_amp: float) -&gt; dict:
     return y</code></pre>
 </details>
 </dd>
+<dt id="pylars.utils.common.find_minmax"><code class="name flex">
+<span>def <span class="ident">find_minmax</span></span>(<span>array: numpy.ndarray) ‑> List[numpy.ndarray]</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Return local peaks and valeys of an 1d array.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>array</code></strong> :&ensp;<code>np.ndarray</code></dt>
+<dd>1d array to compute peaks and valeys</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>List[np.ndarray]</code></dt>
+<dd>res[0] is an array with the indexes of where peaks
+were identified, valeys at res[1].</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def find_minmax(array: np.ndarray) -&gt; List[np.ndarray]:
+    &#34;&#34;&#34;Return local peaks and valeys of an 1d array.
+
+    Args:
+        array (np.ndarray): 1d array to compute peaks and valeys
+
+    Returns:
+        List[np.ndarray]: res[0] is an array with the indexes of where peaks
+            were identified, valeys at res[1].
+    &#34;&#34;&#34;
+    peaks = np.where(
+        (array[1:-1] &gt; array[0:-2]) * (array[1:-1] &gt; array[2:]))[0] + 1
+    valeys = np.where(
+        (array[1:-1] &lt; array[0:-2]) * (array[1:-1] &lt; array[2:]))[0] + 1
+    return [peaks, valeys]</code></pre>
+</details>
+</dd>
 <dt id="pylars.utils.common.func_linear"><code class="name flex">
 <span>def <span class="ident">func_linear</span></span>(<span>x, a, b)</span>
 </code></dt>
@@ -135,6 +213,33 @@ def load_ADC_config(model: str, F_amp: float) -&gt; dict:
 </summary>
 <pre><code class="python">def func_linear(x, a, b):
     return a * x + b</code></pre>
+</details>
+</dd>
+<dt id="pylars.utils.common.get_channel_list"><code class="name flex">
+<span>def <span class="ident">get_channel_list</span></span>(<span>process)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_channel_list(process):
+    _datasets = process.datasets_df
+    modules = np.unique(_datasets[&#39;module&#39;])
+    ch_list = []
+    for mod in modules:
+        raw = pylars.utils.input.raw_data(
+            _datasets[_datasets[&#39;module&#39;] == mod].sample(1)[&#39;path&#39;].values[0],
+            V=123,
+            T=123,
+            module=mod)
+
+        raw.load_root()
+        raw.get_available_channels()
+        channels = raw.channels
+        ch_list += list(itertools.product([mod], channels))
+    return ch_list</code></pre>
 </details>
 </dd>
 <dt id="pylars.utils.common.get_deterministic_hash"><code class="name flex">
@@ -161,27 +266,27 @@ from hashing the configs. Based on
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def get_deterministic_hash(id: str) -&gt; str:
-        &#34;&#34;&#34;Return an hash with 7 characters from a string.
-        
-        In detail, returns a base32 lowercase string of length determined 
-        from hashing the configs. Based on 
-        https://github.com/AxFoundation/strax/blob/
-        156254287c2037876a7040460b3551d590bf5589/strax/utils.py#L303
+    &#34;&#34;&#34;Return an hash with 7 characters from a string.
 
-        Args:
-            id (str): thing to hash
+    In detail, returns a base32 lowercase string of length determined
+    from hashing the configs. Based on
+    https://github.com/AxFoundation/strax/blob/
+    156254287c2037876a7040460b3551d590bf5589/strax/utils.py#L303
 
-        Returns:
-            str: hashed version of the thing
-        &#34;&#34;&#34;
-        jsonned = json.dumps(id)
-        digest = hashlib.sha1(jsonned.encode(&#39;ascii&#39;)).digest()
-        readable_hash = base64.b32encode(digest)[:7].decode(&#39;ascii&#39;).lower()
-        return readable_hash</code></pre>
+    Args:
+        id (str): thing to hash
+
+    Returns:
+        str: hashed version of the thing
+    &#34;&#34;&#34;
+    jsonned = json.dumps(id)
+    digest = hashlib.sha1(jsonned.encode(&#39;ascii&#39;)).digest()
+    readable_hash = base64.b32encode(digest)[:7].decode(&#39;ascii&#39;).lower()
+    return readable_hash</code></pre>
 </details>
 </dd>
 <dt id="pylars.utils.common.load_ADC_config"><code class="name flex">
-<span>def <span class="ident">load_ADC_config</span></span>(<span>model: str, F_amp: float) ‑> dict</span>
+<span>def <span class="ident">load_ADC_config</span></span>(<span>model: str, F_amp: float) ‑> Dict[str, Union[int, float]]</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Load the ADC related quantities depending on the model.</p>
@@ -208,7 +313,7 @@ implemented</dd>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def load_ADC_config(model: str, F_amp: float) -&gt; dict:
+<pre><code class="python">def load_ADC_config(model: str, F_amp: float) -&gt; Dict[str, Union[int, float]]:
     &#34;&#34;&#34;Load the ADC related quantities depending on the model.
 
     Args:
@@ -217,7 +322,7 @@ implemented</dd>
             external amplification on the rack).
 
     Raises:
-        NotImplementedError: Raised if the requested model is not yet 
+        NotImplementedError: Raised if the requested model is not yet
             implemented
 
     Returns:
@@ -226,30 +331,29 @@ implemented</dd>
 
     available_model_configs = [&#39;v1724&#39;, &#39;v1730&#39;]
 
-    if model not in available_model_configs:
-        raise NotImplementedError(f&#39;&#39;&#39;The requested model ({model}) is not 
-            implemented. Choose from {available_model_configs}.&#39;&#39;&#39;)
-
     if model == &#39;v1724&#39;:
         &#34;&#34;&#34; More info at https://www.caen.it/products/v1724/&#34;&#34;&#34;
 
-        ADC_config = {&#39;ADC_range&#39;: 2.25, #V
-                      &#39;ADC_impedance&#39;: 50, #ohm
-                      &#39;F_amp&#39;: F_amp, #external amplification
-                      &#39;ADC_res&#39;: 2**14, #bit-wise resolution
-                      &#39;q_e&#39;: 1.602176634e-19, # electron charge
-                      &#39;dt&#39;:10e-9} # sampling time length
-    
+        ADC_config = {&#39;ADC_range&#39;: 2.25,  # V
+                      &#39;ADC_impedance&#39;: 50,  # ohm
+                      &#39;F_amp&#39;: F_amp,  # external amplification
+                      &#39;ADC_res&#39;: 2**14,  # bit-wise resolution
+                      &#39;q_e&#39;: 1.602176634e-19,  # electron charge
+                      &#39;dt&#39;: 10e-9}  # sampling time length
+
     elif model == &#39;v1730&#39;:
         &#34;&#34;&#34;More info at https://www.caen.it/products/v1730/&#34;&#34;&#34;
 
-        ADC_config = {&#39;ADC_range&#39;: 2.00, #V
-                      &#39;ADC_impedance&#39;: 50, #ohm
-                      &#39;F_amp&#39;: F_amp, #external amplification
-                      &#39;ADC_res&#39;: 2**14, #bit-wise resolution
-                      &#39;q_e&#39;: 1.602176634e-19, # electron charge
-                      &#39;dt&#39;:2e-9} # sampling time length
-    
+        ADC_config = {&#39;ADC_range&#39;: 2.00,  # V
+                      &#39;ADC_impedance&#39;: 50,  # ohm
+                      &#39;F_amp&#39;: F_amp,  # external amplification
+                      &#39;ADC_res&#39;: 2**14,  # bit-wise resolution
+                      &#39;q_e&#39;: 1.602176634e-19,  # electron charge
+                      &#39;dt&#39;: 2e-9}  # sampling time length
+    else:
+        raise NotImplementedError(f&#39;&#39;&#39;The requested model ({model}) is not
+            implemented. Choose from {available_model_configs}.&#39;&#39;&#39;)
+
     return ADC_config</code></pre>
 </details>
 </dd>
@@ -272,7 +376,9 @@ implemented</dd>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
 <li><code><a title="pylars.utils.common.Gaussean" href="#pylars.utils.common.Gaussean">Gaussean</a></code></li>
+<li><code><a title="pylars.utils.common.find_minmax" href="#pylars.utils.common.find_minmax">find_minmax</a></code></li>
 <li><code><a title="pylars.utils.common.func_linear" href="#pylars.utils.common.func_linear">func_linear</a></code></li>
+<li><code><a title="pylars.utils.common.get_channel_list" href="#pylars.utils.common.get_channel_list">get_channel_list</a></code></li>
 <li><code><a title="pylars.utils.common.get_deterministic_hash" href="#pylars.utils.common.get_deterministic_hash">get_deterministic_hash</a></code></li>
 <li><code><a title="pylars.utils.common.load_ADC_config" href="#pylars.utils.common.load_ADC_config">load_ADC_config</a></code></li>
 </ul>

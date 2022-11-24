@@ -38,7 +38,7 @@ import pylars.utils.output
 import scipy.interpolate as itp
 from pylars.analysis.breakdown import compute_BV
 from scipy.optimize import curve_fit
-from tqdm import tqdm
+from tqdm.autonotebook import tqdm
 from typing import Dict, Union
 
 from pylars.utils.common import Gaussean, load_ADC_config
@@ -71,7 +71,7 @@ class DCR_dataset():
 
         Args:
             flag (bool): True for plotting stuff, False for not making nice
-                pictures (plots) to hang on the wall. Yes, I hang plots on 
+                pictures (plots) to hang on the wall. Yes, I hang plots on
                 my bedroom wall and it looks nice.
         &#34;&#34;&#34;
         self.plots_flag = flag
@@ -127,7 +127,7 @@ class DCR_dataset():
 
         Args:
             force_processing (bool, optional): Flag to force processing
-                of raw data in case the processed dataset is not found. 
+                of raw data in case the processed dataset is not found.
                 Defaults to False.
 
         Returns:
@@ -166,7 +166,7 @@ class DCR_dataset():
             plot (boolorstr, optional): _description_. Defaults to False.
 
         Returns:
-            tuple: _description_
+            tuple: (A, mu, sigma), cov
         &#34;&#34;&#34;
 
         (area_hist_x, DCR_values, DCR_der_x_points,
@@ -231,7 +231,7 @@ class DCR_dataset():
 
         Args:
             df (pd.DataFrame): a pd.DataFrame with the series &#34;area&#34; and
-                &#34;length&#34;.       
+                &#34;length&#34;.
             length_cut (int, optional): cut to impose on the length of
                 the peaks for noise suppression. Defaults to 5.
             bins (intorlist, optional): number of bins to make the are
@@ -509,8 +509,8 @@ class DCR_run():
         Assumes a ./figures/ directory exists.
 
         Args:
-            flag (bool): True for plotting stuff, False for not making nice 
-                pictures (plots) to hang on the wall. Yes, I hang plots on my 
+            flag (bool): True for plotting stuff, False for not making nice
+                pictures (plots) to hang on the wall. Yes, I hang plots on my
                 bedroom wall and it looks nice.
         &#34;&#34;&#34;
         self.plots_flag = flag
@@ -535,7 +535,7 @@ class DCR_run():
                                   )
         self.results_df = results_df
 
-    def define_run_ADC_config(self, F_amp: float, 
+    def define_run_ADC_config(self, F_amp: float,
                               model: str = &#39;v1724&#39;) -&gt; None:
         &#34;&#34;&#34;Load the ADC related quantities for the run.
 
@@ -636,10 +636,10 @@ class DCR_run():
         if self.run.run_number == 7:
             channel_map = {0: [&#39;wf0&#39;, &#39;wf3&#39;, &#39;wf4&#39;, &#39;wf6&#39;],
                            1: [&#39;wf0&#39;, &#39;wf3&#39;, &#39;wf4&#39;, &#39;wf6&#39;], }
-        
+
         elif self.run.run_number == 8:
             channel_map = {0: [&#39;wf0&#39;, &#39;wf3&#39;, &#39;wf4&#39;, &#39;wf5&#39;, &#39;wf6&#39;],
-                           1: [&#39;wf0&#39;, &#39;wf1&#39;, &#39;wf2&#39;, &#39;wf3&#39;, &#39;wf4&#39;, 
+                           1: [&#39;wf0&#39;, &#39;wf1&#39;, &#39;wf2&#39;, &#39;wf3&#39;, &#39;wf4&#39;,
                                &#39;wf6&#39;, &#39;wf7&#39;]}
 
         else:
@@ -673,24 +673,24 @@ class DCR_run():
         datetime.now()
 
     def save_results(self, custom_name) -&gt; None:
-        &#34;&#34;&#34;Save dataframe of results to a hdf5 file. Saved files go to 
+        &#34;&#34;&#34;Save dataframe of results to a hdf5 file. Saved files go to
         self.analysis_path.
 
         Args:
             name (str): name to give the file (without extension).
         &#34;&#34;&#34;
         assert isinstance(self.results_df, pd.DataFrame), (&#34;Trying to save &#34;
-            &#34;results that do not exist in the object, c&#39;mon, you know better.&#34;)
+                                                           &#34;results that do not exist in the object, c&#39;mon, you know better.&#34;)
         assert len(self.results_df) &gt; 0, (&#34;Results df is empty, please compute&#34;
-            &#34;something before trying to save, otherwire it&#39;s just a waste of &#34;
-            &#34;disk space&#34;)
+                                          &#34;something before trying to save, otherwire it&#39;s just a waste of &#34;
+                                          &#34;disk space&#34;)
 
         name = f&#39;DCR_results_{custom_name}&#39;
         self.results_df.to_hdf(self.analysis_path + name + &#39;.h5&#39;, &#39;df&#39;)
         print(&#39;Saved results to &#39;)
-    
-    def load_results(self, name:str) -&gt; None:
-        &#34;&#34;&#34;Load dataframe of results from a hdf5 file. Looks for files in 
+
+    def load_results(self, name: str) -&gt; None:
+        &#34;&#34;&#34;Load dataframe of results from a hdf5 file. Looks for files in
         the standard analysis cache directory.
 
         Args:
@@ -698,9 +698,7 @@ class DCR_run():
         &#34;&#34;&#34;
 
         _df = pd.read_hdf(self.analysis_path + name + &#39;.h5&#39;)
-        self.results_df = _df
-        
-        </code></pre>
+        self.results_df = _df</code></pre>
 </details>
 </section>
 <section>
@@ -752,7 +750,7 @@ a certain temperature.</p></div>
 
         Args:
             flag (bool): True for plotting stuff, False for not making nice
-                pictures (plots) to hang on the wall. Yes, I hang plots on 
+                pictures (plots) to hang on the wall. Yes, I hang plots on
                 my bedroom wall and it looks nice.
         &#34;&#34;&#34;
         self.plots_flag = flag
@@ -808,7 +806,7 @@ a certain temperature.</p></div>
 
         Args:
             force_processing (bool, optional): Flag to force processing
-                of raw data in case the processed dataset is not found. 
+                of raw data in case the processed dataset is not found.
                 Defaults to False.
 
         Returns:
@@ -847,7 +845,7 @@ a certain temperature.</p></div>
             plot (boolorstr, optional): _description_. Defaults to False.
 
         Returns:
-            tuple: _description_
+            tuple: (A, mu, sigma), cov
         &#34;&#34;&#34;
 
         (area_hist_x, DCR_values, DCR_der_x_points,
@@ -912,7 +910,7 @@ a certain temperature.</p></div>
 
         Args:
             df (pd.DataFrame): a pd.DataFrame with the series &#34;area&#34; and
-                &#34;length&#34;.       
+                &#34;length&#34;.
             length_cut (int, optional): cut to impose on the length of
                 the peaks for noise suppression. Defaults to 5.
             bins (intorlist, optional): number of bins to make the are
@@ -1244,7 +1242,7 @@ the peaks for noise suppression. Defaults to 5.</dd>
 <h2 id="returns">Returns</h2>
 <dl>
 <dt><code>tuple</code></dt>
-<dd><em>description</em></dd>
+<dd>(A, mu, sigma), cov</dd>
 </dl></div>
 <details class="source">
 <summary>
@@ -1265,7 +1263,7 @@ def get_1pe_value_fit(cls,
         plot (boolorstr, optional): _description_. Defaults to False.
 
     Returns:
-        tuple: _description_
+        tuple: (A, mu, sigma), cov
     &#34;&#34;&#34;
 
     (area_hist_x, DCR_values, DCR_der_x_points,
@@ -1503,8 +1501,7 @@ returns the pair [area thersholds, DCR values]</p>
 <dl>
 <dt><strong><code>df</code></strong> :&ensp;<code>pd.DataFrame</code></dt>
 <dd>a pd.DataFrame with the series "area" and
-"length".
-</dd>
+"length".</dd>
 <dt><strong><code>length_cut</code></strong> :&ensp;<code>int</code>, optional</dt>
 <dd>cut to impose on the length of
 the peaks for noise suppression. Defaults to 5.</dd>
@@ -1531,7 +1528,7 @@ def get_DCR_above_threshold_values(cls, df: pd.DataFrame,
 
     Args:
         df (pd.DataFrame): a pd.DataFrame with the series &#34;area&#34; and
-            &#34;length&#34;.       
+            &#34;length&#34;.
         length_cut (int, optional): cut to impose on the length of
             the peaks for noise suppression. Defaults to 5.
         bins (intorlist, optional): number of bins to make the are
@@ -1883,7 +1880,7 @@ Defaults to False.</dd>
 
     Args:
         force_processing (bool, optional): Flag to force processing
-            of raw data in case the processed dataset is not found. 
+            of raw data in case the processed dataset is not found.
             Defaults to False.
 
     Returns:
@@ -1931,7 +1928,7 @@ my bedroom wall and it looks nice.</dd>
 
     Args:
         flag (bool): True for plotting stuff, False for not making nice
-            pictures (plots) to hang on the wall. Yes, I hang plots on 
+            pictures (plots) to hang on the wall. Yes, I hang plots on
             my bedroom wall and it looks nice.
     &#34;&#34;&#34;
     self.plots_flag = flag</code></pre>
@@ -1978,8 +1975,8 @@ DCR_run.results_df .</p></div>
         Assumes a ./figures/ directory exists.
 
         Args:
-            flag (bool): True for plotting stuff, False for not making nice 
-                pictures (plots) to hang on the wall. Yes, I hang plots on my 
+            flag (bool): True for plotting stuff, False for not making nice
+                pictures (plots) to hang on the wall. Yes, I hang plots on my
                 bedroom wall and it looks nice.
         &#34;&#34;&#34;
         self.plots_flag = flag
@@ -2004,7 +2001,7 @@ DCR_run.results_df .</p></div>
                                   )
         self.results_df = results_df
 
-    def define_run_ADC_config(self, F_amp: float, 
+    def define_run_ADC_config(self, F_amp: float,
                               model: str = &#39;v1724&#39;) -&gt; None:
         &#34;&#34;&#34;Load the ADC related quantities for the run.
 
@@ -2105,10 +2102,10 @@ DCR_run.results_df .</p></div>
         if self.run.run_number == 7:
             channel_map = {0: [&#39;wf0&#39;, &#39;wf3&#39;, &#39;wf4&#39;, &#39;wf6&#39;],
                            1: [&#39;wf0&#39;, &#39;wf3&#39;, &#39;wf4&#39;, &#39;wf6&#39;], }
-        
+
         elif self.run.run_number == 8:
             channel_map = {0: [&#39;wf0&#39;, &#39;wf3&#39;, &#39;wf4&#39;, &#39;wf5&#39;, &#39;wf6&#39;],
-                           1: [&#39;wf0&#39;, &#39;wf1&#39;, &#39;wf2&#39;, &#39;wf3&#39;, &#39;wf4&#39;, 
+                           1: [&#39;wf0&#39;, &#39;wf1&#39;, &#39;wf2&#39;, &#39;wf3&#39;, &#39;wf4&#39;,
                                &#39;wf6&#39;, &#39;wf7&#39;]}
 
         else:
@@ -2142,24 +2139,24 @@ DCR_run.results_df .</p></div>
         datetime.now()
 
     def save_results(self, custom_name) -&gt; None:
-        &#34;&#34;&#34;Save dataframe of results to a hdf5 file. Saved files go to 
+        &#34;&#34;&#34;Save dataframe of results to a hdf5 file. Saved files go to
         self.analysis_path.
 
         Args:
             name (str): name to give the file (without extension).
         &#34;&#34;&#34;
         assert isinstance(self.results_df, pd.DataFrame), (&#34;Trying to save &#34;
-            &#34;results that do not exist in the object, c&#39;mon, you know better.&#34;)
+                                                           &#34;results that do not exist in the object, c&#39;mon, you know better.&#34;)
         assert len(self.results_df) &gt; 0, (&#34;Results df is empty, please compute&#34;
-            &#34;something before trying to save, otherwire it&#39;s just a waste of &#34;
-            &#34;disk space&#34;)
+                                          &#34;something before trying to save, otherwire it&#39;s just a waste of &#34;
+                                          &#34;disk space&#34;)
 
         name = f&#39;DCR_results_{custom_name}&#39;
         self.results_df.to_hdf(self.analysis_path + name + &#39;.h5&#39;, &#39;df&#39;)
         print(&#39;Saved results to &#39;)
-    
-    def load_results(self, name:str) -&gt; None:
-        &#34;&#34;&#34;Load dataframe of results from a hdf5 file. Looks for files in 
+
+    def load_results(self, name: str) -&gt; None:
+        &#34;&#34;&#34;Load dataframe of results from a hdf5 file. Looks for files in
         the standard analysis cache directory.
 
         Args:
@@ -2283,7 +2280,7 @@ external amplification on rack).</p></div>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def define_run_ADC_config(self, F_amp: float, 
+<pre><code class="python">def define_run_ADC_config(self, F_amp: float,
                           model: str = &#39;v1724&#39;) -&gt; None:
     &#34;&#34;&#34;Load the ADC related quantities for the run.
 
@@ -2444,8 +2441,8 @@ the standard analysis cache directory.</p>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def load_results(self, name:str) -&gt; None:
-    &#34;&#34;&#34;Load dataframe of results from a hdf5 file. Looks for files in 
+<pre><code class="python">def load_results(self, name: str) -&gt; None:
+    &#34;&#34;&#34;Load dataframe of results from a hdf5 file. Looks for files in
     the standard analysis cache directory.
 
     Args:
@@ -2486,10 +2483,10 @@ Define it with self.channel_map = dict(mod:[ch#,&hellip;],&hellip;)</p>
     if self.run.run_number == 7:
         channel_map = {0: [&#39;wf0&#39;, &#39;wf3&#39;, &#39;wf4&#39;, &#39;wf6&#39;],
                        1: [&#39;wf0&#39;, &#39;wf3&#39;, &#39;wf4&#39;, &#39;wf6&#39;], }
-    
+
     elif self.run.run_number == 8:
         channel_map = {0: [&#39;wf0&#39;, &#39;wf3&#39;, &#39;wf4&#39;, &#39;wf5&#39;, &#39;wf6&#39;],
-                       1: [&#39;wf0&#39;, &#39;wf1&#39;, &#39;wf2&#39;, &#39;wf3&#39;, &#39;wf4&#39;, 
+                       1: [&#39;wf0&#39;, &#39;wf1&#39;, &#39;wf2&#39;, &#39;wf3&#39;, &#39;wf4&#39;,
                            &#39;wf6&#39;, &#39;wf7&#39;]}
 
     else:
@@ -2514,17 +2511,17 @@ self.analysis_path.</p>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def save_results(self, custom_name) -&gt; None:
-    &#34;&#34;&#34;Save dataframe of results to a hdf5 file. Saved files go to 
+    &#34;&#34;&#34;Save dataframe of results to a hdf5 file. Saved files go to
     self.analysis_path.
 
     Args:
         name (str): name to give the file (without extension).
     &#34;&#34;&#34;
     assert isinstance(self.results_df, pd.DataFrame), (&#34;Trying to save &#34;
-        &#34;results that do not exist in the object, c&#39;mon, you know better.&#34;)
+                                                       &#34;results that do not exist in the object, c&#39;mon, you know better.&#34;)
     assert len(self.results_df) &gt; 0, (&#34;Results df is empty, please compute&#34;
-        &#34;something before trying to save, otherwire it&#39;s just a waste of &#34;
-        &#34;disk space&#34;)
+                                      &#34;something before trying to save, otherwire it&#39;s just a waste of &#34;
+                                      &#34;disk space&#34;)
 
     name = f&#39;DCR_results_{custom_name}&#39;
     self.results_df.to_hdf(self.analysis_path + name + &#39;.h5&#39;, &#39;df&#39;)
@@ -2553,8 +2550,8 @@ bedroom wall and it looks nice.</dd>
     Assumes a ./figures/ directory exists.
 
     Args:
-        flag (bool): True for plotting stuff, False for not making nice 
-            pictures (plots) to hang on the wall. Yes, I hang plots on my 
+        flag (bool): True for plotting stuff, False for not making nice
+            pictures (plots) to hang on the wall. Yes, I hang plots on my
             bedroom wall and it looks nice.
     &#34;&#34;&#34;
     self.plots_flag = flag</code></pre>
