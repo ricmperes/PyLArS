@@ -44,12 +44,12 @@ class processed_dataset():
         to a file.
 
         Args:
-            type (str, optional): type of file to save the data as. Can be 
+            type (str, optional): type of file to save the data as. Can be
                 'hdf5' or 'csv'. Defaults to 'hdf5'.
 
         Raises:
             AssertionError: Raises the object has no data attached.
-            NotImplementedError: Raises if the file format is 
+            NotImplementedError: Raises if the file format is
                 different from 'hdf5' or 'csv'.
         """
         if not isinstance(self.data, pd.DataFrame):
@@ -76,7 +76,7 @@ class processed_dataset():
         else:
             raise NotImplementedError(
                 f"The requested type ({type}) is not" +
-                 "implemented. Choose 'hdf5', 'csv' or make a PR.")
+                "implemented. Choose 'hdf5', 'csv' or make a PR.")
 
     def load_data(self, verbose: int = 0, force: bool = False) -> None:
         """Load cached processed data for a given processed data configuration.

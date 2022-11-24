@@ -1,3 +1,9 @@
+import numpy as np
+from tqdm.autonotebook import tqdm
+import datetime
+import pylars
+import pylars.utils.output
+import pylars.utils.input
 import argparse
 
 parser = argparse.ArgumentParser(
@@ -27,12 +33,6 @@ parser.add_argument('-pp', '--path_processed',
 
 args = parser.parse_args()
 
-import pylars.utils.input
-import pylars.utils.output
-import pylars
-import datetime
-from tqdm import tqdm
-import numpy as np
 
 def run_process_dataset(run_number: int, kind: str,
                         vbias: float, temp: float,

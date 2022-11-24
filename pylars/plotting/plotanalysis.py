@@ -73,12 +73,12 @@ def plot_DCR_curve(plot, area_hist_x, DCR_values, _x, _y, min_area_x, ax=None):
     ax3.axvline(min_area_x, c='r', ls='--', alpha=0.8,
                 label='1$^{st}$ der. (smoothed)')
     ax3.set_ylabel('1$^{st}$ derivative')
-    
+
     if 'fig' in locals():
-        fig.legend() # type: ignore
+        fig.legend()  # type: ignore
 
     if isinstance(plot, str):
-        fig.savefig(f'figures/{plot}_stepplot.png')# type: ignore
+        fig.savefig(f'figures/{plot}_stepplot.png')  # type: ignore
         plt.close()
     else:
         return ax
@@ -112,19 +112,42 @@ def plot_BV_fit(plot, temperature, voltages, gains,
                 a, b, _breakdown_v, ax=None):
 
     if ax is None:
-        fig, ax = plt.subplots(1, 1, figsize=(12, 5), facecolor='white')
+        fig, ax = plt.subplots(1, 1, figsize=(6, 3), facecolor='white')
 
-    ax.plot(voltages, gains,
+    ax.plot(gains, voltages,
             ls='', marker='x', c='k',
             label=f'{temperature}K: {_breakdown_v:.2f} V')
-    _x = np.linspace(min(voltages), max(voltages), 100)
+    _x = np.linspace(min(gains), max(gains), 100)
     ax.plot(_x, func_linear(_x, a, b), c='r', alpha=0.9)
-    ax.set_ylabel('Gain')
-    ax.set_xlabel('V')
+    ax.set_xlabel('Area')
+    ax.set_ylabel('V')
     ax.legend()
+    ax.set_title(plot)
 
     if isinstance(plot, str):
-        plt.savefig(f'figures/{plot}_{temperature}_BV_fit.png')
+        plt.tight_layout()
+        plt.savefig(f'figures/{plot}_{temperature}_BV_fit.pdf')
         plt.close()
     else:
         return ax
+
+
+def plot_peaks(area_x, area_y, area_filt, area_peaks_x,
+               plot=None, ax=None):
+
+    if ax is None:
+        fig, ax = plt.subplots(1, 1, figsize=(12, 5), facecolor='white')
+
+    ax.plot(area_x, area_y, color='k', alpha=0.7)  # , range = (100,1e4))
+
+    ax.plot(area_x, area_filt, color='blue', ls='-', lw=1, alpha=1)
+
+    ax.vlines(area_x[area_peaks_x], 0, 1e6, color='green', alpha=0.5)
+    ax.set_xlabel('Area')
+    ax.set_yscale('log')
+
+    if isinstance(plot, str):
+        plt.savefig(f'figures/{plot}_paeks_and_valeys.png')
+        plt.close()
+    elif plot is True:
+        plt.show()

@@ -1,9 +1,9 @@
-r'''This module contains all the pre-established analysis of PyLArS and its 
-highest level data structures. 
+r'''This module contains all the pre-established analysis of PyLArS and its
+highest level data structures.
 
-These `analysis` are mainly standard SiPM 
-characterization processing scripts, namely for both LED ON (`breakdown`) 
-and LED OFF (`darkcount`). In particular, these aim to analyse processed 
+These `analysis` are mainly standard SiPM
+characterization processing scripts, namely for both LED ON (`breakdown`)
+and LED OFF (`darkcount`). In particular, these aim to analyse processed
 data to compute and deliver for a collection of voltages and temperatures:
 
   - Gain

@@ -47,7 +47,7 @@ class raw_data():
         try:
             raw_file = uproot.open(self.raw_path)
             self.raw_file = raw_file
-        except Exception:
+        except BaseException:
             raise f'No root file found for {self.raw_path}'
 
     def get_available_channels(self):
@@ -62,7 +62,7 @@ class raw_data():
         '''
         Return the raw data array of a given channel.
         '''
-        data = self.raw_file[self.tree][ch].array()
+        data = self.raw_file[self.tree][ch].array()  # type: ignore
         return np.array(data)
 
 
@@ -129,7 +129,8 @@ class run():
             list: list of all ROOT files in the run.
         """
 
-        all_root_files = glob(self.main_run_path + '**/*.root', recursive=True)
+        all_root_files = glob(
+            self.main_run_path + '**/*.root', recursive=True)
         return all_root_files
 
     def fetch_datasets(self) -> list:
@@ -137,33 +138,61 @@ class run():
 
         Returns:
             list: list of all the datasets of a given run. Elements
-                are type dataset
+                are type dataset.
         """
         all_root_files = self.root_files
         datasets = []
         if self.run_number >= 6:
 
             for file in all_root_files:
-                split_file_path = file.split('/')
-                _module = int(split_file_path[-1][-8])
-                _temp = float(split_file_path[-1][-27:-24])
-                _vbias = float(split_file_path[-1][-22:-17].replace('_', '.'))
-                if split_file_path[-1][0] == 'B':
-                    _kind = 'BV'
-                elif split_file_path[-1][0] == 'D':
-                    _kind = 'DCR'
-                elif split_file_path[-1][0] == 'f':
-                    _kind = 'fplt'
-                else:
+                try:
+                    split_file_path = file.split('/')
+                    _module = int(split_file_path[-1][-8])
+                    _temp = float(split_file_path[-1][-27:-24])
+                    _vbias = float(
+                        split_file_path[-1][-22:-17].replace('_', '.'))
+                    if split_file_path[-1][0] == 'B':
+                        _kind = 'BV'
+                    elif split_file_path[-1][0] == 'D':
+                        _kind = 'DCR'
+                    elif split_file_path[-1][0] == 'f':
+                        _kind = 'fplt'
+                    else:
+                        print('Ignoring file: ', file)
+                        continue
+                    datasets.append(
+                        dataset(file, _kind, _module, _temp, _vbias))
+                except BaseException:
                     print('Ignoring file: ', file)
-                    continue
-                datasets.append(dataset(file, _kind, _module, _temp, _vbias))
 
         elif self.run_number == 1:
-            '''TODO'''
-            raise NotImplementedError("Run 1 structure not yet implemented :(")
+            for file in all_root_files:
+                file_split = file.split('/')
+                f_split = file_split[-1].split('_')
+                if f_split[0] == 'test':
+                    print('Ignoring test dataset: ', file)
+                    continue
+                if file_split[8] == 'breakdown-v':
+                    _kind = 'BV'
+                    _vbias = float(f_split[1] + '.' + f_split[2][:-1])
+                elif file_split[8] == 'dcr':
+                    _kind = 'DCR'
+                    if len(f_split) == 5:
+                        _vbias = float(f_split[1][:-1])
+                    else:
+                        _vbias = float(
+                            f_split[1] + '.' + f_split[2][:-1])
+                else:
+                    print('Ignoring file due to unknown kind: ', file)
+                    continue
 
-        elif self.run_number == 2:
+                _temp = float(f_split[0][:-1])
+
+                _module = int(f_split[-2])
+
+                datasets.append(dataset(file, _kind, _module, _temp, _vbias))
+
+        elif self.run_number in (2, 3):
             for file in all_root_files:
                 file_split = file.split('/')
                 f_split = file_split[-1].split('_')
@@ -186,6 +215,8 @@ class run():
 
                 datasets.append(dataset(file, _kind, _module, _temp, _vbias))
 
+        else:
+            raise NotImplementedError("Run not implemented yet.")
         return datasets
 
     def get_run_df(self) -> pd.DataFrame:

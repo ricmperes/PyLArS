@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
+from tqdm.autonotebook import tqdm
 
 from pylars.utils.input import raw_data, run
 from pylars.utils.common import get_deterministic_hash
@@ -64,7 +64,7 @@ class simple_processor():
 
         Args:
             ch (str): channel name as in the ROOT file.
-                In files from DAQ_zero/XenoDAQ these will be 'wf#' with # 
+                In files from DAQ_zero/XenoDAQ these will be 'wf#' with #
                 the number of the channel [0,7]
 
         Raises:

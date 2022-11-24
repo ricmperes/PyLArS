@@ -1,17 +1,18 @@
 import csv
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
+from tqdm.autonotebook import tqdm
 
 from pylars.utils.input import raw_data, run
 from pylars.utils.common import get_deterministic_hash, load_ADC_config
 from .waveforms import waveform_processing
 from .peaks import peak_processing
 
+
 class peak_processor():
     """Define the functions for a simple peak processor.
 
-    Defines a processor object to process waveforms from summing all the 
+    Defines a processor object to process waveforms from summing all the
     channels in the photosensor array.
     """
 
@@ -19,10 +20,10 @@ class peak_processor():
     processing_method = 'peaks_simple'
 
     # for run6
-    index_reorder_data_to_layout = [ 9, 4, 5, 6, 11, 10, 8, 0, 2, 3, 7, 1]
+    index_reorder_data_to_layout = [9, 4, 5, 6, 11, 10, 8, 0, 2, 3, 7, 1]
 
-    def __init__(self, sigma_level: float, baseline_samples: int, 
-                 gains_tag: str , gains_path: str) -> None:
+    def __init__(self, sigma_level: float, baseline_samples: int,
+                 gains_tag: str, gains_path: str) -> None:
 
         self.sigma_level = sigma_level
         self.baseline_samples = baseline_samples
@@ -36,8 +37,8 @@ class peak_processor():
 
         self.gains_tag = gains_tag
         self.gains_path = gains_path
-        """Path to where the gains are saved. 
-        
+        """Path to where the gains are saved.
+
         In the future this should be defined in a config file.
         """
         self.gains = self.load_gains()
@@ -52,10 +53,10 @@ class peak_processor():
 
         Returns:
             np.ndarray: array with channel gains [e/pe]) in ascending order (mo
-                dule->channel) 
+                dule->channel)
         """
 
-        # csv is extremely fast but pandas is easier to load and sort 
+        # csv is extremely fast but pandas is easier to load and sort
         # right away
 
         # with open(self.gains_path + self.gains_tag, mode='r') as file:
@@ -63,11 +64,11 @@ class peak_processor():
         #     gains = {rows[0]:float(rows[1]) for rows in reader}
 
         # return gains
-        
+
         gain_df = pd.read_csv(self.gains_path + self.gains_tag,
-                              header=None, 
-                              names=['module', 'channel','gain'])
-        gain_df = gain_df.sort_values(['module','channel'], ignore_index=True)
+                              header=None,
+                              names=['module', 'channel', 'gain'])
+        gain_df = gain_df.sort_values(['module', 'channel'], ignore_index=True)
 
         return np.array(gain_df['gain'])
 
@@ -92,10 +93,11 @@ class peak_processor():
 
         self.ADC_config = load_ADC_config(model, F_amp)
 
-    def process_waveform_set(self, waveforms:np.ndarray):
+    def process_waveform_set(self, waveforms: np.ndarray,
+                             return_waveforms=False):
         """Process an array of waveforms from all channels.
 
-        The waveforms are assumed to be synchronized and each row of the 
+        The waveforms are assumed to be synchronized and each row of the
         array is a channel. Once a summed waveform is formed, uses the same
         functions as the pulse processing to find peaks and compute its
         properties.
@@ -105,21 +107,22 @@ class peak_processor():
         """
 
         baselines = np.apply_along_axis(
-            func1d = waveform_processing.get_baseline_rough,
-            axis = 1,
-            arr = waveforms,
-            baseline_samples = self.baseline_samples)
+            func1d=waveform_processing.get_baseline_rough,
+            axis=1,
+            arr=waveforms,
+            baseline_samples=self.baseline_samples)
 
         waveforms_pe = peak_processing.apply_waveforms_transform(
             waveforms, baselines, self.gains, self.ADC_config)
         sum_waveform = peak_processing.get_sum_waveform(waveforms_pe)
 
         areas, lengths, positions, amplitudes = waveform_processing.process_waveform(
-                    sum_waveform, self.baseline_samples, self.sigma_level)
+            sum_waveform, self.baseline_samples, self.sigma_level)
+
+        if return_waveforms is True:
+            return waveforms_pe, sum_waveform
 
         return areas, lengths, positions, amplitudes
-
-
 
     def load_raw_data(self, path_to_raw: str, V: float, T: float, module: int):
         """Raw data loader to pass to the processing scripts.
