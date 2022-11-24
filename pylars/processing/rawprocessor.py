@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
+from tqdm.autonotebook import tqdm
 
 from pylars.utils.input import raw_data, run
 from pylars.utils.common import get_deterministic_hash

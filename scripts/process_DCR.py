@@ -31,7 +31,7 @@ import pylars.utils.input
 import pylars.utils.output
 import pylars
 import datetime
-from tqdm import tqdm
+from tqdm.autonotebook import tqdm
 import numpy as np
 
 def run_process_dataset(run_number: int, kind: str,

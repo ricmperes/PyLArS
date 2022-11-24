@@ -4,7 +4,7 @@ import pylars.utils.output
 import pylars
 import datetime
 import argparse
-from tqdm import tqdm
+from tqdm.autonotebook import tqdm
 import numpy as np
 
 parser = argparse.ArgumentParser(

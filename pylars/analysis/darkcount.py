@@ -10,7 +10,7 @@ import pylars.utils.output
 import scipy.interpolate as itp
 from pylars.analysis.breakdown import compute_BV
 from scipy.optimize import curve_fit
-from tqdm import tqdm
+from tqdm.autonotebook import tqdm
 from typing import Dict, Union
 
 from pylars.utils.common import Gaussean, load_ADC_config
@@ -138,7 +138,7 @@ class DCR_dataset():
             plot (boolorstr, optional): _description_. Defaults to False.
 
         Returns:
-            tuple: _description_
+            tuple: (A, mu, sigma), cov
         """
 
         (area_hist_x, DCR_values, DCR_der_x_points,

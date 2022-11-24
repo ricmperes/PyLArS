@@ -1,7 +1,7 @@
 import csv
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
+from tqdm.autonotebook import tqdm
 
 from pylars.utils.input import raw_data, run
 from pylars.utils.common import get_deterministic_hash, load_ADC_config
@@ -92,7 +92,8 @@ class peak_processor():
 
         self.ADC_config = load_ADC_config(model, F_amp)
 
-    def process_waveform_set(self, waveforms:np.ndarray):
+    def process_waveform_set(self, waveforms:np.ndarray, 
+                             return_waveforms = False):
         """Process an array of waveforms from all channels.
 
         The waveforms are assumed to be synchronized and each row of the 
@@ -116,6 +117,9 @@ class peak_processor():
 
         areas, lengths, positions, amplitudes = waveform_processing.process_waveform(
                     sum_waveform, self.baseline_samples, self.sigma_level)
+
+        if return_waveforms is True:
+            return waveforms_pe, sum_waveform
 
         return areas, lengths, positions, amplitudes
 
