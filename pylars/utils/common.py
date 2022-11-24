@@ -1,7 +1,12 @@
 import base64
 import hashlib
+import itertools
 import json
+from typing import Dict, List, Union
+
 import numpy as np
+import pylars.utils.input
+
 
 def Gaussean(x, A, mu, sigma):
     y = A * np.exp(-((x - mu) / sigma)**2 / 2) / np.sqrt(2 * np.pi * sigma**2)
@@ -29,7 +34,7 @@ def get_deterministic_hash(id: str) -> str:
         readable_hash = base64.b32encode(digest)[:7].decode('ascii').lower()
         return readable_hash
 
-def load_ADC_config(model: str, F_amp: float) -> dict:
+def load_ADC_config(model: str, F_amp: float) -> Dict[str, Union[int,float]]:
     """Load the ADC related quantities depending on the model.
 
     Args:
@@ -46,10 +51,6 @@ def load_ADC_config(model: str, F_amp: float) -> dict:
     """
 
     available_model_configs = ['v1724', 'v1730']
-
-    if model not in available_model_configs:
-        raise NotImplementedError(f'''The requested model ({model}) is not 
-            implemented. Choose from {available_model_configs}.''')
 
     if model == 'v1724':
         """ More info at https://www.caen.it/products/v1724/"""
@@ -70,6 +71,41 @@ def load_ADC_config(model: str, F_amp: float) -> dict:
                       'ADC_res': 2**14, #bit-wise resolution
                       'q_e': 1.602176634e-19, # electron charge
                       'dt':2e-9} # sampling time length
+    else:
+        raise NotImplementedError(f'''The requested model ({model}) is not 
+            implemented. Choose from {available_model_configs}.''')
     
     return ADC_config
     
+def find_minmax(array: np.ndarray) -> List[np.ndarray]:
+    """Return local peaks and valeys of an 1d array.
+
+    Args:
+        array (np.ndarray): 1d array to compute peaks and valeys
+
+    Returns:
+        List[np.ndarray]: res[0] is an array with the indexes of where peaks 
+            were identified, valeys at res[1].
+    """
+    peaks = np.where(
+        (array[1:-1] > array[0:-2]) * (array[1:-1] > array[2:]))[0] + 1
+    valeys = np.where(
+        (array[1:-1] < array[0:-2]) * (array[1:-1] < array[2:]))[0] + 1
+    return [peaks, valeys]
+
+def get_channel_list(process):
+    _datasets = process.datasets_df
+    modules = np.unique(_datasets['module'])
+    ch_list = []
+    for mod in modules:
+        raw = pylars.utils.input.raw_data(
+            _datasets[_datasets['module']==mod].sample(1)['path'].values[0], 
+            V = 123, 
+            T=123, 
+            module = mod)
+        
+        raw.load_root()
+        raw.get_available_channels()
+        channels = raw.channels
+        ch_list += list(itertools.product([mod],channels))
+    return ch_list
