@@ -73,12 +73,12 @@ def plot_DCR_curve(plot, area_hist_x, DCR_values, _x, _y, min_area_x, ax=None):
     ax3.axvline(min_area_x, c='r', ls='--', alpha=0.8,
                 label='1$^{st}$ der. (smoothed)')
     ax3.set_ylabel('1$^{st}$ derivative')
-    
+
     if 'fig' in locals():
-        fig.legend() # type: ignore
+        fig.legend()  # type: ignore
 
     if isinstance(plot, str):
-        fig.savefig(f'figures/{plot}_stepplot.png')# type: ignore
+        fig.savefig(f'figures/{plot}_stepplot.png')  # type: ignore
         plt.close()
     else:
         return ax
@@ -131,18 +131,18 @@ def plot_BV_fit(plot, temperature, voltages, gains,
     else:
         return ax
 
-def plot_peaks(area_x, area_y, area_filt, area_peaks_x, 
-                plot = None, ax = None):
+
+def plot_peaks(area_x, area_y, area_filt, area_peaks_x,
+               plot=None, ax=None):
 
     if ax is None:
         fig, ax = plt.subplots(1, 1, figsize=(12, 5), facecolor='white')
 
+    ax.plot(area_x, area_y, color='k', alpha=0.7)  # , range = (100,1e4))
 
-    ax.plot(area_x, area_y, color = 'k', alpha = 0.7)#, range = (100,1e4))
+    ax.plot(area_x, area_filt, color='blue', ls='-', lw=1, alpha=1)
 
-    ax.plot(area_x, area_filt, color = 'blue',ls = '-', lw = 1, alpha = 1)
-
-    ax.vlines(area_x[area_peaks_x] , 0, 1e6, color = 'green', alpha = 0.5)
+    ax.vlines(area_x[area_peaks_x], 0, 1e6, color='green', alpha=0.5)
     ax.set_xlabel('Area')
     ax.set_yscale('log')
 

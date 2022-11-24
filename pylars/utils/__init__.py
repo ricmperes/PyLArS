@@ -1,4 +1,4 @@
-r'''I/O classes and functions, as well as the data structuring classes: 
+r'''I/O classes and functions, as well as the data structuring classes:
 
   - raw data
   - dataset

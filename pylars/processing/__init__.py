@@ -1,8 +1,8 @@
 r'''Welcome to the core-pillar of PyLArS!
 
-This is the module where every waveform comes to be processed and leaves with 
+This is the module where every waveform comes to be processed and leaves with
 a briefcase containing the identified pulses and their following properties:
-  
+
   - area
   - length
   - position in the waveform

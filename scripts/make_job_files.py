@@ -1,7 +1,10 @@
+import pylars
+import os
+import datetime
 import argparse
 
 parser = argparse.ArgumentParser(
-    description=('Script to create ALL the batch jobs to process a run ' 
+    description=('Script to create ALL the batch jobs to process a run '
                  '(no conditions on temperature, voltage or kind).')
 )
 parser.add_argument('-r', '--run',
@@ -11,9 +14,6 @@ parser.add_argument('-r', '--run',
 
 args = parser.parse_args()
 
-import datetime
-import os
-import pylars
 
 def make_batch_script(job_name, run, kind, temp, vbias):
     main_str = f"""#!/bin/bash
@@ -32,18 +32,20 @@ python process_dataset.py -t {temp} -v {vbias} -tp {kind} -r {run}
         os.mkdir('jobs')
 
     with open(f'jobs/job_{job_name}.job', 'w') as F:
-        F.write(main_str)  
+        F.write(main_str)
     print(f'Generated file with ID: {job_name}.')
+
 
 def make_launch_file(ID_list):
     string_head = '''#!/bin/bash
 '''
-    with open('launch_process.sh','w') as F:
+    with open('launch_process.sh', 'w') as F:
         F.write(string_head)
         for _ID in ID_list:
             F.write(f'sbatch jobs/job_{_ID}.job\n')
-    print('Generated launch script file with %d IDs.' %len(ID_list))
+    print('Generated launch script file with %d IDs.' % len(ID_list))
     os.system('chmod +x launch_process.sh')
+
 
 def main():
 
@@ -68,6 +70,7 @@ def main():
         make_batch_script(job_name, _run, _kind, _temp, _vbias)
 
     make_launch_file(ID_list)
+
 
 if __name__ == '__main__':
     t0 = datetime.datetime.now()

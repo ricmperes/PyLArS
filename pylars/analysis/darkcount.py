@@ -43,7 +43,7 @@ class DCR_dataset():
 
         Args:
             flag (bool): True for plotting stuff, False for not making nice
-                pictures (plots) to hang on the wall. Yes, I hang plots on 
+                pictures (plots) to hang on the wall. Yes, I hang plots on
                 my bedroom wall and it looks nice.
         """
         self.plots_flag = flag
@@ -99,7 +99,7 @@ class DCR_dataset():
 
         Args:
             force_processing (bool, optional): Flag to force processing
-                of raw data in case the processed dataset is not found. 
+                of raw data in case the processed dataset is not found.
                 Defaults to False.
 
         Returns:
@@ -203,7 +203,7 @@ class DCR_dataset():
 
         Args:
             df (pd.DataFrame): a pd.DataFrame with the series "area" and
-                "length".       
+                "length".
             length_cut (int, optional): cut to impose on the length of
                 the peaks for noise suppression. Defaults to 5.
             bins (intorlist, optional): number of bins to make the are
@@ -481,8 +481,8 @@ class DCR_run():
         Assumes a ./figures/ directory exists.
 
         Args:
-            flag (bool): True for plotting stuff, False for not making nice 
-                pictures (plots) to hang on the wall. Yes, I hang plots on my 
+            flag (bool): True for plotting stuff, False for not making nice
+                pictures (plots) to hang on the wall. Yes, I hang plots on my
                 bedroom wall and it looks nice.
         """
         self.plots_flag = flag
@@ -507,7 +507,7 @@ class DCR_run():
                                   )
         self.results_df = results_df
 
-    def define_run_ADC_config(self, F_amp: float, 
+    def define_run_ADC_config(self, F_amp: float,
                               model: str = 'v1724') -> None:
         """Load the ADC related quantities for the run.
 
@@ -608,10 +608,10 @@ class DCR_run():
         if self.run.run_number == 7:
             channel_map = {0: ['wf0', 'wf3', 'wf4', 'wf6'],
                            1: ['wf0', 'wf3', 'wf4', 'wf6'], }
-        
+
         elif self.run.run_number == 8:
             channel_map = {0: ['wf0', 'wf3', 'wf4', 'wf5', 'wf6'],
-                           1: ['wf0', 'wf1', 'wf2', 'wf3', 'wf4', 
+                           1: ['wf0', 'wf1', 'wf2', 'wf3', 'wf4',
                                'wf6', 'wf7']}
 
         else:
@@ -645,24 +645,24 @@ class DCR_run():
         datetime.now()
 
     def save_results(self, custom_name) -> None:
-        """Save dataframe of results to a hdf5 file. Saved files go to 
+        """Save dataframe of results to a hdf5 file. Saved files go to
         self.analysis_path.
 
         Args:
             name (str): name to give the file (without extension).
         """
         assert isinstance(self.results_df, pd.DataFrame), ("Trying to save "
-            "results that do not exist in the object, c'mon, you know better.")
+                                                           "results that do not exist in the object, c'mon, you know better.")
         assert len(self.results_df) > 0, ("Results df is empty, please compute"
-            "something before trying to save, otherwire it's just a waste of "
-            "disk space")
+                                          "something before trying to save, otherwire it's just a waste of "
+                                          "disk space")
 
         name = f'DCR_results_{custom_name}'
         self.results_df.to_hdf(self.analysis_path + name + '.h5', 'df')
         print('Saved results to ')
-    
-    def load_results(self, name:str) -> None:
-        """Load dataframe of results from a hdf5 file. Looks for files in 
+
+    def load_results(self, name: str) -> None:
+        """Load dataframe of results from a hdf5 file. Looks for files in
         the standard analysis cache directory.
 
         Args:
@@ -671,5 +671,3 @@ class DCR_run():
 
         _df = pd.read_hdf(self.analysis_path + name + '.h5')
         self.results_df = _df
-        
-        

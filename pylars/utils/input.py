@@ -47,7 +47,7 @@ class raw_data():
         try:
             raw_file = uproot.open(self.raw_path)
             self.raw_file = raw_file
-        except:
+        except BaseException:
             raise f'No root file found for {self.raw_path}'
 
     def get_available_channels(self):
@@ -143,7 +143,7 @@ class run():
         all_root_files = self.root_files
         datasets = []
         if self.run_number >= 6:
-        
+
             for file in all_root_files:
                 try:
                     split_file_path = file.split('/')
@@ -162,7 +162,7 @@ class run():
                         continue
                     datasets.append(
                         dataset(file, _kind, _module, _temp, _vbias))
-                except:
+                except BaseException:
                     print('Ignoring file: ', file)
 
         elif self.run_number == 1:
@@ -218,7 +218,6 @@ class run():
         else:
             raise NotImplementedError("Run not implemented yet.")
         return datasets
-
 
     def get_run_df(self) -> pd.DataFrame:
         """Get a frienly pandas dataframe with all the datasets available,

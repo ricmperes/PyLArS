@@ -2,6 +2,7 @@ import numpy as np
 import numba as nb
 from typing import List
 
+
 class pulse_processing():
     """All the things pulses.
     """
@@ -96,12 +97,12 @@ class pulse_processing():
                            baseline_subtracted: bool = False) -> List[float]:
         """Calcultes the max amplitude of the identified pulse
         in number of samples.
-        
+
         (Faster without numba...?)
 
         Args:
             waveform (np.ndarray): 1D array of all the ADC counts where each
-                element is a sample number in the waveform. The length of the 
+                element is a sample number in the waveform. The length of the
                 array is the ammount of samples in the waveform.
             pulses (np.ndarray): array of identified pulse.
             baseline_value (float): value of ADC counts to use as baseline.
@@ -126,10 +127,10 @@ class pulse_processing():
         return split_array
 
     @classmethod
-    def find_pulses_simple(cls, waveform_array: np.ndarray, 
-                          baseline_value: float, std_value: float, 
-                          sigma_lvl: float = 5, negative_polarity: bool = True,
-                          baseline_subtracted: bool = False) -> list:
+    def find_pulses_simple(cls, waveform_array: np.ndarray,
+                           baseline_value: float, std_value: float,
+                           sigma_lvl: float = 5, negative_polarity: bool = True,
+                           baseline_subtracted: bool = False) -> list:
         """Pulse processing to find pulses above sigma times baseline rms.
 
         Args:
@@ -141,10 +142,10 @@ class pulse_processing():
                 value.
             sigma_lvl (float, optional): number of times above baseline in
                 stds to consider as new pulse. Defaults to 5.
-            negative_polarity (bool): Polarity of the signal, True for 
-                negative (as standard SiPM waveforms), False for positive. 
+            negative_polarity (bool): Polarity of the signal, True for
+                negative (as standard SiPM waveforms), False for positive.
                 Defaults to True.
-            baseline_subtracted (bool): info if the baseline is already 
+            baseline_subtracted (bool): info if the baseline is already
                 subtracted in the waveform. Defaults to False.
 
         Returns:
@@ -153,23 +154,22 @@ class pulse_processing():
 
         if baseline_subtracted:
             baseline_value = 0
-        
+
         if negative_polarity:
             above_baseline = np.where(
                 waveform_array < (
                     baseline_value -
                     std_value *
                     sigma_lvl))[0]
-        
+
         elif not negative_polarity:
             above_baseline = np.where(
                 waveform_array > (
                     baseline_value +
                     std_value *
                     sigma_lvl))[0]
-        
-        
-        pulses = cls.split_consecutive(above_baseline) # type: ignore
+
+        pulses = cls.split_consecutive(above_baseline)  # type: ignore
 
         return pulses
 
@@ -190,12 +190,12 @@ def _get_area(waveform: np.ndarray, baseline_value: float,
         peak_end (int): index of end of the pulse
         dt (int, optional): duration of each sample in the waveform in
             nanoseconds. Defaults to 10.
-        negative_polarity (bool): Polarity of the signal, True for 
-                negative (as standard SiPM waveforms), False for positive. 
+        negative_polarity (bool): Polarity of the signal, True for
+                negative (as standard SiPM waveforms), False for positive.
                 Defaults to True.
-            baseline_subtracted (bool): info if the baseline is already 
+            baseline_subtracted (bool): info if the baseline is already
                 subtracted in the waveform. Defaults to False.
-    
+
     Returns:
         float: return calculated integrated ADC counts.
     """
@@ -207,9 +207,9 @@ def _get_area(waveform: np.ndarray, baseline_value: float,
         polarity = -1
     else:
         polarity = 1
-    
+
     pulse_wf = waveform[pulse_start:pulse_end]
-    area_under = np.sum(baseline_value + polarity* pulse_wf) * dt
+    area_under = np.sum(baseline_value + polarity * pulse_wf) * dt
     return area_under
 
 
@@ -227,14 +227,14 @@ def _get_amplitude(waveform: np.ndarray, baseline_value: float,
         baseline_value (float): value of ADC counts to use as baseline.
         peak_start (int): index of start of the pulse
         peak_end (int): index of end of the pulse
-        negative_polarity (bool): Polarity of the signal, True for 
-                negative (as standard SiPM waveforms), False for positive. 
+        negative_polarity (bool): Polarity of the signal, True for
+                negative (as standard SiPM waveforms), False for positive.
                 Defaults to True.
-            baseline_subtracted (bool): info if the baseline is already 
+            baseline_subtracted (bool): info if the baseline is already
                 subtracted in the waveform. Defaults to False.
-    
+
     Returns:
-        float: return amplitude of pulse in ADC counts (minimum value of 
+        float: return amplitude of pulse in ADC counts (minimum value of
             ADC counts registered in pulse)
     """
     peak_wf = waveform[peak_start:peak_end]

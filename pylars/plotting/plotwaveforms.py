@@ -2,8 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from typing import Optional
 
-def plot_waveform(waveform_array:np.ndarray, full_y:bool=False,
-                  full_x:bool=True, pe: bool = False,
+
+def plot_waveform(waveform_array: np.ndarray, full_y: bool = False,
+                  full_x: bool = True, pe: bool = False,
                   ax: Optional[plt.Axes] = None) -> plt.Axes:
     """Plot a waveform from its array.
 
@@ -15,7 +16,7 @@ def plot_waveform(waveform_array:np.ndarray, full_y:bool=False,
             to False.
         full_x (bool, optional): plot full range of ADC samples. Defaults
             to True.
-        pe (bool, optional): parse that the waveform is in PE/s (for peaks). 
+        pe (bool, optional): parse that the waveform is in PE/s (for peaks).
             Defaults to False.
         ax (plt.Axes, optional): axes to plot into. Defaults to None.
 
@@ -52,9 +53,10 @@ def plot_waveform(waveform_array:np.ndarray, full_y:bool=False,
         ax.set_ylabel('PE/s')
     return ax
 
-def plot_pulses(waveform:np.ndarray, pulse_list: list,
+
+def plot_pulses(waveform: np.ndarray, pulse_list: list,
                 ax: Optional[plt.Axes] = None) -> plt.Axes:
-    """Plot the identified pulses in a waveform. 
+    """Plot the identified pulses in a waveform.
 
     Args:
         waveform (np.ndarray): waveform array. Elements of the array
@@ -70,11 +72,10 @@ def plot_pulses(waveform:np.ndarray, pulse_list: list,
     if ax is None:
         fig, ax = plt.subplots(1, 1)
 
-    ax = plot_waveform(waveform, ax = ax)
+    ax = plot_waveform(waveform, ax=ax)
     for pulse in pulse_list:
-        if len(pulse)>1:
-            ax.fill_betweenx(y = np.linspace(0,16000,100),
-                             x1 = pulse[0], x2 = pulse[-1],
-                             alpha = 0.2, color = 'cyan')
+        if len(pulse) > 1:
+            ax.fill_betweenx(y=np.linspace(0, 16000, 100),
+                             x1=pulse[0], x2=pulse[-1],
+                             alpha=0.2, color='cyan')
     return ax
-        

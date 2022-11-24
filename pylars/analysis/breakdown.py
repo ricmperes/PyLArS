@@ -14,6 +14,7 @@ from scipy.signal import find_peaks
 from scipy import stats
 from tqdm.autonotebook import tqdm
 
+
 class BV_dataset():
     """Object class to hold breakdown voltage related instances and
     methods. Collects all the data and properties of a single MMPC,
@@ -39,7 +40,7 @@ class BV_dataset():
 
         Args:
             flag (bool): True for plotting stuff, False for not making nice
-                pictures (plots) to hang on the wall. Yes, I hang plots on 
+                pictures (plots) to hang on the wall. Yes, I hang plots on
                 my bedroom wall and it looks nice.
         """
         self.plots_flag = flag
@@ -68,17 +69,17 @@ class BV_dataset():
 
         Args:
             force_processing (bool, optional): Flag to force processing
-                of raw data in case the processed dataset is not found. 
+                of raw data in case the processed dataset is not found.
                 Defaults to False.
 
         Returns:
             dict: dictionary with the data df for each voltage as a key.
         """
         self.data = {}
-        for _voltage in tqdm(self.voltages, 
-                             desc =f'Loading processed data for BV '+
+        for _voltage in tqdm(self.voltages,
+                             desc=f'Loading processed data for BV ' +
                              f'data at {self.temp}K: ',
-                            total = len(self.voltages)):
+                             total=len(self.voltages)):
             processed_data = pylars.utils.output.processed_dataset(
                 run=self.run,
                 kind='BV',
@@ -96,53 +97,53 @@ class BV_dataset():
             self.data[_voltage] = copy.deepcopy(_df[mask])
 
     @classmethod
-    def get_peak_rough_positions(cls, area_array:np.ndarray, 
-                                 cut_mask, 
-                                 bins:Union[int, np.ndarray, list] = 1000,
-                                 filt = scipy.ndimage.gaussian_filter1d,
-                                 filter_options = 3,
+    def get_peak_rough_positions(cls, area_array: np.ndarray,
+                                 cut_mask,
+                                 bins: Union[int, np.ndarray, list] = 1000,
+                                 filt=scipy.ndimage.gaussian_filter1d,
+                                 filter_options=3,
                                  plot: Union[bool, str] = False) -> tuple:
-            '''Takes the area histogram (fingerplot) and looks for peaks 
-            and valeys. SPE should be the 2nd peak on most cases. Higher
-            PE values might be properly unrecognized
-            Returns two lists: list of the x value of the peaks, list of
-            the x value of the valeys.
-            Optional plot feature:
-            - False: no plot
-            - True: displays plot in notebook
-            - string - sufix on the name of the file'''
+        '''Takes the area histogram (fingerplot) and looks for peaks
+        and valeys. SPE should be the 2nd peak on most cases. Higher
+        PE values might be properly unrecognized
+        Returns two lists: list of the x value of the peaks, list of
+        the x value of the valeys.
+        Optional plot feature:
+        - False: no plot
+        - True: displays plot in notebook
+        - string - sufix on the name of the file'''
 
-            area_hist = np.histogram(
-                area_array[cut_mask], bins = bins)
+        area_hist = np.histogram(
+            area_array[cut_mask], bins=bins)
 
-            area_x = area_hist[1]
-            area_x = (area_x + (area_x[1]-area_x[0])/2)[:-1]
-            area_y = area_hist[0]
+        area_x = area_hist[1]
+        area_x = (area_x + (area_x[1] - area_x[0]) / 2)[:-1]
+        area_y = area_hist[0]
 
-            area_filt = filt(area_y,filter_options)
-            area_peaks_x, peak_properties = find_peaks(area_filt, 
-                prominence = 20,
-                distance = 50)
+        area_filt = filt(area_y, filter_options)
+        area_peaks_x, peak_properties = find_peaks(area_filt,
+                                                   prominence=20,
+                                                   distance=50)
 
-            if plot != False:
-                pylars.plotting.plotanalysis.plot_peaks(
-                    area_x, area_y, area_filt, area_peaks_x)
+        if plot != False:
+            pylars.plotting.plotanalysis.plot_peaks(
+                area_x, area_y, area_filt, area_peaks_x)
 
-            return area_x[area_peaks_x], peak_properties
+        return area_x[area_peaks_x], peak_properties
 
-    def compute_BV_LED_simple(self, LED_position: int, 
+    def compute_BV_LED_simple(self, LED_position: int,
                               plot: bool = False) -> tuple:
         """Comute BV for a given T dataset with the first no-noise peak
         of the area spectrum given width and position cut.
 
         Args:
-            LED_position (int): number of sample where to center the 
+            LED_position (int): number of sample where to center the
                 position cut.
-            plot (bool, optional): Show the plot, save the plot or only 
+            plot (bool, optional): Show the plot, save the plot or only
                 compute output. Defaults to False.
 
         Returns:
-            tuple: Calculated BV, error on the fit and r2 of the linear 
+            tuple: Calculated BV, error on the fit and r2 of the linear
                 regression. Returns on the form `(BV, BV_std, r2)`.
         """
 
@@ -156,13 +157,13 @@ class BV_dataset():
                             (_df['length'] > 3) &
                             (_df['position'] > LED_position - 10) &
                             (_df['position'] < LED_position + 20)
-                            )
+            )
             peaks, peak_prop = BV_dataset.get_peak_rough_positions(
                 _df['area'],
-                _cuts, 
-                bins = np.linspace(0,np.percentile(_df['area'], 95), 500),
-                plot = False)
-            
+                _cuts,
+                bins=np.linspace(0, np.percentile(_df['area'], 95), 500),
+                plot=False)
+
             if len(peaks) == 0:
                 print('Could not compute LED area for V=', v)
                 continue
@@ -171,41 +172,43 @@ class BV_dataset():
                     first_good_peak = peaks[0]
                 else:
                     first_good_peak = peaks[1]
-            #elif len(peaks) == 0 and peaks[0] > 10000:
+            # elif len(peaks) == 0 and peaks[0] > 10000:
             #    spe = peaks[0]
             else:
                 print('Could not compute LED area for V=', v)
                 continue
-            
+
             bias_voltage.append(v)
             good_peaks.append(first_good_peak)
 
         linres = stats.linregress(good_peaks, bias_voltage)
-        
+
         if plot != False:
             pylars.plotting.plotanalysis.plot_BV_fit(
-                plot = f'{self.module}_{self.channel}',
-                temperature = self.temp, 
-                voltages = bias_voltage, 
-                gains = good_peaks, 
-                a = linres.slope,  # type: ignore
-                b = linres.intercept, # type: ignore
-                _breakdown_v = linres.intercept) # type: ignore
+                plot=f'{self.module}_{self.channel}',
+                temperature=self.temp,
+                voltages=bias_voltage,
+                gains=good_peaks,
+                a=linres.slope,  # type: ignore
+                b=linres.intercept,  # type: ignore
+                _breakdown_v=linres.intercept)  # type: ignore
 
-        return (linres.intercept, linres.intercept_stderr, linres.rvalue**2) # type: ignore
+        return (linres.intercept, linres.intercept_stderr,
+                linres.rvalue**2)  # type: ignore
+
 
 def compute_BV(df_results: pd.DataFrame,
                plot: Union[bool, str] = False) -> pd.DataFrame:
-    """Computes the breakdown voltage with a linear fit of gain over 
+    """Computes the breakdown voltage with a linear fit of gain over
     V points.
 
-    Takes a dataframe with the collumns 'T' (temperature), 'V' (voltage) 
+    Takes a dataframe with the collumns 'T' (temperature), 'V' (voltage)
     and 'gain' (self-explanatory, c'mon...)
 
     Args:
         df_results (pd.DataFrame): dataframe with the processed datasets
             calculated gains.
-        plot (boolorstr, optional): flag for plotting choice. Defaults to 
+        plot (boolorstr, optional): flag for plotting choice. Defaults to
             False.
 
     Returns:
@@ -218,7 +221,7 @@ def compute_BV(df_results: pd.DataFrame,
     df_results = pd.concat([df_results,
                             pd.Series(np.zeros(len(df_results)), name='BV')
                             ], axis=1
-                        )
+                           )
 
     for _temp in temp_list:
         volt_list_in_temp = np.unique(
@@ -232,10 +235,10 @@ def compute_BV(df_results: pd.DataFrame,
 
         if plot != False:
             pylars.plotting.plotanalysis.plot_BV_fit(plot, _temp,
-                                                    volt_list_in_temp,
-                                                    gain_list_in_temp, 
-                                                    a, b,
-                                                    _breakdown_v)
+                                                     volt_list_in_temp,
+                                                     gain_list_in_temp,
+                                                     a, b,
+                                                     _breakdown_v)
 
     df_results['OV'] = df_results['V'] - df_results['BV']
 

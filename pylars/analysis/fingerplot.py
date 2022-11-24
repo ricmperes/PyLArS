@@ -98,7 +98,7 @@ class fingerplot_dataset(DCR_dataset):
             ax.set_title('Module 0 | Channel 0')
             ax.set_xlabel('Peak Area [integrated ADC counts]')
             if isinstance(plot, str):
-                fig.savefig(f'figures/fingerplot_{plot}.png') # type: ignore
+                fig.savefig(f'figures/fingerplot_{plot}.png')  # type: ignore
             else:
                 plt.show()
         return mu, sigma
