@@ -47,7 +47,7 @@ class raw_data():
         try:
             raw_file = uproot.open(self.raw_path)
             self.raw_file = raw_file
-        except BaseException:
+        except:
             raise f'No root file found for {self.raw_path}'
 
     def get_available_channels(self):
@@ -214,7 +214,49 @@ class run():
                 _module = int(f_split[-2])
 
                 datasets.append(dataset(file, _kind, _module, _temp, _vbias))
+        
+        elif self.run_number == 4:
+            for file in all_root_files:
+                file_split = file.split('/')
+                f_split = file_split[-1].split('_')
+                if f_split[0] == 'test':
+                    print('Ignoring test dataset: ', file)
+                    continue
+                if file_split[8] == 'breakdown-v':
+                    _kind = 'BV'
+                elif file_split[8] == 'dcr':
+                    _kind = 'DCR'
+                else:
+                    print('Ignoring file due to unknown kind: ', file)
+                    continue
+                
+                _vbias = float(f_split[1][:-1])
+                _temp = float(f_split[0][:-1])
 
+                _module = int(f_split[-2])
+
+                datasets.append(dataset(file, _kind, _module, _temp, _vbias))
+
+        elif self.run_number == 5:
+            for file in all_root_files:
+                file_split = file.split('/')
+                f_split = file_split[-1].split('_')
+                if f_split[0] == 'test':
+                    print('Ignoring test dataset: ', file)
+                    continue
+                if file_split[8] == 'breakdown-v':
+                    _kind = 'BV'   
+                elif file_split[8] == 'dcr':
+                    _kind = 'DCR'
+                else:
+                    print('Ignoring file due to unknown kind: ', file)
+                    continue
+
+                _temp = float(f_split[0][:-1])
+                _vbias = float(f_split[1] + '.' + f_split[2][:-1])
+                _module = int(f_split[-2])
+
+                datasets.append(dataset(file, _kind, _module, _temp, _vbias))
         else:
             raise NotImplementedError("Run not implemented yet.")
         return datasets
