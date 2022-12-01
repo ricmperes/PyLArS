@@ -114,3 +114,22 @@ def get_channel_list(process):
         channels = raw.channels
         ch_list += list(itertools.product([mod], channels))
     return ch_list
+
+def wstd(array: np.ndarray, waverage: float, weights: np.ndarray) -> float:
+    """Compute weighted standard deviation.
+
+    Args:
+        array (np.ndarray): 1D array to compute wstd of
+        waverage (float): weighted average value
+        weights (np.ndarray): weights to consider
+
+    Returns:
+        float: value of the weighted standard deviation
+    """
+    
+    N = np.count_nonzero(weights)
+    
+    wvar = N*np.sum(weights * (array - waverage)**2) / (N-1) / np.sum(weights)
+    wstd = np.sqrt(wvar)
+    
+    return wstd
