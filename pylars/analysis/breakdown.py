@@ -1,5 +1,5 @@
 import copy
-from typing import Union
+from typing import Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -7,11 +7,11 @@ import pylars
 import pylars.plotting.plotanalysis
 import pylars.utils.input
 import pylars.utils.output
-from pylars.utils.common import func_linear, find_minmax
 import scipy.ndimage
+from pylars.utils.common import find_minmax, func_linear
+from scipy import stats
 from scipy.optimize import curve_fit
 from scipy.signal import find_peaks
-from scipy import stats
 from tqdm.autonotebook import tqdm
 
 
@@ -126,7 +126,7 @@ class BV_dataset():
                                                    distance=50)
 
         if plot != False:
-            pylars.plotting.plotanalysis.plot_peaks(
+            pylars.plotting.plotanalysis.plot_found_area_peaks(
                 area_x, area_y, area_filt, area_peaks_x)
 
         return area_x[area_peaks_x], peak_properties
@@ -152,22 +152,32 @@ class BV_dataset():
         v_list = self.voltages
 
         for i, v in enumerate(v_list):
+            
+            #For very low bias voltage the SiPM shows a pulse when the LED 
+            #shines but it could be not yet in Geiger-Mode.
+            if v < 48:
+                continue
+
             _df = self.data[v]
-            _cuts = _cuts = (
-                            (_df['length'] > 3) &
-                            (_df['position'] > LED_position - 10) &
-                            (_df['position'] < LED_position + 20)
-            )
+            _cuts = (
+                     (_df['length'] > 3) &
+                     (_df['position'] > LED_position - 10) &
+                     (_df['position'] < LED_position + 20)
+                    )
             peaks, peak_prop = BV_dataset.get_peak_rough_positions(
                 _df['area'],
                 _cuts,
-                bins=np.linspace(0, np.percentile(_df['area'], 95), 500),
+                bins=np.linspace(0, np.percentile(_df['area'], 99), 1500),
                 plot=False)
 
-            if len(peaks) == 0:
+            if len(peaks > 5):
+                #likely there is a nice LED fingerplot dominating everything
+                first_good_peak = np.median(_df[_cuts]['area'])
+
+            elif len(peaks) == 0:
                 print('Could not compute LED area for V=', v)
                 continue
-            if len(peaks) > 0:
+            elif len(peaks) > 0:
                 if (peaks[0] > 3500) or (len(peaks) == 1):
                     first_good_peak = peaks[0]
                 else:
@@ -191,14 +201,16 @@ class BV_dataset():
                 gains=good_peaks,
                 a=linres.slope,  # type: ignore
                 b=linres.intercept,  # type: ignore
-                _breakdown_v=linres.intercept)  # type: ignore
+                _breakdown_v=linres.intercept, # type: ignore
+                _breakdown_v_error = linres.intercept_stderr) # type: ignore
 
-        return (linres.intercept, linres.intercept_stderr,
+        return (linres.intercept, linres.intercept_stderr,  # type: ignore
                 linres.rvalue**2)  # type: ignore
 
 
-def compute_BV(df_results: pd.DataFrame,
-               plot: Union[bool, str] = False) -> pd.DataFrame:
+def compute_BV_df(df_results: pd.DataFrame,
+               plot: Union[bool, str] = False
+               ) -> Tuple[pd.DataFrame, float, float]:
     """Computes the breakdown voltage with a linear fit of gain over
     V points.
 
@@ -228,8 +240,13 @@ def compute_BV(df_results: pd.DataFrame,
             df_results[df_results['T'] == _temp]['V'])
         gain_list_in_temp = np.unique(
             df_results[df_results['T'] == _temp]['Gain'])
-        (a, b), cov = curve_fit(func_linear, volt_list_in_temp, gain_list_in_temp)
-        _breakdown_v = -b / a
+
+        linres = stats.linregress(gain_list_in_temp, volt_list_in_temp)
+
+        a=linres.slope,  # type: ignore
+        b=linres.intercept,  # type: ignore
+        _breakdown_v = float(b) # type: ignore
+        _breakdown_v_error = linres.intercept_stderr # type: ignore
         # print(_breakdown_v)
         df_results.loc[df_results['T'] == _temp, 'BV'] = _breakdown_v
 
@@ -238,8 +255,10 @@ def compute_BV(df_results: pd.DataFrame,
                                                      volt_list_in_temp,
                                                      gain_list_in_temp,
                                                      a, b,
-                                                     _breakdown_v)
+                                                     _breakdown_v,
+                                                     _breakdown_v_error)
 
     df_results['OV'] = df_results['V'] - df_results['BV']
 
-    return df_results
+    return df_results, a, b #type:ignore
+

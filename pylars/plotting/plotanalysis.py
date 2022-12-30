@@ -3,9 +3,10 @@ import numpy as np
 from pylars.utils.common import Gaussean, func_linear
 from matplotlib.figure import Figure as pltFigure
 from .plotprocessed import *
+from typing import Union
+import pandas as pd
 
-# LED ON
-
+##### LED ON #####
 
 def plot_area_LED(bv_dataset, voltage, LED_position=300,
                   log_y=True, full_x=False, ax=None,
@@ -54,7 +55,76 @@ def plot_LED_all_voltages(bv_dataset, cmap='winter', ax=None,):
     plt.show()
 
 
-# LED OFF
+def plot_BV_fit(plot, temperature, voltages, gains,
+                a, b, _breakdown_v, _breakdown_v_error, ax=None):
+
+    if ax is None:
+        fig, ax = plt.subplots(1, 1, figsize=(6, 3), facecolor='white')
+
+    ax.plot(gains, voltages,
+            ls='', marker='x', c='k',
+            label=(f'{temperature}K: ({_breakdown_v:.2f}'
+                   f'$\pm${_breakdown_v_error:.2f}) V') # type: ignore
+            )
+    _offset_gains = min(gains)*0.15
+    _x = np.linspace(min(gains) - _offset_gains, 
+                     max(gains) + _offset_gains, 
+                     100)
+    ax.plot(_x, func_linear(_x, a, b), c='r', alpha=0.9)
+    ax.set_xlabel('Gain')
+    ax.set_ylabel('Voltage [V]')
+    ax.legend()
+    ax.set_title(plot)
+    ax.ticklabel_format(style='sci', axis='x', scilimits=(0,0), 
+                        useMathText=True)
+
+    if isinstance(plot, str):
+        plt.tight_layout()
+        plt.savefig(f'figures/{plot}_{temperature}_BV_fit.pdf')
+        plt.close()
+    else:
+        return ax
+
+
+def plot_BV_results(df_BV_results: pd.DataFrame, 
+                    all_channels: Union[list, tuple, np.ndarray], 
+                    r2_threshold: float = 0., 
+                    ax = None):
+    """Plot the distribution of BV voltages for different channels.
+
+    Args:
+        df_BV_results (pd.DataFrame): df with the BV values, errors, r2 value 
+            of linear fit for eahc temperature and channel.
+        all_channels (Union[list, tuple, np.ndarray]): the channel names, 
+            in order, to put on the x axis ticks. Usually "(mod, ch)" or 
+            "#xxx" for the MPPC number.
+        r2_threshold (float, optional): cuts BVs with fits with r2 bellow this
+             value. Defaults to 0.
+        ax (plt.axis, optional): the axis to draw into. Defaults to None.
+    """
+    if ax is None:
+        fig, ax = plt.subplots(1, 1, figsize=(6, 4))
+    
+    temps = df_BV_results.index.levels[0] # type: ignore
+    for t in temps:
+        t_mask = ((df_BV_results['temp'] == t) & 
+                  (df_BV_results['r2'] > r2_threshold)
+                 )
+        _df = df_BV_results[t_mask]
+        
+        ax.errorbar(_df.index.codes[1], # type: ignore
+                    _df['BV'], 
+                    yerr=_df['BV_std'],
+                    ls = '', marker = '.', capsize=4, 
+                    label = f'{t:.0f} K')
+        
+    ax.legend()
+    ax.set_xticks(df_BV_results.index.levels[1], # type: ignore
+                  all_channels, rotation = 30)
+    
+    return ax
+
+##### LED OFF #####
 
 
 def plot_DCR_curve(plot, area_hist_x, DCR_values, _x, _y, min_area_x, ax=None):
@@ -108,37 +178,7 @@ def plot_SPE_fit(df, length_cut, plot, area_hist_x,
     else:
         return ax
 
-
-def plot_BV_fit(plot, temperature, voltages, gains,
-                a, b, _breakdown_v, ax=None):
-
-    if ax is None:
-        fig, ax = plt.subplots(1, 1, figsize=(6, 3), facecolor='white')
-
-    ax.plot(gains, voltages,
-            ls='', marker='x', c='k',
-            label=f'{temperature}K: {_breakdown_v:.2f} V')
-    _offset_gains = min(gains)*0.15
-    _x = np.linspace(min(gains) - _offset_gains, 
-                     max(gains) + _offset_gains, 
-                     100)
-    ax.plot(_x, func_linear(_x, a, b), c='r', alpha=0.9)
-    ax.set_xlabel('Gain')
-    ax.set_ylabel('Voltage [V]')
-    ax.legend()
-    ax.set_title(plot)
-    ax.ticklabel_format(style='sci', axis='x', scilimits=(0,0), 
-                        useMathText=True)
-
-    if isinstance(plot, str):
-        plt.tight_layout()
-        plt.savefig(f'figures/{plot}_{temperature}_BV_fit.pdf')
-        plt.close()
-    else:
-        return ax
-
-
-def plot_peaks(area_x, area_y, area_filt, area_peaks_x,
+def plot_found_area_peaks(area_x, area_y, area_filt, area_peaks_x,
                plot=None, ax=None):
 
     if ax is None:
@@ -157,3 +197,4 @@ def plot_peaks(area_x, area_y, area_filt, area_peaks_x,
         plt.close()
     elif plot is True:
         plt.show()
+
