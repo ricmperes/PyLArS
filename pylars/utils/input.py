@@ -48,7 +48,7 @@ class raw_data():
             raw_file = uproot.open(self.raw_path)
             self.raw_file = raw_file
         except:
-            raise f'No root file found for {self.raw_path}'
+            print(f'No root file found for {self.raw_path}')
 
     def get_available_channels(self):
         '''

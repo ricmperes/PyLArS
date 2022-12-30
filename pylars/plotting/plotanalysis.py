@@ -91,8 +91,9 @@ def plot_SPE_fit(df, length_cut, plot, area_hist_x,
         fig, ax = plt.subplots(1, 1, figsize=(12, 5), facecolor='white')
     bin_size = area_hist_x[1] - area_hist_x[0]
     ax.hist(df[df['length'] > length_cut]['area'],
-            bins=np.linspace(min_area_x - 2000, min_area_x + 2000, 300),
+            bins=np.linspace(0.5 * min_area_x, 1.5 * min_area_x, 300),
             color='gray', alpha=0.8)
+            
     _x = np.linspace(area_hist_x[0], area_hist_x[-1], 200)
     ax.plot(_x, Gaussean(_x, A, mu, sigma), color='red')
     ax.set_xlabel('Area [integrated ADC counts]')
@@ -117,12 +118,17 @@ def plot_BV_fit(plot, temperature, voltages, gains,
     ax.plot(gains, voltages,
             ls='', marker='x', c='k',
             label=f'{temperature}K: {_breakdown_v:.2f} V')
-    _x = np.linspace(min(gains), max(gains), 100)
+    _offset_gains = min(gains)*0.15
+    _x = np.linspace(min(gains) - _offset_gains, 
+                     max(gains) + _offset_gains, 
+                     100)
     ax.plot(_x, func_linear(_x, a, b), c='r', alpha=0.9)
-    ax.set_xlabel('Area')
-    ax.set_ylabel('V')
+    ax.set_xlabel('Gain')
+    ax.set_ylabel('Voltage [V]')
     ax.legend()
     ax.set_title(plot)
+    ax.ticklabel_format(style='sci', axis='x', scilimits=(0,0), 
+                        useMathText=True)
 
     if isinstance(plot, str):
         plt.tight_layout()
