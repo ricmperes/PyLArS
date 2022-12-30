@@ -80,6 +80,34 @@ def load_ADC_config(model: str, F_amp: float) -> Dict[str, Union[int, float]]:
 
     return ADC_config
 
+def get_gain(F_amp : float,
+             spe_area: float,
+             ADC_range: float = 2.25, 
+             ADC_impedance: float = 50, 
+             ADC_res: float = 2**16,
+             q_e: float = 1.602176634e-19, 
+             ) -> float:
+    """Compute the gain given the value of the SPE area and the ADC 
+        paramenters.
+
+    Args:
+        F_amp (float): Total signal amplification factor.
+        spe_area (float): mean area of spe (in ADC bins x ns).
+        ADC_range (float, optional): Dynamic range of the ADC. Defaults 
+            to 2.25.
+        ADC_impedance (float, optional): Impedance of the ADC. Defaults to 50.
+        ADC_res (float, optional): bit.wise resolution of the ADC. Defaults 
+            to 2**16.
+        q_e (float, optional): electron charge [C]. Defaults to 1.602176634e-19.
+
+    Returns:
+        float: the calculated gain.
+    """
+
+    gain = (ADC_range * spe_area * 1e-9 / ADC_impedance / F_amp /
+            ADC_res / q_e)
+
+    return gain
 
 def find_minmax(array: np.ndarray) -> List[np.ndarray]:
     """Return local peaks and valeys of an 1d array.
