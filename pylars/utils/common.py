@@ -6,7 +6,8 @@ from typing import Dict, List, Union
 
 import numpy as np
 import pylars.utils.input
-
+from scipy.signal import find_peaks
+import scipy.ndimage
 
 def Gaussean(x, A, mu, sigma):
     y = A * np.exp(-((x - mu) / sigma)**2 / 2) / np.sqrt(2 * np.pi * sigma**2)
@@ -161,3 +162,39 @@ def wstd(array: np.ndarray, waverage: float, weights: np.ndarray) -> float:
     wstd = np.sqrt(wvar)
     
     return wstd
+
+def get_peak_rough_positions(area_array: np.ndarray,
+                             cut_mask,
+                             bins: Union[int, np.ndarray, list] = 1000,
+                             filt=scipy.ndimage.gaussian_filter1d,
+                             filter_options=3,
+                             plot: Union[bool, str] = False) -> tuple:
+    '''Takes the area histogram (fingerplot) and looks for peaks
+    and valeys. SPE should be the 2nd peak on most cases. Higher
+    PE values might be properly unrecognized
+    Returns two lists: list of the x value of the peaks, list of
+    the x value of the valeys.
+    Optional plot feature:
+    - False: no plot
+    - True: displays plot in notebook
+    - string - sufix on the name of the file'''
+
+    area_hist = np.histogram(
+        area_array[cut_mask], bins=bins)
+
+    area_x = area_hist[1]
+    area_x = (area_x + (area_x[1] - area_x[0]) / 2)[:-1]
+    area_y = area_hist[0]
+
+    area_filt = filt(area_y, filter_options)
+    area_peaks_x, peak_properties = find_peaks(area_filt,
+                                                prominence=20,
+                                                distance=50)
+
+    if plot != False:
+        from pylars.plotting.plotanalysis import plot_found_area_peaks
+        plot_found_area_peaks(
+            area_x, area_y, area_filt, area_peaks_x)
+
+    return area_x[area_peaks_x], peak_properties
+

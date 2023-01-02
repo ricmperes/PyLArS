@@ -7,11 +7,9 @@ import pylars
 import pylars.plotting.plotanalysis
 import pylars.utils.input
 import pylars.utils.output
-import scipy.ndimage
-from pylars.utils.common import find_minmax, func_linear
+from pylars.utils.common import get_peak_rough_positions
 from scipy import stats
 from scipy.optimize import curve_fit
-from scipy.signal import find_peaks
 from tqdm.autonotebook import tqdm
 
 
@@ -96,40 +94,6 @@ class BV_dataset():
 
             self.data[_voltage] = copy.deepcopy(_df[mask])
 
-    @classmethod
-    def get_peak_rough_positions(cls, area_array: np.ndarray,
-                                 cut_mask,
-                                 bins: Union[int, np.ndarray, list] = 1000,
-                                 filt=scipy.ndimage.gaussian_filter1d,
-                                 filter_options=3,
-                                 plot: Union[bool, str] = False) -> tuple:
-        '''Takes the area histogram (fingerplot) and looks for peaks
-        and valeys. SPE should be the 2nd peak on most cases. Higher
-        PE values might be properly unrecognized
-        Returns two lists: list of the x value of the peaks, list of
-        the x value of the valeys.
-        Optional plot feature:
-        - False: no plot
-        - True: displays plot in notebook
-        - string - sufix on the name of the file'''
-
-        area_hist = np.histogram(
-            area_array[cut_mask], bins=bins)
-
-        area_x = area_hist[1]
-        area_x = (area_x + (area_x[1] - area_x[0]) / 2)[:-1]
-        area_y = area_hist[0]
-
-        area_filt = filt(area_y, filter_options)
-        area_peaks_x, peak_properties = find_peaks(area_filt,
-                                                   prominence=20,
-                                                   distance=50)
-
-        if plot != False:
-            pylars.plotting.plotanalysis.plot_found_area_peaks(
-                area_x, area_y, area_filt, area_peaks_x)
-
-        return area_x[area_peaks_x], peak_properties
 
     def compute_BV_LED_simple(self, LED_position: int,
                               plot: bool = False) -> tuple:
@@ -164,7 +128,7 @@ class BV_dataset():
                      (_df['position'] > LED_position - 10) &
                      (_df['position'] < LED_position + 20)
                     )
-            peaks, peak_prop = BV_dataset.get_peak_rough_positions(
+            peaks, peak_prop = get_peak_rough_positions(
                 _df['area'],
                 _cuts,
                 bins=np.linspace(0, np.percentile(_df['area'], 99), 1500),
