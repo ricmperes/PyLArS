@@ -1,6 +1,7 @@
 import copy
-from typing import Union
+from typing import Union, Tuple
 
+import numba
 import numpy as np
 import pandas as pd
 import pylars
@@ -8,6 +9,7 @@ import pylars.plotting.plotanalysis
 import pylars.utils.input
 import pylars.utils.output
 import scipy.interpolate as itp
+from scipy.signal import find_peaks
 from pylars.analysis.breakdown import compute_BV_df
 from pylars.utils.common import Gaussean, get_gain, load_ADC_config
 from scipy.optimize import curve_fit
@@ -31,7 +33,8 @@ class DCR_analysis():
     def get_1pe_value_fit(cls,
                           df: pd.DataFrame,
                           length_cut: int = 5,
-                          plot: Union[bool, str] = False) -> tuple:
+                          plot: Union[bool, str] = False,
+                          use_scipy_find_peaks: bool = False) -> tuple:
         """Try to fit the SPE peak in the area histogram and return the
         Gaussian paramenters.
 
@@ -46,7 +49,8 @@ class DCR_analysis():
         """
 
         (area_hist_x, DCR_values, DCR_der_x_points,
-         DCR_der_y_points, min_area_x) = cls.get_1pe_rough(df, length_cut)
+         DCR_der_y_points, min_area_x) = cls.get_1pe_rough(
+            df, length_cut,use_scipy_find_peaks = use_scipy_find_peaks)
 
         if plot != False:
             pylars.plotting.plotanalysis.plot_DCR_curve(
@@ -72,7 +76,8 @@ class DCR_analysis():
     @classmethod
     def get_1pe_rough(cls, df: pd.DataFrame,
                       length_cut: int,
-                      bins: int or list = 200) -> tuple:
+                      bins: int or list = 200,
+                      use_scipy_find_peaks: bool = False) -> tuple:
         """From an event df (1 channel), find the rough position of the
         SPE from the DCR vs threshold curve and its derivative
 
@@ -92,11 +97,27 @@ class DCR_analysis():
         grad = np.gradient(DCR_values)
         grad_spline = itp.UnivariateSpline(area_hist_x, grad)
         # , s = len(area_hist_x)*3)
-        _x = np.linspace(area_hist_x[0], area_hist_x[-1], bins)
-        _y = grad_spline(_x)
-        min_idx = np.where(_y == min(_y))
-        min_area_x = _x[min_idx][0]
-        return area_hist_x, DCR_values, _x, _y, min_area_x
+        DCR_der_x_points = np.linspace(area_hist_x[0], area_hist_x[-1], bins)
+        DCR_der_y_points = grad_spline(DCR_der_x_points)
+
+        if use_scipy_find_peaks:
+            pks, props= find_peaks(-1*DCR_der_y_points,
+                                   prominence = 20) 
+            peaks_area_values = DCR_der_x_points[pks]
+            if len(peaks_area_values) == 0:
+                print('Could not find any peaks')
+                min_area_x = np.nan
+            elif len(peaks_area_values) > 0:
+                if (peaks_area_values[0] > 2000*200) or (len(peaks_area_values) == 1):
+                    min_area_x = peaks_area_values[0]
+                else:
+                    min_area_x = peaks_area_values[1]
+        else:
+            min_idx = np.where(DCR_der_y_points == min(DCR_der_y_points))
+            min_area_x = DCR_der_x_points[min_idx][0]
+
+        return (area_hist_x, DCR_values, DCR_der_x_points, 
+                DCR_der_y_points, min_area_x) # type:ignore
 
     @classmethod
     def get_DCR_above_threshold_values(cls, df: pd.DataFrame,
@@ -276,6 +297,12 @@ class DCR_dataset(DCR_analysis):
         self.voltages = self.get_voltages_available()
         self.plots_flag = False
 
+        # There are better ways to set these options but this is stil 
+        # better then a lot of flags
+        self.use_scipy_find_peaks = False 
+        self.amplitude_based = False 
+
+
     def set_plots_flag(self, flag: bool) -> None:
         """Set if computing properties makes plots (True) or not (False).
         Assumes a ./figures/ directory exists.
@@ -404,7 +431,8 @@ class DCR_dataset(DCR_analysis):
 
             # Get SPE value from Gaussian fit
             (A, mu, sigma), cov = self.get_1pe_value_fit(
-                df, plot=plot_name_1pe_fit)
+                df, plot=plot_name_1pe_fit,
+                use_scipy_find_peaks = self.use_scipy_find_peaks)
 
             # Calculate DCR and CTP
             DCR, DCR_error, CTP, CTP_error = self.get_DCR(
@@ -456,18 +484,13 @@ class DCR_dataset(DCR_analysis):
         Returns:
             pd.DataFrame: dataframe with the pairs: wf_number - pulse_count.
         """
-        ret = []
-        waveforms_w_pulses = np.unique(df['wf_number'])
-        n_waveforms = len(waveforms_w_pulses)
-        for _wf in tqdm(
-            waveforms_w_pulses, 
-            total = n_waveforms, 
-            desc = 'Counting number of pulses in waveform: ',
-            leave = False):
-
-            n_pulses = len(df[df['wf_number'] == _wf])
-            ret.append([_wf,n_pulses])
-        return pd.DataFrame(ret, columns = ['wf_number', 'pulse_count'])
+        
+        wf_number_arr = np.array(df['wf_number'].values)
+        waveforms_w_pulses, N_pulses = _get_how_many_peaks_per_waveform(wf_number_arr)
+        
+        pulse_count_df = pd.concat([pd.Series(waveforms_w_pulses, name = 'wf_number'), pd.Series(N_pulses, name = 'pulse_count')], axis = 1
+         )
+        return pulse_count_df
 
     def get_med_amplitude(self, df, extra_cut_mask) -> tuple:
         """Calculate the median and standard deviation of the distribution
@@ -814,3 +837,15 @@ class DCR_run():
 
         _df = pd.read_hdf(self.analysis_path + name + '.h5')
         self.results_df = _df
+
+@numba.njit
+def _get_how_many_peaks_per_waveform(wf_number_list: np.ndarray):
+    waveforms_w_pulses = np.unique(wf_number_list)
+    n_waveforms = len(waveforms_w_pulses)
+
+    N_pulses = np.zeros(n_waveforms)
+
+    for i, _wf in enumerate(waveforms_w_pulses):
+        _n_pulses = np.count_nonzero(wf_number_list == _wf)
+        N_pulses[i] = _n_pulses
+    return (waveforms_w_pulses, N_pulses)
