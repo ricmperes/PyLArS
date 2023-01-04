@@ -1,6 +1,6 @@
 import copy
 from typing import Union, Tuple
-
+import time
 import numba
 import numpy as np
 import pandas as pd
@@ -11,7 +11,7 @@ import pylars.utils.output
 import scipy.interpolate as itp
 from scipy.signal import find_peaks
 from pylars.analysis.breakdown import compute_BV_df
-from pylars.utils.common import Gaussean, get_gain, load_ADC_config
+from pylars.utils.common import Gaussean, get_gain
 from scipy.optimize import curve_fit
 from tqdm.autonotebook import tqdm
 
@@ -296,6 +296,7 @@ class DCR_dataset(DCR_analysis):
         self.process = processor
         self.voltages = self.get_voltages_available()
         self.plots_flag = False
+        self.livetimes = self.get_livetimes()
 
         # There are better ways to set these options but this is stil 
         # better then a lot of flags
@@ -314,29 +315,16 @@ class DCR_dataset(DCR_analysis):
         """
         self.plots_flag = flag
 
-    def define_ADC_config(self, F_amp: float, model: str = 'v1724') -> None:
-        """Load the ADC related quantities for the dataset.
-
-        Args:
-        model (str): model of the digitizer
-        F_amp (float): signal amplification from the sensor (pre-amp *
-            external amplification on rack).
-        """
-
-        self.ADC_config = load_ADC_config(model, F_amp)
-
-    def define_SiPM_config(self, livetime: float,
+    def define_SiPM_config(self, 
                            sensor_area: float = 12 * 12,
                            ) -> None:
         r"""Define the SiPM data related quantities for the dataset.
 
         Args:
-            livetime (float): livetime of the measurement for DCR porpuses.
             sensor_area (float, optional): Area of the photosensor (mm\*\*2).
                 Defaults to 12\*12.
         """
-        SiPM_config = {'livetime': livetime,
-                       'sensor_area': sensor_area,
+        SiPM_config = {'sensor_area': sensor_area,
                        }
 
         self.SiPM_config = SiPM_config
@@ -357,6 +345,37 @@ class DCR_dataset(DCR_analysis):
 
         return voltages
 
+    def get_livetimes(self) -> dict:
+        livetimes = {}
+        for v in self.voltages:
+
+            # Need all this to find the correct path...
+            self.datasets_df = self.run.get_run_df()
+            selection = ((self.datasets_df['kind'] == 'DCR') &
+                        (self.datasets_df['vbias'] == v) &
+                        (self.datasets_df['temp'] == self.temp) &
+                        # to end with just one of the modules. 
+                        # It's assumed both have the same number of 
+                        # entries and size of entries
+                        (self.datasets_df['module'] == 0)) 
+
+            ds_selected = self.datasets_df[selection]
+
+            assert len(self.datasets_df[selection]) == 1, "Found more than 1 ds with the same config. Help."
+
+            ds_temp = pylars.utils.input.dataset(path = str(ds_selected['path'].values[0]),
+                                                kind = 'DCR',
+                                                module = 0,
+                                                temp = self.temp,
+                                                vbias = v)
+            try:
+                n_waveforms, n_samples = ds_temp.read_sizes()
+                livetimes[v] = n_waveforms * n_samples * self.run.ADC_config['dt']
+            except:
+                livetimes[v] = np.nan
+            
+        return livetimes
+    
     def load_processed_data(self, force_processing: bool = False) -> None:
         """For all the voltages of a DCR_dataset (smae temperature) looks
         for already processed files to load. If force_processing=True and
@@ -441,15 +460,15 @@ class DCR_dataset(DCR_analysis):
                 length_cut_max=length_cut_max,
                 spe_area=mu,
                 sensor_area=self.SiPM_config['sensor_area'],
-                t=self.SiPM_config['livetime'])
+                t=self.livetimes[_volt])
 
             # Calculate gain
-            gain = get_gain(F_amp = self.ADC_config['F_amp'],
+            gain = get_gain(F_amp = self.run.ADC_config['F_amp'],
                 spe_area = mu ,
-                ADC_range = self.ADC_config['ADC_range'],
-                ADC_impedance = self.ADC_config['ADC_impedance'],
-                ADC_res = self.ADC_config['ADC_res'],
-                q_e = self.ADC_config['q_e'])
+                ADC_range = self.run.ADC_config['ADC_range'],
+                ADC_impedance = self.run.ADC_config['ADC_impedance'],
+                ADC_res = self.run.ADC_config['ADC_res'],
+                q_e = self.run.ADC_config['q_e'])
 
             # Merge into rolling dataframe (I know it's slow... make a PR, pls)
             _results_dataset = pd.concat((_results_dataset,
@@ -484,12 +503,18 @@ class DCR_dataset(DCR_analysis):
         Returns:
             pd.DataFrame: dataframe with the pairs: wf_number - pulse_count.
         """
-        
+        t0 = time.time()
+        print('Starting counting peaks at:', t0)
         wf_number_arr = np.array(df['wf_number'].values)
         waveforms_w_pulses, N_pulses = _get_how_many_peaks_per_waveform(wf_number_arr)
         
-        pulse_count_df = pd.concat([pd.Series(waveforms_w_pulses, name = 'wf_number'), pd.Series(N_pulses, name = 'pulse_count')], axis = 1
+        pulse_count_df = pd.concat(
+            [pd.Series(waveforms_w_pulses, name = 'wf_number'), 
+            pd.Series(N_pulses, name = 'pulse_count')], axis = 1
          )
+        t1 = time.time()
+        print('Finished conting peaks at: ',t1)
+        print('Took time in calc: ',t1-t0)
         return pulse_count_df
 
     def get_med_amplitude(self, df, extra_cut_mask) -> tuple:
@@ -513,7 +538,7 @@ class DCR_dataset(DCR_analysis):
 
     def compute_properties_of_dataset_amplitude_based(self,
                                       length_cut_min: int = 4,
-                                      length_cut_max: int = 20) -> pd.DataFrame:
+                                      length_cut_max: int = 40) -> pd.DataFrame:
         """Calculate the gain, DCR, CTP and BV for the dataset in a single
         line! This is an alternative method to the main one, using amplitude
         cuts instead of area cuts.
@@ -574,15 +599,15 @@ class DCR_dataset(DCR_analysis):
                     pe_amplitude=med_amplitude,
                     pe_amplitude_std=std_amplitude,
                     sensor_area=self.SiPM_config['sensor_area'],
-                    t=self.SiPM_config['livetime'])
+                    t=self.livetimes[_volt])
 
                 # Calculate gain
-                gain = gain = get_gain(F_amp = self.ADC_config['F_amp'],
+                gain = get_gain(F_amp = self.run.ADC_config['F_amp'],
                     spe_area = mu ,
-                    ADC_range = self.ADC_config['ADC_range'],
-                    ADC_impedance = self.ADC_config['ADC_impedance'],
-                    ADC_res = self.ADC_config['ADC_res'],
-                    q_e = self.ADC_config['q_e'])
+                    ADC_range = self.run.ADC_config['ADC_range'],
+                    ADC_impedance = self.run.ADC_config['ADC_impedance'],
+                    ADC_res = self.run.ADC_config['ADC_res'],
+                    q_e = self.run.ADC_config['q_e'])
 
                 # Merge into rolling dataframe (I know it's slow... make a PR, pls)
                 _results_dataset = pd.concat((_results_dataset,
@@ -662,20 +687,7 @@ class DCR_run():
                                   )
         self.results_df = results_df
 
-    def define_run_ADC_config(self, F_amp: float,
-                              model: str = 'v1724') -> None:
-        """Load the ADC related quantities for the run.
-
-        Args:
-        model (str): model of the digitizer
-        F_amp (float): signal amplification from the sensor (pre-amp *
-            external amplification on rack).
-        """
-
-        self.ADC_config = load_ADC_config(model, F_amp)
-
-    def define_run_SiPM_config(self, livetime: float,
-                               sensor_area: float = 12 * 12,
+    def define_run_SiPM_config(self,sensor_area: float = 12 * 12,
                                ) -> None:
         r"""Define the SiPM data related quantities for the dataset.
 
@@ -684,8 +696,7 @@ class DCR_run():
             sensor_area (float, optional): Area of the photosensor (mm\*\*2).
                 Defaults to 12\*12.
         """
-        SiPM_config = {'livetime': livetime,
-                       'sensor_area': sensor_area,
+        SiPM_config = {'sensor_area': sensor_area,
                        }
         self.SiPM_config = SiPM_config
 
@@ -738,11 +749,10 @@ class DCR_run():
         """
 
         assert isinstance(self.SiPM_config, dict), 'No SiPM_config found!'
-        assert isinstance(self.ADC_config, dict), 'No ADC_config found!'
+        assert isinstance(self.run.ADC_config, dict), 'No ADC_config found!'
 
         ds = self.load_dataset(temp, module, channel)
         ds.set_plots_flag(self.plots_flag)
-        ds.ADC_config = self.ADC_config
         ds.SiPM_config = self.SiPM_config
 
         if amplitude_based:
