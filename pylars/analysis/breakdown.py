@@ -174,7 +174,7 @@ class BV_dataset():
 
 def compute_BV_df(df_results: pd.DataFrame,
                plot: Union[bool, str] = False
-               ) -> Tuple[pd.DataFrame, float, float]:
+               ) -> Tuple[pd.DataFrame, float, float, float]:
     """Computes the breakdown voltage with a linear fit of gain over
     V points.
 
@@ -206,11 +206,15 @@ def compute_BV_df(df_results: pd.DataFrame,
             df_results[df_results['T'] == _temp]['Gain'])
 
         linres = stats.linregress(gain_list_in_temp, volt_list_in_temp)
-
         a=linres.slope,  # type: ignore
         b=linres.intercept,  # type: ignore
-        _breakdown_v = float(b) # type: ignore
-        _breakdown_v_error = linres.intercept_stderr # type: ignore
+        b_err = linres.intercept_stderr # type: ignore
+        a = float(a[0]) #why is this needed? Who knows...
+        b = float(b[0])
+        b_err = float(b_err)
+        
+        _breakdown_v = b # type: ignore
+        _breakdown_v_error = b_err # type: ignore
         # print(_breakdown_v)
         df_results.loc[df_results['T'] == _temp, 'BV'] = _breakdown_v
 
@@ -224,5 +228,49 @@ def compute_BV_df(df_results: pd.DataFrame,
 
     df_results['OV'] = df_results['V'] - df_results['BV']
 
-    return df_results, a, b #type:ignore
+    return df_results, a, _breakdown_v,_breakdown_v_error # type: ignore
 
+def compute_BV_DCRds_results(results_df: pd.DataFrame, plot: bool) -> pd.DataFrame:
+    """Compute BVs for a finished DCR analysis results dataframe. 
+
+    Args:
+        results_df (pd.DataFrame): DCR analysis result df (without BV)
+        plot (bool): save plot of V vs Gain fit.
+
+    Returns:
+        pd.DataFrame: a df with all the BV and their std.
+    """
+    temps = np.unique(results_df['T'])
+    BVs = pd.DataFrame(columns=['T','module', 'channel', 'BV', 'BV_error'])
+    for _temp in temps:
+        _select_temp = (results_df['T'] == _temp)
+        for mod in np.unique(results_df[_select_temp]['module']):
+            _select_mod = (results_df['module'] == mod)
+            for ch in np.unique(results_df[_select_temp & _select_mod]['channel']):
+                _select = (_select_temp & _select_mod &
+                           (results_df['channel'] == ch))
+                df = results_df[_select]
+                if plot == True:
+                    plot_BV = f'BV_mod{mod}_ch{ch}'
+                else: 
+                    plot_BV = False
+
+                try:
+                    df,a,bv,bv_err = compute_BV_df(df, # type: ignore
+                                                   plot = plot_BV)
+                    BVs = pd.concat([BVs, 
+                                        pd.DataFrame({'T' : [_temp],
+                                                    'module' : [mod], 
+                                                    'channel' : [ch],
+                                                    'BV' : [bv], 
+                                                    'BV_error' : [bv_err]})],
+                                    ignore_index = True)
+                except:
+                    BVs = pd.concat([BVs, 
+                                    pd.DataFrame({'T' : [_temp],
+                                                'module' : [mod], 
+                                                'channel' : [ch],
+                                                'BV' : [np.nan], 
+                                                'BV_error' : [np.nan]})],
+                                    ignore_index = True)
+    return BVs

@@ -27,6 +27,12 @@ parser.add_argument('-r', '--run',
                     help='Run to consider.',
                     type=int,
                     required=True)
+parser.add_argument('-a', '--amplification',
+                    help='Amplification factor used.',
+                    default=200,
+                    type=float,
+                    required = False)
+
 parser.add_argument('-pr', '--path_raw',
                     help='Path to the main raw files directory.',
                     default='/disk/gfs_atp/xenoscope/SiPMs/char_campaign/raw_data/',
@@ -45,7 +51,8 @@ def process_dataset(run_number: int, kind: str,
     # Define run
     base_run = pylars.utils.input.run(
         run_number=run_number,
-        main_data_path=main_data_path)
+        main_data_path=main_data_path,
+        F_amp=args.amplification)
 
     # Define processor
     process = pylars.processing.rawprocessor.run_processor(

@@ -21,7 +21,7 @@ def make_batch_script(job_name, run, kind, temp, vbias):
 #SBATCH --job-name={job_name}
 #SBATCH --output=/home/atp/rperes/logs/jobs/{job_name}.out
 #SBATCH --error=/home/atp/rperes/logs/jobs/{job_name}.err
-#SBATCH --mem=32G
+#SBATCH --mem=14G
 
 source /home/atp/rperes/.bashrc
 conda activate sipms
@@ -52,9 +52,14 @@ def main():
     ### INPUTS HERE ###
     run_number = args.run
     ### ### ###
+    if args.run == 8:
+        F_amp = 20
+    else:
+        F_amp = 200
     base_run = pylars.utils.input.run(
-        run_number=run_number,
-        main_data_path='/disk/gfs_atp/xenoscope/SiPMs/char_campaign/raw_data/')
+        run_number=args.run,
+        main_data_path='/disk/gfs_atp/xenoscope/SiPMs/char_campaign/raw_data/',
+        F_amp = F_amp)
 
     datasets = base_run.get_run_df()
     ID_list = []

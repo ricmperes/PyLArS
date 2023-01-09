@@ -8,6 +8,7 @@ import pylars
 import pylars.plotting.plotanalysis
 import pylars.utils.input
 import pylars.utils.output
+import pylars.utils.common
 import scipy.interpolate as itp
 from scipy.signal import find_peaks
 from pylars.analysis.breakdown import compute_BV_df
@@ -32,7 +33,8 @@ class DCR_analysis():
     @classmethod
     def get_1pe_value_fit(cls,
                           df: pd.DataFrame,
-                          length_cut: int = 5,
+                          length_cut_min: int = 5,
+                          length_cut_max: int = 80,
                           plot: Union[bool, str] = False,
                           use_scipy_find_peaks: bool = False) -> tuple:
         """Try to fit the SPE peak in the area histogram and return the
@@ -50,14 +52,16 @@ class DCR_analysis():
 
         (area_hist_x, DCR_values, DCR_der_x_points,
          DCR_der_y_points, min_area_x) = cls.get_1pe_rough(
-            df, length_cut,use_scipy_find_peaks = use_scipy_find_peaks)
+            df, length_cut_min, length_cut_max, 
+            use_scipy_find_peaks = use_scipy_find_peaks)
 
         if plot != False:
             pylars.plotting.plotanalysis.plot_DCR_curve(
                 plot, area_hist_x, DCR_values, DCR_der_x_points,
                 DCR_der_y_points, min_area_x)
 
-        area_hist = np.histogram(df[df['length'] > length_cut]['area'],
+        area_hist = np.histogram(df[(df['length'] > length_cut_min) &
+                                    (df['length'] < length_cut_max)]['area'],
                                  bins=np.linspace(0.5 * min_area_x, 1.5 * min_area_x, 300))
         area_hist_x = area_hist[1]
         area_hist_x = (
@@ -69,13 +73,14 @@ class DCR_analysis():
 
         if plot != False:
             pylars.plotting.plotanalysis.plot_SPE_fit(
-                df, length_cut, plot, area_hist_x, min_area_x, A, mu, sigma)
+                df, length_cut_min, length_cut_max, plot, area_hist_x, min_area_x, A, mu, sigma)
 
         return (A, mu, sigma), cov
 
     @classmethod
     def get_1pe_rough(cls, df: pd.DataFrame,
-                      length_cut: int,
+                      length_cut_min: int,
+                      length_cut_max: int,
                       bins: int or list = 200,
                       use_scipy_find_peaks: bool = False) -> tuple:
         """From an event df (1 channel), find the rough position of the
@@ -93,7 +98,7 @@ class DCR_analysis():
         """
 
         (area_hist_x, DCR_values) = cls.get_DCR_above_threshold_values(
-            df, length_cut, bins, output = 'values') # type: ignore        
+            df, length_cut_min, length_cut_max, bins, output = 'values') # type: ignore        
         grad = np.gradient(DCR_values)
         grad_spline = itp.UnivariateSpline(area_hist_x, grad)
         # , s = len(area_hist_x)*3)
@@ -121,7 +126,8 @@ class DCR_analysis():
 
     @classmethod
     def get_DCR_above_threshold_values(cls, df: pd.DataFrame,
-                                       length_cut: int = 5,
+                                       length_cut_min: int = 5,
+                                       length_cut_max: int = 80,
                                        bins: int or list = 200,
                                        output:str = 'values',
                                        **kwargs) -> Union[
@@ -135,8 +141,10 @@ class DCR_analysis():
         Args:
             df (pd.DataFrame): a pd.DataFrame with the series "area" and
                 "length".
-            length_cut (int, optional): cut to impose on the length of
-                the peaks for noise suppression. Defaults to 5.
+            length_cut_min (int, optional): cut to impose on the minimum 
+                length of the peaks for noise suppression. Defaults to 5.
+            length_cut_max (int, optional): cut to impose on the maximum 
+                length of the peaks for noise suppression. Defaults to 5.
             bins (intorlist, optional): number of bins to make the are
                 histogram or list of bin edges to consider on the histogram.
                 Defaults to 200.
@@ -151,7 +159,8 @@ class DCR_analysis():
             raise NotImplementedError("Specifiy a valid output. Options are "
                                       "'values', 'spline' or 'interp1d'.")
 
-        area_hist = np.histogram(df[df['length'] > length_cut]['area'],
+        area_hist = np.histogram(df[(df['length'] > length_cut_min) &
+                                    (df['length'] < length_cut_max)]['area'],
                                  bins=bins)
         area_hist_x = area_hist[1]
         area_hist_x = (area_hist_x +
@@ -297,6 +306,8 @@ class DCR_dataset(DCR_analysis):
         self.voltages = self.get_voltages_available()
         self.plots_flag = False
         self.livetimes = self.get_livetimes()
+        
+        self.set_standard_cuts()
 
         # There are better ways to set these options but this is stil 
         # better then a lot of flags
@@ -376,6 +387,36 @@ class DCR_dataset(DCR_analysis):
             
         return livetimes
     
+    def set_standard_cuts(self,
+                          cut_area_min: float = 5,
+                          cut_area_max: float = 1e6, 
+                          cut_length_min: int = 4, 
+                          cut_length_max: int = 70, 
+                          cut_n_pulses_min: float = 0, 
+                          cut_n_pulses_max: float = 2) -> None:
+        """Sets the cuts to use in analysis as object variables.
+
+        Args:
+            cut_area_min (float, optional): Area minimum value. Defaults to 5.
+            cut_area_max (float, optional): Area maximum value. Defaults 
+                to 1e6.
+            cut_length_min (float, optional): Lenght minimum value. 
+                Defaults to 4.
+            cut_length_max (float, optional): Lenght minimum value.
+                 Defaults to 70.
+            cut_n_pulses_min (float, optional): Minimum number of pulses in 
+                the waveform. Defaults to 0.
+            cut_n_pulses_max (float, optional): Maximum number of pulses in 
+                the waveform. Defaults to 2.
+        """
+
+        self.cut_area_min = cut_area_min
+        self.cut_area_max = cut_area_max
+        self.cut_length_min = cut_length_min
+        self.cut_length_max = cut_length_max
+        self.cut_n_pulses_min = cut_n_pulses_min
+        self.cut_n_pulses_max = cut_n_pulses_max
+
     def load_processed_data(self, force_processing: bool = False) -> None:
         """For all the voltages of a DCR_dataset (smae temperature) looks
         for already processed files to load. If force_processing=True and
@@ -412,22 +453,23 @@ class DCR_dataset(DCR_analysis):
 
             self.data[_voltage] = copy.deepcopy(_df[mask])
 
-    def compute_properties_of_dataset(self,
-                                      length_cut_min: int = 4,
-                                      length_cut_max: int = 20) -> pd.DataFrame:
+    def compute_properties_of_dataset(
+        self,
+        use_n_pulse_wf: bool = False,
+        compute_BV_flag: bool = True,
+        amplitude_based: bool = False) -> pd.DataFrame:
         """Calculate the gain, DCR, CTP and BV for the dataset in a single
         line!
 
         Args:
-            length_cut_min (int): lower bound accepted for the length of
-                peaks. Defaults to 4.
-            length_cut_max (int): upper bound accepted for the length of
-                peaks. Defaults to 20.
+            use_1_pulse_wf (bool): 
+            compute_BV_flag (bool): 
 
         Returns:
             pd.DataFrame: dataframe with all the computed properties with
-                the columns ['V','T','path','module','channel','Gain','DCR',
-                'CTP','DCR_error','CTP_error','BV','OV']
+                the columns ['T', 'V', 'SPE_area','SPE_area_error', 'Gain', 
+                'Gain_error', 'SPE_res', 'SPE_res_error', 'DCR', 
+                'DCR_error', 'CTP', 'CTP_error']
         """
 
         assert isinstance(self.data, dict), ('Woops, no data found! Load'
@@ -435,60 +477,106 @@ class DCR_dataset(DCR_analysis):
 
         voltage_list = self.voltages
 
-        _results_dataset = pd.DataFrame(columns=['T', 'V', 'pe_area', 'Gain',
-                                                 'res', 'DCR', 'DCR_error',
-                                                 'CTP', 'CTP_error'])
+        _results_dataset = pd.DataFrame(
+            columns=['T', 'V', 'SPE_area','SPE_area_error', 'Gain', 
+                     'Gain_error', 'SPE_res', 'SPE_res_error', 'DCR', 
+                     'DCR_error', 'CTP', 'CTP_error'])
 
         for _volt in voltage_list:
             # select voltage
             df = self.data[_volt]
+            if use_n_pulse_wf == True:
+                df = df[(df['n_pulses'] > self.cut_n_pulses_min) &
+                        (df['n_pulses'] <= self.cut_n_pulses_max)]
             if self.plots_flag == True:
                 plot_name_1pe_fit = (f'{self.temp}K_{_volt}V_mod{self.module}_'
                                      f'ch{self.channel}')
             else:
                 plot_name_1pe_fit = False
 
-            # Get SPE value from Gaussian fit
-            (A, mu, sigma), cov = self.get_1pe_value_fit(
-                df, plot=plot_name_1pe_fit,
-                use_scipy_find_peaks = self.use_scipy_find_peaks)
+            try:
+                # Get SPE value from Gaussian fit
+                (A, mu, sigma), cov = self.get_1pe_value_fit(
+                    df, plot=plot_name_1pe_fit,
+                    length_cut_min = self.cut_length_min,
+                    length_cut_max = self.cut_length_max,
+                    use_scipy_find_peaks = self.use_scipy_find_peaks)
 
-            # Calculate DCR and CTP
-            DCR, DCR_error, CTP, CTP_error = self.get_DCR(
-                df=df,
-                length_cut_min=length_cut_min,
-                length_cut_max=length_cut_max,
-                spe_area=mu,
-                sensor_area=self.SiPM_config['sensor_area'],
-                t=self.livetimes[_volt])
+                A_err, mu_err, sigma_err = np.sqrt(np.diag(cov))
 
-            # Calculate gain
-            gain = get_gain(F_amp = self.run.ADC_config['F_amp'],
-                spe_area = mu ,
-                ADC_range = self.run.ADC_config['ADC_range'],
-                ADC_impedance = self.run.ADC_config['ADC_impedance'],
-                ADC_res = self.run.ADC_config['ADC_res'],
-                q_e = self.run.ADC_config['q_e'])
+                # Calculate DCR and CTP
+                DCR, DCR_error, CTP, CTP_error = self.get_DCR(
+                    df=df,
+                    length_cut_min=self.cut_length_min,
+                    length_cut_max=self.cut_length_max,
+                    spe_area=mu,
+                    sensor_area=self.SiPM_config['sensor_area'],
+                    t=self.livetimes[_volt])
 
-            # Merge into rolling dataframe (I know it's slow... make a PR, pls)
-            _results_dataset = pd.concat((_results_dataset,
-                                          pd.DataFrame({'T': [self.temp],
-                                                        'V': [_volt],
-                                                        'pe_area': [mu],
-                                                        'Gain': [gain],
-                                                        'res': [mu / sigma],
-                                                        'DCR': [DCR],
-                                                        'DCR_error': [DCR_error],
-                                                        'CTP': [CTP],
-                                                        'CTP_error': [CTP_error]})
-                                          ), ignore_index=True)
+                # Calculate gain
+                gain = get_gain(F_amp = self.run.ADC_config['F_amp'],
+                    spe_area = mu ,
+                    ADC_range = self.run.ADC_config['ADC_range'],
+                    ADC_impedance = self.run.ADC_config['ADC_impedance'],
+                    ADC_res = self.run.ADC_config['ADC_res'],
+                    q_e = self.run.ADC_config['q_e'])
+                gain_error = get_gain(F_amp = self.run.ADC_config['F_amp'],
+                    spe_area = mu_err ,
+                    ADC_range = self.run.ADC_config['ADC_range'],
+                    ADC_impedance = self.run.ADC_config['ADC_impedance'],
+                    ADC_res = self.run.ADC_config['ADC_res'],
+                    q_e = self.run.ADC_config['q_e'])
+                
+                
+                SPE_res = np.abs(sigma/mu) *100 # in %
+                SPE_res_err = np.sqrt(
+                    (sigma_err/mu)**2 + (sigma*mu_err/mu**2)**2) *100 #in %
+
+                # Merge into rolling dataframe (I know it's slow... make a PR, pls)
+                _results_dataset = pd.concat(
+                    (_results_dataset,
+                     pd.DataFrame({'T': [self.temp],
+                                   'V': [_volt],
+                                   'SPE_area': [mu],
+                                   'SPE_area_error' : [mu_err],
+                                   'Gain': [gain],
+                                   'Gain_error' : [gain_error],
+                                   'SPE_res': [SPE_res],
+                                   'SPE_res_error' : [SPE_res_err],
+                                   'DCR': [DCR],
+                                   'DCR_error': [DCR_error],
+                                   'CTP': [CTP*100],
+                                   'CTP_error': [CTP_error*100]})
+                    ), ignore_index=True
+                    )
+            except:
+                print(f'Could not compute properties of module {self.module}, '
+                      f'channel {self.channel}, {self.temp} K, {_volt} V. '
+                      f'Skipping dataset.')
+                _results_dataset = pd.concat(
+                    (_results_dataset,
+                     pd.DataFrame({'T': [self.temp],
+                     'V': [_volt],
+                     'SPE_area': [np.nan],
+                     'SPE_area_error' : [np.nan],
+                     'Gain': [np.nan],
+                     'Gain_error' : [np.nan],
+                     'SPE_res': [np.nan],
+                     'SPE_res_error' : [np.nan],
+                     'DCR': [np.nan],
+                     'DCR_error': [np.nan],
+                     'CTP': [np.nan],
+                     'CTP_error': [np.nan]})
+                     ), ignore_index=True
+                    )
 
         # Compute BV from gain(V) curve and update df
-        if self.plots_flag == True:
-            plot_BV = f'BV_mod{self.module}_ch{self.channel}'
-        else:
-            plot_BV = False
-        _results_dataset, _a, _b = compute_BV_df(_results_dataset, plot_BV)
+        if compute_BV_flag == True:
+            if self.plots_flag == True:
+                plot_BV = f'BV_mod{self.module}_ch{self.channel}'
+            else:
+                plot_BV = False
+            _results_dataset, _a, _b, _b_err = compute_BV_df(_results_dataset, plot_BV)
 
         return _results_dataset
 
@@ -496,6 +584,9 @@ class DCR_dataset(DCR_analysis):
     def get_how_many_peaks_per_waveform(df: pd.DataFrame) -> pd.DataFrame:
         """Finds how many peaks each waveform has.
         Only looks in wavforms with at least 1 peak
+
+        Since commit 6f8e0c72b8e3e0bf7c5307941b49bdf57879d554 this method 
+        is not needed as n_pulses is stored during processing.
 
         Args:
             df (pd.DataFrame): dataframe with the processed pulse data
@@ -517,7 +608,7 @@ class DCR_dataset(DCR_analysis):
         print('Took time in calc: ',t1-t0)
         return pulse_count_df
 
-    def get_med_amplitude(self, df, extra_cut_mask) -> tuple:
+    def get_med_amplitude(self, df, cut_mask) -> tuple:
         """Calculate the median and standard deviation of the distribution
         of amplitudes, applying a given mask.
 
@@ -528,112 +619,25 @@ class DCR_dataset(DCR_analysis):
         Returns:
             tuple: _description_
         """
-        cuts = ((df['length'] < 50) & 
-                (df['length'] > 3) &
-                (df['area'] > 10))
-        med_amplitude = np.median(df[cuts & extra_cut_mask]['amplitude'])
-        std_amplitude = np.std(df[cuts & extra_cut_mask]['amplitude'])
+        med_amplitude = np.median(df[cut_mask]['amplitude'])
+        std_amplitude = np.std(df[cut_mask]['amplitude'])
         return med_amplitude, std_amplitude
 
 
     def compute_properties_of_dataset_amplitude_based(self,
-                                      length_cut_min: int = 4,
-                                      length_cut_max: int = 40) -> pd.DataFrame:
-        """Calculate the gain, DCR, CTP and BV for the dataset in a single
+        use_n_pulse_wf: bool = True) -> pd.DataFrame:
+        """NOT IMPLEMENTED - Needs review and merge with other compute method
+        
+        Calculate the gain, DCR, CTP and BV for the dataset in a single
         line! This is an alternative method to the main one, using amplitude
         cuts instead of area cuts.
-
-        Args:
-            length_cut_min (int): lower bound accepted for the length of
-                peaks. Defaults to 4.
-            length_cut_max (int): upper bound accepted for the length of
-                peaks. Defaults to 20.
 
         Returns:
             pd.DataFrame: dataframe with all the computed properties with
                 the columns ['V','T','path','module','channel','Gain','DCR',
                 'CTP','DCR_error','CTP_error','BV','OV']
         """
-
-        assert isinstance(self.data, dict), ('Woops, no data found! Load'
-                                             ' data into the dataset first')
-
-        voltage_list = self.voltages
-
-        _results_dataset = pd.DataFrame(columns=['T', 'V', 'pe_area', 'Gain',
-                                                 'res', 'DCR', 'DCR_error',
-                                                 'CTP', 'CTP_error'])
-
-        for _volt in voltage_list:
-            # select voltage
-            df = self.data[_volt]
-            if self.plots_flag == True:
-                plot_name_1pe_fit = (f'{self.temp}K_{_volt}V_mod{self.module}_'
-                                     f'ch{self.channel}_amplitude_based')
-            else:
-                plot_name_1pe_fit = False
-            
-            try:
-                pulse_count = self.get_how_many_peaks_per_waveform(df)
-                wfs_1_pulse = pulse_count[
-                    pulse_count['pulse_count'] == 1]['wf_number'].values
-                mask_1_pulse_in_wf = [i in wfs_1_pulse for i in tqdm(
-                    df['wf_number'],
-                    desc= 'Concatenating number of pulses to mask: ',
-                    leave = False)]
-
-                med_amplitude, std_amplitude = self.get_med_amplitude(
-                    df, mask_1_pulse_in_wf)
-
-                # Get SPE value from Gaussian fit
-                (A, mu, sigma), cov = self.get_1pe_value_fit(
-                    df = df[mask_1_pulse_in_wf], 
-                    length_cut = length_cut_min,
-                    plot=plot_name_1pe_fit)
-
-                # Calculate DCR and CTP
-                DCR, DCR_error, CTP, CTP_error = self.get_DCR_amplitude(
-                    df=df,
-                    length_cut_min=length_cut_min,
-                    length_cut_max=length_cut_max,
-                    pe_amplitude=med_amplitude,
-                    pe_amplitude_std=std_amplitude,
-                    sensor_area=self.SiPM_config['sensor_area'],
-                    t=self.livetimes[_volt])
-
-                # Calculate gain
-                gain = get_gain(F_amp = self.run.ADC_config['F_amp'],
-                    spe_area = mu ,
-                    ADC_range = self.run.ADC_config['ADC_range'],
-                    ADC_impedance = self.run.ADC_config['ADC_impedance'],
-                    ADC_res = self.run.ADC_config['ADC_res'],
-                    q_e = self.run.ADC_config['q_e'])
-
-                # Merge into rolling dataframe (I know it's slow... make a PR, pls)
-                _results_dataset = pd.concat((_results_dataset,
-                                            pd.DataFrame({'T': [self.temp],
-                                                            'V': [_volt],
-                                                            'pe_area': [mu],
-                                                            'Gain': [gain],
-                                                            'res': [mu / sigma],
-                                                            'DCR': [DCR],
-                                                            'DCR_error': [DCR_error],
-                                                            'CTP': [CTP],
-                                                            'CTP_error': [CTP_error]})
-                                            ), ignore_index=True)
-            except:
-                print(f'Process failed for vbias: {_volt}.')
-                continue
-
-        # Compute BV from gain(V) curve and update df
-        if self.plots_flag == True:
-            plot_BV = f'BV_mod{self.module}_ch{self.channel}'
-        else:
-            plot_BV = False
-        _results_dataset, _a, _b = compute_BV_df(_results_dataset, plot_BV)
-
-        return _results_dataset
-
+        raise NotImplementedError # needs review and merging with normal 
 
 class DCR_run():
     """Collection of all the DCR_datasets results for a run, ie, for all
@@ -646,10 +650,12 @@ class DCR_run():
     __version__ = '0.0.1'
 
     def __init__(self, run: pylars.utils.input.run,
-                 processor: pylars.processing.rawprocessor.run_processor):
+                 processor: pylars.processing.rawprocessor.run_processor,
+                 use_n_pulse: bool = True):
 
         self.run = run
         self.process = processor
+        self.use_n_pulse = use_n_pulse
         self.datasets = self.process.datasets_df
         self.temperatures = self.get_run_temperatures()
         self.plots_flag = False
@@ -681,10 +687,11 @@ class DCR_run():
         """Initialize a clean results_df instance in the object.
         """
 
-        results_df = pd.DataFrame(columns=['V', 'T', 'module', 'channel',
-                                           'Gain', 'DCR', 'CTP', 'DCR_error',
-                                           'CTP_error', 'BV', 'OV']
-                                  )
+        results_df = pd.DataFrame(
+            columns=['T', 'V', 'SPE_area','SPE_area_error', 'Gain', 
+                     'Gain_error', 'SPE_res', 'SPE_res_error', 'DCR', 
+                     'DCR_error', 'CTP', 'CTP_error'])
+
         self.results_df = results_df
 
     def define_run_SiPM_config(self,sensor_area: float = 12 * 12,
@@ -747,8 +754,6 @@ class DCR_run():
         Returns:
             pd.DataFrame: dataframe
         """
-
-        assert isinstance(self.SiPM_config, dict), 'No SiPM_config found!'
         assert isinstance(self.run.ADC_config, dict), 'No ADC_config found!'
 
         ds = self.load_dataset(temp, module, channel)
@@ -756,9 +761,13 @@ class DCR_run():
         ds.SiPM_config = self.SiPM_config
 
         if amplitude_based:
-            ds_results = ds.compute_properties_of_dataset_amplitude_based()
+            ds_results = ds.compute_properties_of_dataset_amplitude_based(
+                use_n_pulse_wf=self.use_n_pulse,
+            )
         else:
-            ds_results = ds.compute_properties_of_dataset()
+            ds_results = ds.compute_properties_of_dataset(
+                compute_BV_flag=False,
+                use_n_pulse_wf=self.use_n_pulse)
 
         # Add module and channel columns
         module_Series = pd.Series([module] * len(ds_results), name='module')
@@ -777,6 +786,9 @@ class DCR_run():
         Args:
             path_to_map (str): path to csv file with the channel map
         """
+        # Is this needed after the get_channels function in 
+        # pylars.utils.common?
+
         if self.run.run_number == 7:
             channel_map = {0: ['wf0', 'wf3', 'wf4', 'wf6'],
                            1: ['wf0', 'wf3', 'wf4', 'wf6'], }
@@ -803,12 +815,11 @@ class DCR_run():
         """
         self.initialize_results_df()
 
+        all_channels = pylars.utils.common.get_channel_list(self.process)
         for temperature in self.temperatures:
-            for module in self.channel_map.keys():
-                for channel in tqdm(self.channel_map[module],
+            for (module, channel) in tqdm(all_channels,
                                     (f'Computing properties for '
-                                     f'T={temperature}; module '
-                                     f'{module}: ')):
+                                     f'T={temperature}: ')):
                     _ds_results = self.compute_properties_of_ds(
                         temp=temperature,
                         module=module,

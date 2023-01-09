@@ -3,7 +3,7 @@ import numpy as np
 from pylars.utils.common import Gaussean, func_linear
 from matplotlib.figure import Figure as pltFigure
 from .plotprocessed import *
-from typing import Union
+from typing import Union, Tuple
 import pandas as pd
 
 ##### LED ON #####
@@ -154,13 +154,14 @@ def plot_DCR_curve(plot, area_hist_x, DCR_values, _x, _y, min_area_x, ax=None):
         return ax
 
 
-def plot_SPE_fit(df, length_cut, plot, area_hist_x,
+def plot_SPE_fit(df, length_cut_min, length_cut_max, plot, area_hist_x,
                  min_area_x, A, mu, sigma, ax=None):
 
     if ax is None:
         fig, ax = plt.subplots(1, 1, figsize=(12, 5), facecolor='white')
     bin_size = area_hist_x[1] - area_hist_x[0]
-    ax.hist(df[df['length'] > length_cut]['area'],
+    ax.hist(df[(df['length'] > length_cut_min) &
+               (df['length'] < length_cut_max)]['area'],
             bins=np.linspace(0.5 * min_area_x, 1.5 * min_area_x, 300),
             color='gray', alpha=0.8)
             
@@ -198,3 +199,61 @@ def plot_found_area_peaks(area_x, area_y, area_filt, area_peaks_x,
     elif plot is True:
         plt.show()
 
+
+def plot_results_ds(results: pd.DataFrame,
+                              errorbars: bool = True,
+                              figaxs: Union[None, Tuple] = None):
+    if figaxs is None:
+        fig, axs = plt.subplots(4,sharex=True, sharey=False,figsize=(10,8))
+    else:
+        fig, axs = figaxs
+    fig.subplots_adjust(hspace=0)
+
+    temps = np.unique(results['T'])
+    for _temp in temps:
+        _select = results['T'] == _temp
+        if errorbars:
+            axs[0].errorbar(results[_select]['Gain'],results[_select]['V'],
+                        xerr=results[_select]['Gain_error'],
+                        ls = '', capsize=4, 
+                        marker = '.')#, label = '180 K')
+            axs[1].errorbar(results[_select]['Gain'],results[_select]['SPE_res'],
+                        xerr=results[_select]['Gain_error'], yerr = results[_select]['SPE_res_error'],
+                        ls = '', capsize=4, 
+                        marker = '.', label = f'{_temp:.0f} K')
+            axs[2].errorbar(results[_select]['Gain'],results[_select]['DCR'],
+                            xerr=results[_select]['Gain_error'], yerr = results[_select]['DCR_error'],
+                            ls = '', capsize=4, 
+                            marker = '.')
+            axs[3].errorbar(results[_select]['Gain'],results[_select]['CTP'],
+                            xerr=results[_select]['Gain_error'], yerr = results[_select]['CTP_error'],
+                            ls = '', capsize=4, 
+                            marker = '.')
+        else:
+            axs[0].plot(results[_select]['Gain'],results[_select]['V'],
+                        ls = '',
+                        marker = 'o', label = f'{_temp:.0f} K')
+            axs[1].plot(results[_select]['Gain'],results[_select]['SPE_res'],
+                        ls = '',
+                        marker = 'o')#, label = '180 K')
+            axs[2].plot(results[_select]['Gain'],results[_select]['DCR'],
+                        ls = '',
+                        marker = 'o')
+            axs[3].plot(results[_select]['Gain'],results[_select]['CTP'],
+                        ls = '',
+                        marker = 'o')
+
+    axs[0].set_ylabel('Bias Voltage [V]')
+    axs[1].set_ylabel('SPE res [%]')
+    axs[2].set_ylabel('DCR [Hz/mm$^2$]')
+    axs[3].set_ylabel('CTP [%]')
+    axs[3].set_ylim(0,80)
+    axs[-1].set_xlabel('Gain')
+    axs[0].grid()
+    axs[1].grid()
+    axs[2].grid()
+    axs[3].grid()
+
+    fig.legend(bbox_to_anchor=[0.9, 0.84])
+
+    return fig, axs

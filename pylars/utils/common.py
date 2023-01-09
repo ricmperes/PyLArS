@@ -2,7 +2,7 @@ import base64
 import hashlib
 import itertools
 import json
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Tuple
 
 import numpy as np
 import pylars.utils.input
@@ -127,7 +127,7 @@ def find_minmax(array: np.ndarray) -> List[np.ndarray]:
     return [peaks, valeys]
 
 
-def get_channel_list(process):
+def get_channel_list(process) -> List[Tuple[int,str]]:
     _datasets = process.datasets_df
     modules = np.unique(_datasets['module'])
     ch_list = []

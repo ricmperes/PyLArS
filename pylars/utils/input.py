@@ -106,8 +106,8 @@ class run():
     The datasets can be at different tmeperature and bias voltage
     conditions but the layout of the array stays the same."""
 
-    def __init__(self, run_number, main_data_path, 
-                 ADC_model: str = 'v1724', F_amp : float = 20):
+    def __init__(self, run_number: int, main_data_path:str , F_amp : float,
+                 ADC_model: str = 'v1724'):
         self.run_number = run_number
         self.layout = self.read_layout()
         self.main_data_path = main_data_path

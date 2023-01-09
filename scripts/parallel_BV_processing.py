@@ -34,13 +34,14 @@ args = parser.parse_args()
 
 def prepare():
     print('Starting preparations of base_run, etc.')
+    if args.run == 8:
+        F_amp = 20
+    else:
+        F_amp = 200
     base_run = pylars.utils.input.run(
         run_number=args.run,
-        main_data_path='/disk/gfs_atp/xenoscope/SiPMs/char_campaign/raw_data/')
-    process = pylars.processing.rawprocessor.run_processor(run_to_process=base_run,
-                                                           processor_type='simple',
-                                                           sigma_level=5,
-                                                           baseline_samples=50)
+        main_data_path='/disk/gfs_atp/xenoscope/SiPMs/char_campaign/raw_data/',
+        F_amp = F_amp)
     all_channels = get_channel_list(process)
     print('Channels found: ', all_channels)
     print('Preperations done.')

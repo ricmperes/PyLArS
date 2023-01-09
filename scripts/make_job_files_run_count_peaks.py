@@ -54,9 +54,14 @@ def make_launch_file(ID_list):
 
 def prepare():
     print('Starting preparations of base_run, etc.')
+    if args.run == 8:
+        F_amp = 20
+    else:
+        F_amp = 200
     base_run = pylars.utils.input.run(
         run_number=args.run,
-        main_data_path='/disk/gfs_atp/xenoscope/SiPMs/char_campaign/raw_data/')
+        main_data_path='/disk/gfs_atp/xenoscope/SiPMs/char_campaign/raw_data/',
+        F_amp = F_amp)
     process = pylars.processing.rawprocessor.run_processor(
         run_to_process=base_run,
         processor_type='simple',
