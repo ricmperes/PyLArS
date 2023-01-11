@@ -121,9 +121,9 @@ class processed_dataset():
 
             else:
                 processor = pylars.processing.rawprocessor.run_processor(run_to_process=self.run,
-                                          processor_type='simple',
-                                          sigma_level=5,
-                                          baseline_samples=50)
+                                                                         processor_type='simple',
+                                                                         sigma_level=5,
+                                                                         baseline_samples=50)
                 if verbose > 0:
                     print((
                         f'Using Default values for sigma '

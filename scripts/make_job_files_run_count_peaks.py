@@ -52,6 +52,7 @@ def make_launch_file(ID_list):
     print('Generated launch script file with %d IDs.' % len(ID_list))
     os.system('chmod +x launch_process.sh')
 
+
 def prepare():
     print('Starting preparations of base_run, etc.')
     if args.run == 8:
@@ -61,28 +62,28 @@ def prepare():
     base_run = pylars.utils.input.run(
         run_number=args.run,
         main_data_path='/disk/gfs_atp/xenoscope/SiPMs/char_campaign/raw_data/',
-        F_amp = F_amp)
+        F_amp=F_amp)
     process = pylars.processing.rawprocessor.run_processor(
         run_to_process=base_run,
         processor_type='simple',
         sigma_level=5,
         baseline_samples=50)
     all_channels = get_channel_list(process)
-    
-    
+
     print('Channels found: ', all_channels)
     print('Preperations done.')
 
     DCR_datasets = pylars.analysis.darkcount.DCR_dataset(
-        run = base_run,
-        temperature = args.temperature,
-        module = all_channels[0][0],
-        channel = all_channels[0][1],
-        processor = process,
-        )
+        run=base_run,
+        temperature=args.temperature,
+        module=all_channels[0][0],
+        channel=all_channels[0][1],
+        processor=process,
+    )
     voltages = DCR_datasets.voltages
 
     return all_channels, voltages
+
 
 def main():
 
@@ -90,26 +91,25 @@ def main():
     run_number = args.run
     temp = args.temperature
     ### ### ###
-    
+
     all_channels, voltages = prepare()
     all_combinations = list(product(all_channels, voltages))
-    
+
     ID_list = []
     for params in all_combinations:
         module = params[0][0]
         channel = params[0][1]
         voltage = params[1]
-       
 
         job_name = f'run{run_number}_{temp}_{voltage}_{module}_{channel}'
         ID_list.append(job_name)
 
-        make_batch_script(job_name = job_name,
-                          run = run_number,
-                          temp = temp,
-                          vbias = voltage,
-                          module = module,
-                          channel = channel)
+        make_batch_script(job_name=job_name,
+                          run=run_number,
+                          temp=temp,
+                          vbias=voltage,
+                          module=module,
+                          channel=channel)
 
     make_launch_file(ID_list)
 

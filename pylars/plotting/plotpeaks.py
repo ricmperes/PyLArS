@@ -1,11 +1,9 @@
-from turtle import ht
-import numpy as np
+from typing import List, Optional, Union
+
 import matplotlib
 import matplotlib.pyplot as plt
-from matplotlib.colors import LogNorm
-from matplotlib.patches import Circle
-from matplotlib.patches import Rectangle
-from typing import (Union, Optional, List)
+import numpy as np
+from matplotlib.patches import Circle, Rectangle
 
 
 def plot_sensor_layout(layout: np.ndarray,
@@ -100,7 +98,7 @@ def plot_hitpattern(hitpattern: Union[np.ndarray, List[float]],
 
     norm = matplotlib.colors.Normalize(vmin=color_min, vmax=color_max)
 
-    mappable = matplotlib.cm.ScalarMappable(
-        norm=norm, cmap=cmap)  # type: ignore
+    mappable = matplotlib.cm.ScalarMappable(  # type: ignore
+        norm=norm, cmap=cmap)
 
     return (ax, mappable)

@@ -1,9 +1,9 @@
 import numpy as np
 import pandas as pd
+from pylars.utils.common import get_deterministic_hash
+from pylars.utils.input import raw_data, run
 from tqdm.autonotebook import tqdm
 
-from pylars.utils.input import raw_data, run
-from pylars.utils.common import get_deterministic_hash
 from .waveforms import waveform_processing
 
 
@@ -117,7 +117,7 @@ class simple_processor():
                 # check if any pulses were found
                 if len(areas) == 0:
                     continue
-                
+
                 module_number = [module] * len(areas)
                 ch_name = [ch] * len(areas)
                 wf_number = np.ones(len(areas), dtype=int) * i
@@ -133,7 +133,6 @@ class simple_processor():
                 results['length'] += list(lengths)
                 results['position'] += list(positions)
                 results['amplitude'] += list(amplitudes)
-                
 
             except Exception:
                 raise AssertionError(

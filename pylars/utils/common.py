@@ -9,6 +9,7 @@ import pylars.utils.input
 from scipy.signal import find_peaks
 import scipy.ndimage
 
+
 def Gaussean(x, A, mu, sigma):
     y = A * np.exp(-((x - mu) / sigma)**2 / 2) / np.sqrt(2 * np.pi * sigma**2)
     return y
@@ -81,23 +82,24 @@ def load_ADC_config(model: str, F_amp: float) -> Dict[str, Union[int, float]]:
 
     return ADC_config
 
-def get_gain(F_amp : float,
+
+def get_gain(F_amp: float,
              spe_area: float,
-             ADC_range: float = 2.25, 
-             ADC_impedance: float = 50, 
+             ADC_range: float = 2.25,
+             ADC_impedance: float = 50,
              ADC_res: float = 2**16,
-             q_e: float = 1.602176634e-19, 
+             q_e: float = 1.602176634e-19,
              ) -> float:
-    """Compute the gain given the value of the SPE area and the ADC 
+    """Compute the gain given the value of the SPE area and the ADC
         paramenters.
 
     Args:
         F_amp (float): Total signal amplification factor.
         spe_area (float): mean area of spe (in ADC bins x ns).
-        ADC_range (float, optional): Dynamic range of the ADC. Defaults 
+        ADC_range (float, optional): Dynamic range of the ADC. Defaults
             to 2.25.
         ADC_impedance (float, optional): Impedance of the ADC. Defaults to 50.
-        ADC_res (float, optional): bit.wise resolution of the ADC. Defaults 
+        ADC_res (float, optional): bit.wise resolution of the ADC. Defaults
             to 2**16.
         q_e (float, optional): electron charge [C]. Defaults to 1.602176634e-19.
 
@@ -109,6 +111,7 @@ def get_gain(F_amp : float,
             ADC_res / q_e)
 
     return gain
+
 
 def find_minmax(array: np.ndarray) -> List[np.ndarray]:
     """Return local peaks and valeys of an 1d array.
@@ -127,7 +130,17 @@ def find_minmax(array: np.ndarray) -> List[np.ndarray]:
     return [peaks, valeys]
 
 
-def get_channel_list(process) -> List[Tuple[int,str]]:
+def get_channel_list(process) -> List[Tuple[int, str]]:
+    """Fetch the channels available for a dataset by reading the original
+    ROOT file.
+
+    Args:
+        process (run_processor): initiated `run_processor` object.
+
+    Returns:
+        List[Tuple[int,str]]: list with the available channels of a given
+            dataset in the format [(mod, ch)_i]
+    """
     _datasets = process.datasets_df
     modules = np.unique(_datasets['module'])
     ch_list = []
@@ -144,6 +157,7 @@ def get_channel_list(process) -> List[Tuple[int,str]]:
         ch_list += list(itertools.product([mod], channels))
     return ch_list
 
+
 def wstd(array: np.ndarray, waverage: float, weights: np.ndarray) -> float:
     """Compute weighted standard deviation.
 
@@ -155,13 +169,15 @@ def wstd(array: np.ndarray, waverage: float, weights: np.ndarray) -> float:
     Returns:
         float: value of the weighted standard deviation
     """
-    
+
     N = np.count_nonzero(weights)
-    
-    wvar = N*np.sum(weights * (array - waverage)**2) / (N-1) / np.sum(weights)
+
+    wvar = N * np.sum(weights * (array - waverage)**2) / \
+        (N - 1) / np.sum(weights)
     wstd = np.sqrt(wvar)
-    
+
     return wstd
+
 
 def get_peak_rough_positions(area_array: np.ndarray,
                              cut_mask,
@@ -188,8 +204,8 @@ def get_peak_rough_positions(area_array: np.ndarray,
 
     area_filt = filt(area_y, filter_options)
     area_peaks_x, peak_properties = find_peaks(area_filt,
-                                                prominence=20,
-                                                distance=50)
+                                               prominence=20,
+                                               distance=50)
 
     if plot != False:
         from pylars.plotting.plotanalysis import plot_found_area_peaks
@@ -197,4 +213,3 @@ def get_peak_rough_positions(area_array: np.ndarray,
             area_x, area_y, area_filt, area_peaks_x)
 
     return area_x[area_peaks_x], peak_properties
-

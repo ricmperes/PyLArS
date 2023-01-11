@@ -41,7 +41,7 @@ def prepare():
     base_run = pylars.utils.input.run(
         run_number=args.run,
         main_data_path='/disk/gfs_atp/xenoscope/SiPMs/char_campaign/raw_data/',
-        F_amp = F_amp)
+        F_amp=F_amp)
     all_channels = get_channel_list(process)
     print('Channels found: ', all_channels)
     print('Preperations done.')

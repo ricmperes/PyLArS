@@ -1,8 +1,9 @@
 from glob import glob
+from typing import Tuple
+
 import numpy as np
 import pandas as pd
 import uproot
-from typing import Tuple
 from pylars.utils.common import load_ADC_config
 
 
@@ -52,10 +53,12 @@ class raw_data():
         self.module = module
 
     def load_root(self):
+        """Open the ROOT file and put in memory.
+        """
         try:
             raw_file = uproot.open(self.raw_path)
             self.raw_file = raw_file
-        except:
+        except BaseException:
             print(f'No root file found for {self.raw_path}')
 
     def get_available_channels(self):
@@ -72,32 +75,33 @@ class raw_data():
         '''
         data = self.raw_file[self.tree][ch].array()  # type: ignore
         return np.array(data)
-    
+
     def get_n_waveforms(self) -> int:
-        """Get the number of waveforms in the root file without reading 
+        """Get the number of waveforms in the root file without reading
         the whole array.
 
         Returns:
             int: The number of wfs in the file
         """
         first_channel = self.channels[0]
+
         
         n_waveforms = self.raw_file[self.tree][first_channel].num_entries # type: ignore
         self.n_waveforms = n_waveforms
         return n_waveforms
-    
+
     def get_n_samples(self) -> int:
-        """Get the number of samples in wach waveform in the root file 
+        """Get the number of samples in wach waveform in the root file
         without reading the whole array.
 
         Returns:
             int: The number of samples of the wfs in the file
         """
         first_channel = self.channels[0]
+        
         n_samples = self.raw_file[self.tree][first_channel].interpretation.inner_shape[0] # type: ignore
         self.n_samples = n_samples
         return n_samples
-
 
 
 class run():
@@ -106,7 +110,7 @@ class run():
     The datasets can be at different tmeperature and bias voltage
     conditions but the layout of the array stays the same."""
 
-    def __init__(self, run_number: int, main_data_path:str , F_amp : float,
+    def __init__(self, run_number: int, main_data_path: str, F_amp: float,
                  ADC_model: str = 'v1724'):
         self.run_number = run_number
         self.layout = self.read_layout()
@@ -114,7 +118,7 @@ class run():
         self.main_run_path = self.get_run_path()
         self.root_files = self.get_all_files_of_run()
         self.datasets = self.fetch_datasets()
-        self.define_ADC_config(F_amp = F_amp, model = ADC_model)
+        self.define_ADC_config(F_amp=F_amp, model=ADC_model)
 
     def __repr__(self) -> str:
         repr = f'Run {self.run_number}'
@@ -156,10 +160,10 @@ class run():
             which tile: layout[<module>][<channel>]['tile'] -> str
             which mppc(s): layout[<module>][<channel>]['mppc'] -> list of ints
         """
-        pass
+        raise NotImplementedError
 
     def define_ADC_config(self, F_amp: float, model: str = 'v1724') -> None:
-        """Load the ADC related quantities for the dataset.
+        """Load the ADC related quantities for the run.
 
         Args:
         model (str): model of the digitizer
@@ -182,6 +186,8 @@ class run():
 
     def fetch_datasets(self) -> list:
         """Get all the datasets of a given run.
+
+        This method needs to be adapted to the specific data storage system.
 
         Returns:
             list: list of all the datasets of a given run. Elements
@@ -261,7 +267,7 @@ class run():
                 _module = int(f_split[-2])
 
                 datasets.append(dataset(file, _kind, _module, _temp, _vbias))
-        
+
         elif self.run_number == 4:
             for file in all_root_files:
                 file_split = file.split('/')
@@ -276,7 +282,7 @@ class run():
                 else:
                     print('Ignoring file due to unknown kind: ', file)
                     continue
-                
+
                 _vbias = float(f_split[1][:-1])
                 _temp = float(f_split[0][:-1])
 
@@ -292,7 +298,7 @@ class run():
                     print('Ignoring test dataset: ', file)
                     continue
                 if file_split[8] == 'breakdown-v':
-                    _kind = 'BV'   
+                    _kind = 'BV'
                 elif file_split[8] == 'dcr':
                     _kind = 'DCR'
                 else:
@@ -337,34 +343,34 @@ class dataset():
         self.module = module
         self.temp = temp
         self.vbias = vbias
-        #self.read_sizes()
+        # self.read_sizes()
 
         self.dict = dict(kind=self.kind,
                          module=self.module,
                          temp=self.temp,
                          vbias=self.vbias,
                          path=self.path,
-                        )
+                         )
 
     def __repr__(self) -> str:
         repr = f'{self.kind}_{self.temp}_{self.vbias}'
         return repr
 
     def read_sizes(self) -> Tuple[int, int]:
-        """Gets the number of waveforms and number of samples per waveform 
+        """Gets the number of waveforms and number of samples per waveform
         of a given dataset.
 
-        Brieafly creates a raw_data object of the dataset to access the ROOT 
-        file and read the number of entries as number of waveforms and size of 
+        Brieafly creates a raw_data object of the dataset to access the ROOT
+        file and read the number of entries as number of waveforms and size of
         entries as number of samples in each waveform.
 
         Returns:
             Tuple[int, int]: (number of waveforms, number of samples)
         """
-        raw = raw_data(raw_path=self.path, 
-                       V = self.vbias, 
-                       T = self.temp, 
-                       module = self.module)
+        raw = raw_data(raw_path=self.path,
+                       V=self.vbias,
+                       T=self.temp,
+                       module=self.module)
         raw.load_root()
         n_samples = raw.get_n_samples()
         n_waveforms = raw.get_n_waveforms()

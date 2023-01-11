@@ -57,7 +57,7 @@ def get_config_lists(run_number: int,
     base_run = pylars.utils.input.run(
         run_number=args.run,
         main_data_path='/disk/gfs_atp/xenoscope/SiPMs/char_campaign/raw_data/',
-        F_amp = F_amp)
+        F_amp=F_amp)
 
     all_datasets = base_run.get_run_df()
 
@@ -80,6 +80,8 @@ def get_config_lists(run_number: int,
         kind_list = np.unique(selection['kind'].values)
         vbias_list = values
         temp_list = np.unique(selection['temp'].values)
+        
+    else: kind_list = vbias_list = temp_list = []
 
     print('The following kinds will be processed:', kind_list)
     print('The following voltages will be processed:', vbias_list)
@@ -98,7 +100,7 @@ def process_dataset(run_number: int, kind: str,
     base_run = pylars.utils.input.run(
         run_number=args.run,
         main_data_path='/disk/gfs_atp/xenoscope/SiPMs/char_campaign/raw_data/',
-        F_amp = F_amp)
+        F_amp=F_amp)
 
     # Define processor
     process = pylars.processing.rawprocessor.run_processor(

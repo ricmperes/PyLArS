@@ -1,12 +1,11 @@
-import csv
+
 import numpy as np
 import pandas as pd
-from tqdm.autonotebook import tqdm
-
-from pylars.utils.input import raw_data, run
 from pylars.utils.common import get_deterministic_hash, load_ADC_config
-from .waveforms import waveform_processing
+from pylars.utils.input import raw_data
+
 from .peaks import peak_processing
+from .waveforms import waveform_processing
 
 
 class peak_processor():

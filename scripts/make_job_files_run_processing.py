@@ -59,7 +59,7 @@ def main():
     base_run = pylars.utils.input.run(
         run_number=args.run,
         main_data_path='/disk/gfs_atp/xenoscope/SiPMs/char_campaign/raw_data/',
-        F_amp = F_amp)
+        F_amp=F_amp)
 
     datasets = base_run.get_run_df()
     ID_list = []

@@ -46,7 +46,7 @@ def run_process_dataset(run_number: int, kind: str,
     base_run = pylars.utils.input.run(
         run_number=args.run,
         main_data_path='/disk/gfs_atp/xenoscope/SiPMs/char_campaign/raw_data/',
-        F_amp = F_amp)
+        F_amp=F_amp)
 
     # Define processor
     process = pylars.processing.rawprocessor.run_processor(
@@ -82,7 +82,7 @@ if __name__ == '__main__':
     base_run = pylars.utils.input.run(
         run_number=args.run,
         main_data_path='/disk/gfs_atp/xenoscope/SiPMs/char_campaign/raw_data/',
-        F_amp = F_amp)
+        F_amp=F_amp)
 
     datasets_df = base_run.get_run_df()
     print('Temperatures to process: ', args.temperature)

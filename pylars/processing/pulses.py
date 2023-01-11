@@ -1,6 +1,7 @@
-import numpy as np
-import numba as nb
 from typing import List
+
+import numba as nb
+import numpy as np
 
 
 class pulse_processing():

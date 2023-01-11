@@ -1,6 +1,6 @@
+from typing import List, Tuple
+
 import numpy as np
-import numba as nb
-from typing import Tuple, List
 
 
 class peak_processing():
@@ -69,10 +69,10 @@ class peak_processing():
         the order of channels in waveforms_charge.
 
         Args:
-            waveforms_charge (_type_): _description_
+            waveforms_charge (np.ndarray): waveform array in charge units
 
         Returns:
-            np.ndarray:
+            np.ndarray: waveform array in pe/sample
         """
 
         assert len(gains) == np.shape(waveforms_charge)[0], ('''Size of
@@ -122,7 +122,7 @@ class peak_processing():
             ADC_config (dict): dictionary with the specific digitizer configs.
 
         Returns:
-            np.ndarray: transformed waveforms
+            np.ndarray: waveforms with applied gain and e2pe transformation.
         """
 
         waveforms_subtracted = cls.apply_baseline_subtract(

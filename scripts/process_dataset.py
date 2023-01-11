@@ -31,7 +31,7 @@ parser.add_argument('-a', '--amplification',
                     help='Amplification factor used.',
                     default=200,
                     type=float,
-                    required = False)
+                    required=False)
 
 parser.add_argument('-pr', '--path_raw',
                     help='Path to the main raw files directory.',
