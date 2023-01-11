@@ -50,9 +50,14 @@ def get_config_lists(run_number: int,
                      main_data_path: str,
                      ) -> tuple:
 
+    if args.run == 8:
+        F_amp = 20
+    else:
+        F_amp = 200
     base_run = pylars.utils.input.run(
-        run_number=run_number,
-        main_data_path=main_data_path)
+        run_number=args.run,
+        main_data_path='/disk/gfs_atp/xenoscope/SiPMs/char_campaign/raw_data/',
+        F_amp = F_amp)
 
     all_datasets = base_run.get_run_df()
 
@@ -86,9 +91,14 @@ def process_dataset(run_number: int, kind: str,
                     vbias: float, temp: float,
                     main_data_path: str, path_processed: str) -> None:
     # Define run
+    if args.run == 8:
+        F_amp = 20
+    else:
+        F_amp = 200
     base_run = pylars.utils.input.run(
-        run_number=run_number,
-        main_data_path=main_data_path)
+        run_number=args.run,
+        main_data_path='/disk/gfs_atp/xenoscope/SiPMs/char_campaign/raw_data/',
+        F_amp = F_amp)
 
     # Define processor
     process = pylars.processing.rawprocessor.run_processor(

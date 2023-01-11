@@ -1,5 +1,5 @@
 from .input import run
-from pylars.processing.rawprocessor import run_processor
+import pylars
 import pandas as pd
 from glob import glob
 
@@ -120,7 +120,7 @@ class processed_dataset():
                     print('Loaded file: ', file_name + '.h5')
 
             else:
-                processor = run_processor(run_to_process=self.run,
+                processor = pylars.processing.rawprocessor.run_processor(run_to_process=self.run,
                                           processor_type='simple',
                                           sigma_level=5,
                                           baseline_samples=50)

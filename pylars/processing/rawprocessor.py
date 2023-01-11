@@ -11,7 +11,7 @@ class simple_processor():
     """Define the atributes and functions for a simple processor.
     """
 
-    version = '0.0.2'
+    version = '0.0.3'
     processing_method = 'simple'
 
     def __init__(self, sigma_level: float, baseline_samples: int):
@@ -91,6 +91,7 @@ class simple_processor():
                    'channel': [],
                    'wf_number': [],
                    'pulse_number': [],
+                   'n_pulses': [],
                    'area': [],
                    'length': [],
                    'position': [],
@@ -113,24 +114,26 @@ class simple_processor():
 
                 assert len(areas) == len(positions) == len(
                     lengths) == len(amplitudes)
-
                 # check if any pulses were found
                 if len(areas) == 0:
                     continue
-
+                
                 module_number = [module] * len(areas)
                 ch_name = [ch] * len(areas)
                 wf_number = np.ones(len(areas), dtype=int) * i
                 pulse_number = np.arange(len(areas))
+                n_pulses = np.ones(len(areas), dtype=int) * len(areas)
 
                 results['module'] += module_number
                 results['channel'] += ch_name
                 results['wf_number'] += list(wf_number)
                 results['pulse_number'] += list(pulse_number)
+                results['n_pulses'] += list(n_pulses)
                 results['area'] += list(areas)
                 results['length'] += list(lengths)
                 results['position'] += list(positions)
                 results['amplitude'] += list(amplitudes)
+                
 
             except Exception:
                 raise AssertionError(
