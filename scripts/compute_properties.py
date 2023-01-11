@@ -54,7 +54,7 @@ def load_data_to_ds(ds):
     
 if __name__ == '__main__':
     base_run, process, all_channels, DCR_run = prepare()
-    DCR_run.set_plots_flag(True)
+    DCR_run.set_plots_flag(False)
     DCR_run.define_run_SiPM_config()
     
     print('Starting loading and computation')

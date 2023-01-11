@@ -213,24 +213,32 @@ def plot_results_ds(results: pd.DataFrame,
     for _temp in temps:
         _select = results['T'] == _temp
         if errorbars:
-            axs[0].errorbar(results[_select]['Gain'],results[_select]['V'],
-                        xerr=results[_select]['Gain_error'],
-                        ls = '', capsize=4, 
-                        marker = '.')#, label = '180 K')
-            axs[1].errorbar(results[_select]['Gain'],results[_select]['SPE_res'],
-                        xerr=results[_select]['Gain_error'], yerr = results[_select]['SPE_res_error'],
-                        ls = '', capsize=4, 
-                        marker = '.', label = f'{_temp:.0f} K')
-            axs[2].errorbar(results[_select]['Gain'],results[_select]['DCR'],
-                            xerr=results[_select]['Gain_error'], yerr = results[_select]['DCR_error'],
+            axs[0].errorbar(results[_select]['Gain'],
+                            results[_select]['V'],
+                            xerr=results[_select]['Gain_error'],
+                            ls = '', capsize=4, 
+                            marker = '.')#, label = '180 K')
+            axs[1].errorbar(results[_select]['Gain'],
+                            results[_select]['SPE_res'],
+                            xerr=results[_select]['Gain_error'], 
+                            yerr = results[_select]['SPE_res_error'],
+                            ls = '', capsize=4, 
+                            marker = '.', label = f'{_temp:.0f} K')
+            axs[2].errorbar(results[_select]['Gain'],
+                            results[_select]['DCR'],
+                            xerr=results[_select]['Gain_error'],
+                            yerr = results[_select]['DCR_error'],
                             ls = '', capsize=4, 
                             marker = '.')
-            axs[3].errorbar(results[_select]['Gain'],results[_select]['CTP'],
-                            xerr=results[_select]['Gain_error'], yerr = results[_select]['CTP_error'],
+            axs[3].errorbar(results[_select]['Gain'],
+                            results[_select]['CTP'],
+                            xerr=results[_select]['Gain_error'], 
+                            yerr = results[_select]['CTP_error'],
                             ls = '', capsize=4, 
                             marker = '.')
         else:
-            axs[0].plot(results[_select]['Gain'],results[_select]['V'],
+            axs[0].plot(results[_select]['Gain'],
+                        results[_select]['V'],
                         ls = '',
                         marker = 'o', label = f'{_temp:.0f} K')
             axs[1].plot(results[_select]['Gain'],results[_select]['SPE_res'],
@@ -257,3 +265,91 @@ def plot_results_ds(results: pd.DataFrame,
     fig.legend(bbox_to_anchor=[0.9, 0.84])
 
     return fig, axs
+
+
+def plot_BV_DCRresults(df_BV_results: pd.DataFrame, 
+                       ch_names: Union[list, tuple, np.ndarray], 
+                       errorbars: bool = False, 
+                       figax = None):
+    """Plot the distribution of BV voltages for different channels.
+
+    Args:
+        df_BV_results (pd.DataFrame): df with the BV values, errors, r2 value 
+            of linear fit for eahc temperature and channel.
+        ch_names (Union[list, tuple, np.ndarray]): the channel names, 
+            in order, to put on the x axis ticks. Usually "(mod, ch)" or 
+            "#xxx" for the MPPC number.
+        ax (plt.axis, optional): the axis to draw into. Defaults to None.
+    """
+    if figax is None:
+        fig, ax = plt.subplots(1, 1, figsize=(6, 4))
+    else:
+        fig, ax = figax
+
+    temps = np.unique(df_BV_results['T'])
+    
+    for t in temps:
+        _df = df_BV_results[df_BV_results['T'] == t]
+        _df.reset_index(drop = True, inplace=True)
+        
+        if errorbars:
+            ax.errorbar(_df.index, _df['BV'], 
+                         yerr = _df[f'BV_error'],
+                         label = f'{t} K',
+                         ls = '', marker = '.', capsize = 4)
+            
+        else:
+            ax.plot(_df.index, _df['BV'], 
+                    label = f'{t} K', ls = '',
+                    marker = 'o')
+    ax.legend()
+    ax.set_xticks(_df.index, ch_names, rotation = 30) # type: ignore
+    fig.set_tight_layout(True)
+    
+    return fig, ax
+
+def plot_parameter_for_V(results_df: pd.DataFrame, V: float, 
+                         parameter: str, ch_names: list, 
+                         errorbars: bool = False):
+    """Plot the results from DCR analysis for a specific parameter 
+    (Gain, SPE_res, DCR, CTP) and applied voltage for all the recorded 
+    channels.
+
+    Args:
+        results_df (pd.DataFrame): DCR analysis results dataset.
+        V (float): voltage.
+        parameter (str): parameter to plot.
+        ch_names (list): list with the names to assign to the channels.
+        errorbars (bool, optional): include errorbars in plot. Defaults 
+            to False.
+
+    Returns:
+        (fig, ax): The figure and axis objects created.
+    """
+    
+    fig, ax = plt.subplots(1,1, figsize = (8,5))
+    temps = np.unique(results_df['T'])
+    for t in temps:
+        _df = results_df[(results_df['V'] == V) & (results_df['T'] == t)]
+        _df.reset_index(drop = True, inplace=True)
+        
+        if len(_df) == 0:
+            print(f'Found no points for {V} V at {t} K.')
+            continue
+
+        if errorbars:
+            ax.errorbar(_df.index, _df[parameter], 
+                         yerr = _df[f'{parameter}_error'],
+                         label = f'{t} K',
+                         ls = '', marker = '.', capsize = 4)
+            
+        else:
+            ax.plot(_df.index, _df[parameter], 
+                    label = f'{t} K', ls = '',
+                    marker = 'o')
+    ax.legend(title = f'@{V} V')
+    ax.set_ylabel(parameter)
+    ax.set_xticks(_df.index, ch_names, rotation = 30) # type: ignore
+    fig.set_tight_layout(True)
+    
+    return fig, ax
