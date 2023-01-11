@@ -5,7 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.9.2" />
 <title>pylars.analysis.darkcount API documentation</title>
-<meta name="description" content="" />
+<meta name="description" content="This file contains classes and methods to conduct an analysis of an LED OFF
+dataset/run. It is divided into:
+- `DCR_analysis`: the collection of …" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
 <link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
@@ -22,140 +24,68 @@
 <h1 class="title">Module <code>pylars.analysis.darkcount</code></h1>
 </header>
 <section id="section-intro">
+<p>This file contains classes and methods to conduct an analysis of an LED OFF
+dataset/run. It is divided into:
+- <code><a title="pylars.analysis.darkcount.DCR_analysis" href="#pylars.analysis.darkcount.DCR_analysis">DCR_analysis</a></code>: the collection of methods required for the analysis (fits,
+DCR, CTP, gain calculation, etc.)
+- <code><a title="pylars.analysis.darkcount.DCR_dataset" href="#pylars.analysis.darkcount.DCR_dataset">DCR_dataset</a></code>: the object of a LED OFF dataset, i.e., given temp, given
+module and given channel, several bias voltages.
+- <code><a title="pylars.analysis.darkcount.DCR_run" href="#pylars.analysis.darkcount.DCR_run">DCR_run</a></code>: the object to collect and handle all the <code><a title="pylars.analysis.darkcount.DCR_dataset" href="#pylars.analysis.darkcount.DCR_dataset">DCR_dataset</a></code>
+objects of a run.</p>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">import copy
-from datetime import datetime
+<pre><code class="python">&#34;&#34;&#34;This file contains classes and methods to conduct an analysis of an LED OFF
+dataset/run. It is divided into:
+    - `DCR_analysis`: the collection of methods required for the analysis (fits,
+        DCR, CTP, gain calculation, etc.)
+    - `DCR_dataset`: the object of a LED OFF dataset, i.e., given temp, given
+        module and given channel, several bias voltages.
+    - `DCR_run`: the object to collect and handle all the `DCR_dataset`
+        objects of a run.
+&#34;&#34;&#34;
 
+import copy
+import time
+from typing import Tuple, Union
+
+import numba
 import numpy as np
 import pandas as pd
 import pylars
 import pylars.plotting.plotanalysis
+import pylars.utils.common
 import pylars.utils.input
 import pylars.utils.output
 import scipy.interpolate as itp
-from pylars.analysis.breakdown import compute_BV
+from pylars.analysis.breakdown import compute_BV_df
+from pylars.utils.common import Gaussean, get_gain
 from scipy.optimize import curve_fit
+from scipy.signal import find_peaks
 from tqdm.autonotebook import tqdm
-from typing import Dict, Union
-
-from pylars.utils.common import Gaussean, load_ADC_config
 
 
-class DCR_dataset():
-    &#34;&#34;&#34;Object class to hold dark count related instances and
-    methods. Collects all the data and properties of a single MMPC,
-    meaning the pair (module, channel) for all the available voltages at
-    a certain temperature.
+class DCR_analysis():
+    &#34;&#34;&#34;A class with all the methods needed for DCR analysis.
+
+    Why a separate class? DCR_dataset was too messy with @classmethods.
+    These we be put in this parent class and DCR_dataset and DCR_run will
+    have only object-specific methods.
     &#34;&#34;&#34;
 
-    __version__ = &#39;0.0.1&#39;
+    __version__ = &#39;v0.0.1&#39;
 
-    def __init__(self, run: pylars.utils.input.run, temperature: float,
-                 module: int, channel: str,
-                 processor: pylars.processing.rawprocessor.run_processor):
-
-        self.run = run
-        self.temp = temperature
-        self.module = module
-        self.channel = channel
-        self.process = processor
-        self.voltages = self.get_voltages_available()
-        self.plots_flag = False
-
-    def set_plots_flag(self, flag: bool) -&gt; None:
-        &#34;&#34;&#34;Set if computing properties makes plots (True) or not (False).
-        Assumes a ./figures/ directory exists.
-
-        Args:
-            flag (bool): True for plotting stuff, False for not making nice
-                pictures (plots) to hang on the wall. Yes, I hang plots on
-                my bedroom wall and it looks nice.
-        &#34;&#34;&#34;
-        self.plots_flag = flag
-
-    def define_ADC_config(self, F_amp: float, model: str = &#39;v1724&#39;) -&gt; None:
-        &#34;&#34;&#34;Load the ADC related quantities for the dataset.
-
-        Args:
-        model (str): model of the digitizer
-        F_amp (float): signal amplification from the sensor (pre-amp *
-            external amplification on rack).
-        &#34;&#34;&#34;
-
-        self.ADC_config = load_ADC_config(model, F_amp)
-
-    def define_SiPM_config(self, livetime: float,
-                           sensor_area: float = 12 * 12,
-                           ) -&gt; None:
-        r&#34;&#34;&#34;Define the SiPM data related quantities for the dataset.
-
-        Args:
-            livetime (float): livetime of the measurement for DCR porpuses.
-            sensor_area (float, optional): Area of the photosensor (mm\*\*2).
-                Defaults to 12\*12.
-        &#34;&#34;&#34;
-        SiPM_config = {&#39;livetime&#39;: livetime,
-                       &#39;sensor_area&#39;: sensor_area,
-                       }
-
-        self.SiPM_config = SiPM_config
-
-    def get_voltages_available(self) -&gt; np.ndarray:
-        &#34;&#34;&#34;Checks the loaded run for which voltages are available for the
-        defined temperature.
-
-        Returns:
-            np.ndarray: array of the available voltages
-        &#34;&#34;&#34;
-
-        voltages = []
-        for _dataset in self.run.datasets:
-            if (_dataset.temp == self.temp) and (_dataset.kind == &#39;DCR&#39;):
-                voltages.append(_dataset.vbias)
-        voltages = np.unique(voltages)
-
-        return voltages
-
-    def load_processed_data(self, force_processing: bool = False) -&gt; None:
-        &#34;&#34;&#34;For all the voltages of a DCR_dataset (smae temperature) looks
-        for already processed files to load. If force_processing=True and
-        no saved file is found, processes the dataset with standard
-        options (sigma = 5, N_baseline = 50).
-
-        Args:
-            force_processing (bool, optional): Flag to force processing
-                of raw data in case the processed dataset is not found.
-                Defaults to False.
-
-        Returns:
-            dict: dictionary with the data df for each voltage as a key.
-        &#34;&#34;&#34;
-        self.data = {}
-        for _voltage in self.voltages:
-            processed_data = pylars.utils.output.processed_dataset(
-                run=self.run,
-                kind=&#39;DCR&#39;,
-                vbias=_voltage,
-                temp=self.temp,
-                path_processed=(&#39;/disk/gfs_atp/xenoscope/SiPMs/char_campaign/&#39;
-                                &#39;processed_data/&#39;),
-                process_hash=self.process.hash)
-            processed_data.load_data(force=force_processing)
-
-            _df = processed_data.data
-            mask = ((_df[&#39;module&#39;] == self.module) &amp;
-                    (_df[&#39;channel&#39;] == self.channel))
-
-            self.data[_voltage] = copy.deepcopy(_df[mask])
+    def __init__(self):
+        pass
 
     @classmethod
     def get_1pe_value_fit(cls,
                           df: pd.DataFrame,
-                          length_cut: int = 5,
-                          plot: Union[bool, str] = False) -&gt; tuple:
+                          length_cut_min: int = 5,
+                          length_cut_max: int = 80,
+                          plot: Union[bool, str] = False,
+                          use_scipy_find_peaks: bool = False) -&gt; tuple:
         &#34;&#34;&#34;Try to fit the SPE peak in the area histogram and return the
         Gaussian paramenters.
 
@@ -170,14 +100,17 @@ class DCR_dataset():
         &#34;&#34;&#34;
 
         (area_hist_x, DCR_values, DCR_der_x_points,
-         DCR_der_y_points, min_area_x) = cls.get_1pe_rough(df, length_cut)
+         DCR_der_y_points, min_area_x) = cls.get_1pe_rough(
+            df, length_cut_min, length_cut_max,
+            use_scipy_find_peaks=use_scipy_find_peaks)
 
         if plot != False:
             pylars.plotting.plotanalysis.plot_DCR_curve(
                 plot, area_hist_x, DCR_values, DCR_der_x_points,
                 DCR_der_y_points, min_area_x)
 
-        area_hist = np.histogram(df[df[&#39;length&#39;] &gt; length_cut][&#39;area&#39;],
+        area_hist = np.histogram(df[(df[&#39;length&#39;] &gt; length_cut_min) &amp;
+                                    (df[&#39;length&#39;] &lt; length_cut_max)][&#39;area&#39;],
                                  bins=np.linspace(0.5 * min_area_x, 1.5 * min_area_x, 300))
         area_hist_x = area_hist[1]
         area_hist_x = (
@@ -189,59 +122,97 @@ class DCR_dataset():
 
         if plot != False:
             pylars.plotting.plotanalysis.plot_SPE_fit(
-                df, length_cut, plot, area_hist_x, min_area_x, A, mu, sigma)
+                df, length_cut_min, length_cut_max, plot, area_hist_x, min_area_x, A, mu, sigma)
 
         return (A, mu, sigma), cov
 
     @classmethod
     def get_1pe_rough(cls, df: pd.DataFrame,
-                      length_cut: int,
-                      bins: int or list = 200) -&gt; tuple:
+                      length_cut_min: int,
+                      length_cut_max: int,
+                      bins: int or list = 200,
+                      use_scipy_find_peaks: bool = False) -&gt; tuple:
         &#34;&#34;&#34;From an event df (1 channel), find the rough position of the
         SPE from the DCR vs threshold curve and its derivative
 
         Args:
-            df (_type_): _description_
-            length_cut (_type_): _description_
+            df (pd.DataFrame): dataframe with the processed data.
+            length_cut_min (int): minimum value of lenght to consider
+            length_cut_max (int): maximum value of lenght to consider
             bins (intorlist, optional): number of bins to make the are
                 histogram or list of bin edges to consider on the histogram.
                 Defaults to 200.
 
         Returns:
-            tuple: _description_
+            tuple: computed arrays: area_hist_x, DCR_values, DCR_der_x_points,
+                DCR_der_y_points, min_area_x
         &#34;&#34;&#34;
 
         (area_hist_x, DCR_values) = cls.get_DCR_above_threshold_values(
-            df, length_cut, bins)
+            df, length_cut_min, length_cut_max, bins, output=&#39;values&#39;)  # type: ignore
         grad = np.gradient(DCR_values)
         grad_spline = itp.UnivariateSpline(area_hist_x, grad)
         # , s = len(area_hist_x)*3)
-        _x = np.linspace(area_hist_x[0], area_hist_x[-1], 500)
-        _y = grad_spline(_x)
-        min_idx = np.where(_y == min(_y))
-        min_area_x = _x[min_idx][0]
-        return area_hist_x, DCR_values, _x, _y, min_area_x
+        DCR_der_x_points = np.linspace(area_hist_x[0], area_hist_x[-1], bins)
+        DCR_der_y_points = grad_spline(DCR_der_x_points)
+
+        if use_scipy_find_peaks:
+            pks, props = find_peaks(-1 * DCR_der_y_points,
+                                    prominence=20)
+            peaks_area_values = DCR_der_x_points[pks]
+            if len(peaks_area_values) == 0:
+                print(&#39;Could not find any peaks&#39;)
+                min_area_x = np.nan
+            elif len(peaks_area_values) &gt; 0:
+                if (peaks_area_values[0] &gt; 2000 *
+                        200) or (len(peaks_area_values) == 1):
+                    min_area_x = peaks_area_values[0]
+                else:
+                    min_area_x = peaks_area_values[1]
+        else:
+            min_idx = np.where(DCR_der_y_points == min(DCR_der_y_points))
+            min_area_x = DCR_der_x_points[min_idx][0]
+
+        return (area_hist_x, DCR_values, DCR_der_x_points,
+                DCR_der_y_points, min_area_x)  # type:ignore
 
     @classmethod
     def get_DCR_above_threshold_values(cls, df: pd.DataFrame,
-                                       length_cut: int = 5,
-                                       bins: int or list = 200) -&gt; tuple:
+                                       length_cut_min: int = 5,
+                                       length_cut_max: int = 80,
+                                       bins: int or list = 200,
+                                       output: str = &#39;values&#39;,
+                                       **kwargs) -&gt; Union[
+            tuple,
+            itp.UnivariateSpline,
+            itp.interp1d,
+            None]:
         &#34;&#34;&#34;Computes the event rate in a sweep of area thresholds and
         returns the pair [area thersholds, DCR values]
 
         Args:
             df (pd.DataFrame): a pd.DataFrame with the series &#34;area&#34; and
                 &#34;length&#34;.
-            length_cut (int, optional): cut to impose on the length of
-                the peaks for noise suppression. Defaults to 5.
+            length_cut_min (int, optional): cut to impose on the minimum
+                length of the peaks for noise suppression. Defaults to 5.
+            length_cut_max (int, optional): cut to impose on the maximum
+                length of the peaks for noise suppression. Defaults to 5.
             bins (intorlist, optional): number of bins to make the are
                 histogram or list of bin edges to consider on the histogram.
                 Defaults to 200.
+            output (str): type of output. Can be &#39;values&#39;, &#39;spline&#39; or
+                &#39;interp1d&#39;
 
         Returns:
             tuple: pair of np.ndarrays (area thersholds, DCR values)
         &#34;&#34;&#34;
-        area_hist = np.histogram(df[df[&#39;length&#39;] &gt; length_cut][&#39;area&#39;],
+
+        if output not in [&#39;values&#39;, &#39;spline&#39;, &#39;interp1d&#39;]:
+            raise NotImplementedError(&#34;Specifiy a valid output. Options are &#34;
+                                      &#34;&#39;values&#39;, &#39;spline&#39; or &#39;interp1d&#39;.&#34;)
+
+        area_hist = np.histogram(df[(df[&#39;length&#39;] &gt; length_cut_min) &amp;
+                                    (df[&#39;length&#39;] &lt; length_cut_max)][&#39;area&#39;],
                                  bins=bins)
         area_hist_x = area_hist[1]
         area_hist_x = (area_hist_x +
@@ -250,77 +221,20 @@ class DCR_dataset():
 
         DCR_values = np.flip(np.cumsum(np.flip(area_hist_y)))
 
-        return (area_hist_x, DCR_values)
-
-    @classmethod
-    def get_DCR_above_threshold_spline(cls, df: pd.DataFrame,
-                                       length_cut: int = 5,
-                                       bins: int or list = 200,
-                                       **kwargs) -&gt; itp.UnivariateSpline:
-        &#34;&#34;&#34;Computes the event rate in a sweep of area thresholds and
-        returns a spline object of the curve.
-
-        Args:
-            df (pd.DataFrame): a pd.DataFrame with the series &#34;area&#34; and
-                &#34;length&#34;.
-            length_cut (int, optional): cut to impose on the length of
-                the peaks for noise suppression. Defaults to 5.
-            bins (intorlist, optional): number of bins to make the are
-                histogram or list of bin edges to consider on the histogram.
-                Defaults to 200.
-
-        Returns:
-            itp.UnivariateSpline: spline object of the DCR vs area
-                threshold curve.
-        &#34;&#34;&#34;
-        area_hist = np.histogram(df[df[&#39;length&#39;] &gt; length_cut][&#39;area&#39;],
-                                 bins=bins)
-        area_hist_x = area_hist[1]
-        area_hist_x = (area_hist_x +
-                       (area_hist_x[1] - area_hist_x[0]) / 2)[:-1]
-        area_hist_y = area_hist[0]
-        DCR_values = np.flip(np.cumsum(np.flip(area_hist_y)))
-        DCR_func = itp.UnivariateSpline(area_hist_x, DCR_values, **kwargs)
-
-        return DCR_func
-
-    @classmethod
-    def get_DCR_above_threshold_interp1d(cls, df: pd.DataFrame,
-                                         length_cut: int = 5,
-                                         bins: int or list = 200
-                                         ) -&gt; itp.interp1d:
-        &#34;&#34;&#34;Computes the event rate in a sweep of area thresholds and
-        returns a 1D interpolation object of the curve.
-
-        Args:
-            df (pd.DataFrame): a pd.DataFrame with the series &#34;area&#34; and
-                &#34;length&#34;.
-            length_cut (int, optional): cut to impose on the length of
-                the peaks for noise suppression. Defaults to 5.
-            bins (intorlist, optional): number of bins to make the are
-                histogram or list of bin edges to consider on the histogram.
-                Defaults to 200.
-
-        Returns:
-            itp.interp1d: 1D interpolation object of the DCR vs area
-                threshold curve.
-        &#34;&#34;&#34;
-        area_hist = np.histogram(df[df[&#39;length&#39;] &gt; length_cut][&#39;area&#39;],
-                                 bins=bins)
-        area_hist_x = area_hist[1]
-        area_hist_x = (area_hist_x +
-                       (area_hist_x[1] - area_hist_x[0]) / 2)[:-1]
-        area_hist_y = area_hist[0]
-        DCR_values = np.flip(np.cumsum(np.flip(area_hist_y)))
-        DCR_func = itp.interp1d(area_hist_x, DCR_values)
-
-        return DCR_func
+        if output == &#39;values&#39;:
+            return (area_hist_x, DCR_values)
+        elif output == &#39;spline&#39;:
+            DCR_func = itp.UnivariateSpline(area_hist_x, DCR_values, **kwargs)
+            return DCR_func
+        elif output == &#39;interp1d&#39;:
+            DCR_func = itp.interp1d(area_hist_x, DCR_values)
+            return DCR_func
 
     @staticmethod
     def get_DCR(df: pd.DataFrame,
                 length_cut_min: int,
                 length_cut_max: int,
-                pe_area: float,
+                spe_area: float,
                 sensor_area: float,
                 t: float) -&gt; tuple:
         &#34;&#34;&#34;Compute the dark count rate (DCR) and crosstalk probability
@@ -330,7 +244,7 @@ class DCR_dataset():
             df (pd.DataFrame): DataFrame of the dataset (single ch)
             length_cut_min (int): low length cut to apply
             length_cut_max (int): high length cut to apply
-            pe_area (float): SPE area
+            spe_area (float): SPE area
             sensor_area (float): effective are of the sensor
             t (float): livetime of the dataset
 
@@ -338,8 +252,8 @@ class DCR_dataset():
             tuple: DCR value, error of DCR value, CTP value, error of
                 CTP value
         &#34;&#34;&#34;
-        pe_0_5 = pe_area * 0.5
-        pe_1_5 = pe_area * 1.5
+        pe_0_5 = spe_area * 0.5
+        pe_1_5 = spe_area * 1.5
 
         DC_0_5 = len(df[(df[&#39;length&#39;] &gt; length_cut_min) &amp;
                         (df[&#39;length&#39;] &lt; length_cut_max) &amp;
@@ -347,6 +261,53 @@ class DCR_dataset():
         DC_1_5 = len(df[(df[&#39;length&#39;] &gt; length_cut_min) &amp;
                         (df[&#39;length&#39;] &lt; length_cut_max) &amp;
                         (df[&#39;area&#39;] &gt; pe_1_5)])
+
+        DC_0_5_error = np.sqrt(DC_0_5)
+        DC_1_5_error = np.sqrt(DC_1_5)
+
+        DCR = DC_0_5 / sensor_area / t
+        DCR_error = DC_0_5_error / sensor_area / t
+
+        CTP = DC_1_5 / DC_0_5
+        CTP_error = np.sqrt((DC_0_5_error / DC_1_5)**2 +
+                            (DC_0_5 * DC_1_5_error / (DC_1_5)**2)**2)
+
+        return DCR, DCR_error, CTP, CTP_error
+
+    @staticmethod
+    def get_DCR_amplitude(df: pd.DataFrame,
+                          length_cut_min: int,
+                          length_cut_max: int,
+                          pe_amplitude: float,
+                          pe_amplitude_std: float,
+                          sensor_area: float,
+                          t: float) -&gt; tuple:
+        &#34;&#34;&#34;Compute the dark count rate (DCR) and crosstalk probability
+        (CTP) of a dataset, amplitude based.
+
+        Args:
+            df (pd.DataFrame): DataFrame of the dataset (single ch)
+            length_cut_min (int): low length cut to apply
+            length_cut_max (int): high length cut to apply
+            pe_amplitude (float): SPE amplitude
+            sensor_area (float): effective are of the sensor
+            t (float): livetime of the dataset
+
+        Returns:
+            tuple: DCR value, error of DCR value, CTP value, error of
+                CTP value
+        &#34;&#34;&#34;
+        pe_0_5 = pe_amplitude * 0.5
+        pe_1_5 = pe_amplitude * 1.5
+        pe_m5sigma = pe_amplitude - 5 * pe_amplitude_std
+        pe_p5sigma = pe_amplitude + 5 * pe_amplitude_std
+
+        DC_0_5 = len(df[(df[&#39;length&#39;] &gt; length_cut_min) &amp;
+                        (df[&#39;length&#39;] &lt; length_cut_max) &amp;
+                        (df[&#39;amplitude&#39;] &lt; pe_p5sigma)])
+        DC_1_5 = len(df[(df[&#39;length&#39;] &gt; length_cut_min) &amp;
+                        (df[&#39;length&#39;] &lt; length_cut_max) &amp;
+                        (df[&#39;area&#39;] &lt; pe_m5sigma)])
 
         DC_0_5_error = np.sqrt(DC_0_5)
         DC_1_5_error = np.sqrt(DC_1_5)
@@ -376,111 +337,382 @@ class DCR_dataset():
         print(f&#39;Your lovely DCR is: ({DCR:.2f} +- {DCR_error:.2f}) Hz/mm^2&#39;)
         print(f&#39;Your lovely CTP is: ({CTP*100:.2f} +- {CTP_error*100:.2f})%&#39;)
 
-    def get_gain(self, spe_area: float) -&gt; float:
-        &#34;&#34;&#34;Compute the gain given the value of the SPE area
+
+class DCR_dataset(DCR_analysis):
+    &#34;&#34;&#34;Object class to hold dark count related instances and
+    methods. Collects all the data and properties of a single MMPC,
+    meaning the pair (module, channel) for all the available voltages at
+    a certain temperature.
+    &#34;&#34;&#34;
+
+    __version__ = &#39;0.0.2&#39;
+
+    def __init__(self, run: pylars.utils.input.run, temperature: float,
+                 module: int, channel: str,
+                 processor: pylars.processing.rawprocessor.run_processor):
+
+        self.run = run
+        self.temp = temperature
+        self.module = module
+        self.channel = channel
+        self.process = processor
+        self.voltages = self.get_voltages_available()
+        self.plots_flag = False
+        self.livetimes = self.get_livetimes()
+
+        self.set_standard_cuts()
+
+        # There are better ways to set these options but this is stil
+        # better then a lot of flags
+        self.use_scipy_find_peaks = False
+        self.amplitude_based = False
+
+    def set_plots_flag(self, flag: bool) -&gt; None:
+        &#34;&#34;&#34;Set if computing properties makes plots (True) or not (False).
+        Assumes a ./figures/ directory exists.
 
         Args:
-            spe_area (float): Area of the SPE peak in integrated ADC
-                counts [ADC count * ns].
+            flag (bool): True for plotting stuff, False for not making nice
+                pictures (plots) to hang on the wall. Yes, I hang plots on
+                my bedroom wall and it looks nice.
+        &#34;&#34;&#34;
+        self.plots_flag = flag
 
-        Raises:
-            ValueError: self.ADC_config not defined for the current dataset.
-                Run dataset.define_ADC_config(...)
+    def define_SiPM_config(self,
+                           sensor_area: float = 12 * 12,
+                           ) -&gt; None:
+        r&#34;&#34;&#34;Define the SiPM data related quantities for the dataset.
+
+        Args:
+            sensor_area (float, optional): Area of the photosensor (mm\*\*2).
+                Defaults to 12\*12.
+        &#34;&#34;&#34;
+        SiPM_config = {&#39;sensor_area&#39;: sensor_area,
+                       }
+
+        self.SiPM_config = SiPM_config
+
+    def get_voltages_available(self) -&gt; np.ndarray:
+        &#34;&#34;&#34;Checks the loaded run for which voltages are available for the
+        defined temperature.
 
         Returns:
-            float: the calculated gain.
+            np.ndarray: array of the available voltages
         &#34;&#34;&#34;
 
-        if not isinstance(self.ADC_config, dict):
-            raise ValueError(&#39;Define ADC_config first.&#39;)
+        voltages = []
+        for _dataset in self.run.datasets:
+            if (_dataset.temp == self.temp) and (_dataset.kind == &#39;DCR&#39;):
+                voltages.append(_dataset.vbias)
+        voltages = np.unique(voltages)
 
-        ADC_range = self.ADC_config[&#39;ADC_range&#39;]
-        ADC_impedance = self.ADC_config[&#39;ADC_impedance&#39;]
-        F_amp = self.ADC_config[&#39;F_amp&#39;]
-        ADC_res = self.ADC_config[&#39;ADC_res&#39;]
-        q_e = self.ADC_config[&#39;q_e&#39;]
+        return voltages
 
-        gain = (ADC_range * spe_area * 1e-9 / ADC_impedance / F_amp /
-                ADC_res / q_e)
+    def get_livetimes(self) -&gt; dict:
+        &#34;&#34;&#34;Fetch the livetimes of a dataset.
 
-        return gain
+        Based on the propertied of the DCR_dataset, creates its dataset object
+        and computes the livetime for each vbias by multiplying the number
+        of samples per waveform with the number of waveforms in the dataset
+        and the duration of a sample (given by `self.run.ADC_config[&#39;dt&#39;]`).
+        Provides the result in dict format where the keys are the vbias of
+        the dataset.
 
-    def compute_properties_of_dataset(self,
-                                      length_cut_min: int = 4,
-                                      length_cut_max: int = 20) -&gt; pd.DataFrame:
+        Returns:
+            dict: _description_
+        &#34;&#34;&#34;
+        livetimes = {}
+        for v in self.voltages:
+
+            # Need all this to find the correct path...
+            self.datasets_df = self.run.get_run_df()
+            selection = ((self.datasets_df[&#39;kind&#39;] == &#39;DCR&#39;) &amp;
+                         (self.datasets_df[&#39;vbias&#39;] == v) &amp;
+                         (self.datasets_df[&#39;temp&#39;] == self.temp) &amp;
+                         # to end with just one of the modules.
+                         # It&#39;s assumed both have the same number of
+                         # entries and size of entries
+                         (self.datasets_df[&#39;module&#39;] == 0))
+
+            ds_selected = self.datasets_df[selection]
+
+            assert len(
+                self.datasets_df[selection]) == 1, &#34;Found more than 1 ds with the same config. Help.&#34;
+
+            ds_temp = pylars.utils.input.dataset(path=str(ds_selected[&#39;path&#39;].values[0]),
+                                                 kind=&#39;DCR&#39;,
+                                                 module=0,
+                                                 temp=self.temp,
+                                                 vbias=v)
+            try:
+                n_waveforms, n_samples = ds_temp.read_sizes()
+                livetimes[v] = n_waveforms * \
+                    n_samples * self.run.ADC_config[&#39;dt&#39;]
+            except BaseException:
+                livetimes[v] = np.nan
+
+        return livetimes
+
+    def set_standard_cuts(self,
+                          cut_area_min: float = 5,
+                          cut_area_max: float = 1e6,
+                          cut_length_min: int = 4,
+                          cut_length_max: int = 70,
+                          cut_n_pulses_min: float = 0,
+                          cut_n_pulses_max: float = 2) -&gt; None:
+        &#34;&#34;&#34;Sets the cuts to use in analysis as object variables.
+
+        Args:
+            cut_area_min (float, optional): Area minimum value. Defaults to 5.
+            cut_area_max (float, optional): Area maximum value. Defaults
+                to 1e6.
+            cut_length_min (float, optional): Lenght minimum value.
+                Defaults to 4.
+            cut_length_max (float, optional): Lenght minimum value.
+                 Defaults to 70.
+            cut_n_pulses_min (float, optional): Minimum number of pulses in
+                the waveform. Defaults to 0.
+            cut_n_pulses_max (float, optional): Maximum number of pulses in
+                the waveform. Defaults to 2.
+        &#34;&#34;&#34;
+
+        self.cut_area_min = cut_area_min
+        self.cut_area_max = cut_area_max
+        self.cut_length_min = cut_length_min
+        self.cut_length_max = cut_length_max
+        self.cut_n_pulses_min = cut_n_pulses_min
+        self.cut_n_pulses_max = cut_n_pulses_max
+
+    def load_processed_data(self, force_processing: bool = False) -&gt; None:
+        &#34;&#34;&#34;For all the voltages of a DCR_dataset (smae temperature) looks
+        for already processed files to load. If force_processing=True and
+        no saved file is found, processes the dataset with standard
+        options (sigma = 5, N_baseline = 50).
+
+        Args:
+            force_processing (bool, optional): Flag to force processing
+                of raw data in case the processed dataset is not found.
+                Defaults to False.
+
+        Returns:
+            dict: dictionary with the data df for each voltage as a key.
+        &#34;&#34;&#34;
+        self.data = {}
+        for _voltage in tqdm(self.voltages,
+                             desc=f&#39;Loading processed data for DCR &#39; +
+                             f&#39;data at {self.temp}K: &#39;,
+                             total=len(self.voltages),
+                             leave=False):
+            processed_data = pylars.utils.output.processed_dataset(
+                run=self.run,
+                kind=&#39;DCR&#39;,
+                vbias=_voltage,
+                temp=self.temp,
+                path_processed=(&#39;/disk/gfs_atp/xenoscope/SiPMs/char_campaign/&#39;
+                                &#39;processed_data/&#39;),
+                process_hash=self.process.hash)
+            processed_data.load_data(force=force_processing)
+
+            _df = processed_data.data
+            mask = ((_df[&#39;module&#39;] == self.module) &amp;
+                    (_df[&#39;channel&#39;] == self.channel))
+
+            self.data[_voltage] = copy.deepcopy(_df[mask])
+
+    def compute_properties_of_dataset(
+            self,
+            use_n_pulse_wf: bool = False,
+            compute_BV_flag: bool = True,
+            amplitude_based: bool = False) -&gt; pd.DataFrame:
         &#34;&#34;&#34;Calculate the gain, DCR, CTP and BV for the dataset in a single
         line!
 
         Args:
-            temp (float): temperature to consider in the dataset.
-            module (int): module to load.
-            channel (str): channel to load.
-            length_cut_min (int): lower bound accepted for the length of
-                peaks. Defaults to 4.
-            length_cut_max (int): upper bound accepted for the length of
-                peaks. Defaults to 20.
+            use_1_pulse_wf (bool):
+            compute_BV_flag (bool):
 
         Returns:
             pd.DataFrame: dataframe with all the computed properties with
-                the columns [&#39;V&#39;,&#39;T&#39;,&#39;path&#39;,&#39;module&#39;,&#39;channel&#39;,&#39;Gain&#39;,&#39;DCR&#39;,
-                &#39;CTP&#39;,&#39;DCR_error&#39;,&#39;CTP_error&#39;,&#39;BV&#39;,&#39;OV&#39;]
+                the columns [&#39;T&#39;, &#39;V&#39;, &#39;SPE_area&#39;,&#39;SPE_area_error&#39;, &#39;Gain&#39;,
+                &#39;Gain_error&#39;, &#39;SPE_res&#39;, &#39;SPE_res_error&#39;, &#39;DCR&#39;,
+                &#39;DCR_error&#39;, &#39;CTP&#39;, &#39;CTP_error&#39;]
         &#34;&#34;&#34;
 
         assert isinstance(self.data, dict), (&#39;Woops, no data found! Load&#39;
                                              &#39; data into the dataset first&#39;)
 
+        if amplitude_based:
+            raise NotImplementedError
+
         voltage_list = self.voltages
 
-        _results_dataset = pd.DataFrame(columns=[&#39;T&#39;, &#39;V&#39;, &#39;pe_area&#39;, &#39;Gain&#39;,
-                                                 &#39;res&#39;, &#39;DCR&#39;, &#39;DCR_error&#39;,
-                                                 &#39;CTP&#39;, &#39;CTP_error&#39;])
+        _results_dataset = pd.DataFrame(
+            columns=[&#39;T&#39;, &#39;V&#39;, &#39;SPE_area&#39;, &#39;SPE_area_error&#39;, &#39;Gain&#39;,
+                     &#39;Gain_error&#39;, &#39;SPE_res&#39;, &#39;SPE_res_error&#39;, &#39;DCR&#39;,
+                     &#39;DCR_error&#39;, &#39;CTP&#39;, &#39;CTP_error&#39;])
 
         for _volt in voltage_list:
             # select voltage
             df = self.data[_volt]
+            if use_n_pulse_wf == True:
+                df = df[(df[&#39;n_pulses&#39;] &gt; self.cut_n_pulses_min) &amp;
+                        (df[&#39;n_pulses&#39;] &lt;= self.cut_n_pulses_max)]
             if self.plots_flag == True:
                 plot_name_1pe_fit = (f&#39;{self.temp}K_{_volt}V_mod{self.module}_&#39;
                                      f&#39;ch{self.channel}&#39;)
             else:
                 plot_name_1pe_fit = False
 
-            # Get SPE value from Gaussian fit
-            (A, mu, sigma), cov = self.get_1pe_value_fit(
-                df, plot=plot_name_1pe_fit)
+            try:
+                # Get SPE value from Gaussian fit
+                (A, mu, sigma), cov = self.get_1pe_value_fit(
+                    df, plot=plot_name_1pe_fit,
+                    length_cut_min=self.cut_length_min,
+                    length_cut_max=self.cut_length_max,
+                    use_scipy_find_peaks=self.use_scipy_find_peaks)
 
-            # Calculate DCR and CTP
-            DCR, DCR_error, CTP, CTP_error = self.get_DCR(
-                df=df,
-                length_cut_min=length_cut_min,
-                length_cut_max=length_cut_max,
-                pe_area=mu,
-                sensor_area=self.SiPM_config[&#39;sensor_area&#39;],
-                t=self.SiPM_config[&#39;livetime&#39;])
+                A_err, mu_err, sigma_err = np.sqrt(np.diag(cov))
 
-            # Calculate gain
-            gain = self.get_gain(mu)
+                # Calculate DCR and CTP
+                DCR, DCR_error, CTP, CTP_error = self.get_DCR(
+                    df=df,
+                    length_cut_min=self.cut_length_min,
+                    length_cut_max=self.cut_length_max,
+                    spe_area=mu,
+                    sensor_area=self.SiPM_config[&#39;sensor_area&#39;],
+                    t=self.livetimes[_volt])
 
-            # Merge into rolling dataframe (I know it&#39;s slow... make a PR, pls)
-            _results_dataset = pd.concat((_results_dataset,
-                                          pd.DataFrame({&#39;T&#39;: [self.temp],
-                                                        &#39;V&#39;: [_volt],
-                                                        &#39;pe_area&#39;: [mu],
-                                                        &#39;Gain&#39;: [gain],
-                                                        &#39;res&#39;: [mu / sigma],
-                                                        &#39;DCR&#39;: [DCR],
-                                                        &#39;DCR_error&#39;: [DCR_error],
-                                                        &#39;CTP&#39;: [CTP],
-                                                        &#39;CTP_error&#39;: [CTP_error]})
-                                          ), ignore_index=True)
+                # Calculate gain
+                gain = get_gain(F_amp=self.run.ADC_config[&#39;F_amp&#39;],
+                                spe_area=mu,
+                                ADC_range=self.run.ADC_config[&#39;ADC_range&#39;],
+                                ADC_impedance=self.run.ADC_config[&#39;ADC_impedance&#39;],
+                                ADC_res=self.run.ADC_config[&#39;ADC_res&#39;],
+                                q_e=self.run.ADC_config[&#39;q_e&#39;])
+                gain_error = get_gain(F_amp=self.run.ADC_config[&#39;F_amp&#39;],
+                                      spe_area=mu_err,
+                                      ADC_range=self.run.ADC_config[&#39;ADC_range&#39;],
+                                      ADC_impedance=self.run.ADC_config[&#39;ADC_impedance&#39;],
+                                      ADC_res=self.run.ADC_config[&#39;ADC_res&#39;],
+                                      q_e=self.run.ADC_config[&#39;q_e&#39;])
+
+                SPE_res = np.abs(sigma / mu) * 100  # in %
+                SPE_res_err = np.sqrt(
+                    (sigma_err / mu)**2 + (sigma * mu_err / mu**2)**2) * 100  # in %
+
+                # Merge into rolling dataframe (I know it&#39;s slow... make a PR,
+                # pls)
+                _results_dataset = pd.concat(
+                    (_results_dataset,
+                     pd.DataFrame({&#39;T&#39;: [self.temp],
+                                   &#39;V&#39;: [_volt],
+                                   &#39;SPE_area&#39;: [mu],
+                                   &#39;SPE_area_error&#39;: [mu_err],
+                                   &#39;Gain&#39;: [gain],
+                                   &#39;Gain_error&#39;: [gain_error],
+                                   &#39;SPE_res&#39;: [SPE_res],
+                                   &#39;SPE_res_error&#39;: [SPE_res_err],
+                                   &#39;DCR&#39;: [DCR],
+                                   &#39;DCR_error&#39;: [DCR_error],
+                                   &#39;CTP&#39;: [CTP * 100],
+                                   &#39;CTP_error&#39;: [CTP_error * 100]})
+                     ), ignore_index=True
+                )
+            except BaseException:
+                print(f&#39;Could not compute properties of module {self.module}, &#39;
+                      f&#39;channel {self.channel}, {self.temp} K, {_volt} V. &#39;
+                      f&#39;Skipping dataset.&#39;)
+                _results_dataset = pd.concat(
+                    (_results_dataset,
+                     pd.DataFrame({&#39;T&#39;: [self.temp],
+                                   &#39;V&#39;: [_volt],
+                                   &#39;SPE_area&#39;: [np.nan],
+                                   &#39;SPE_area_error&#39;: [np.nan],
+                                   &#39;Gain&#39;: [np.nan],
+                                   &#39;Gain_error&#39;: [np.nan],
+                                   &#39;SPE_res&#39;: [np.nan],
+                                   &#39;SPE_res_error&#39;: [np.nan],
+                                   &#39;DCR&#39;: [np.nan],
+                                   &#39;DCR_error&#39;: [np.nan],
+                                   &#39;CTP&#39;: [np.nan],
+                                   &#39;CTP_error&#39;: [np.nan]})
+                     ), ignore_index=True
+                )
 
         # Compute BV from gain(V) curve and update df
-        if self.plots_flag == True:
-            plot_BV = f&#39;BV_mod{self.module}_ch{self.channel}&#39;
-        else:
-            plot_BV = False
-        _results_dataset = compute_BV(_results_dataset, plot_BV)
+        if compute_BV_flag == True:
+            if self.plots_flag == True:
+                plot_BV = f&#39;BV_mod{self.module}_ch{self.channel}&#39;
+            else:
+                plot_BV = False
+            _results_dataset, _a, _b, _b_err = compute_BV_df(
+                _results_dataset, plot_BV)
 
         return _results_dataset
+
+    @staticmethod
+    def get_how_many_peaks_per_waveform(df: pd.DataFrame,
+                                        verbose: bool = False) -&gt; pd.DataFrame:
+        &#34;&#34;&#34;Finds how many peaks each waveform has.
+        Only looks in wavforms with at least 1 peak
+
+        Since commit 6f8e0c72b8e3e0bf7c5307941b49bdf57879d554 this method
+        is not needed as n_pulses is stored during processing.
+
+        Args:
+            df (pd.DataFrame): dataframe with the processed pulse data.
+            verbose (bool): print info during processing.
+
+        Returns:
+            pd.DataFrame: dataframe with the pairs: wf_number - pulse_count.
+        &#34;&#34;&#34;
+        t0 = time.time()
+        if verbose:
+            print(&#39;Starting counting peaks at:&#39;, t0)
+        wf_number_arr = np.array(df[&#39;wf_number&#39;].values)
+        waveforms_w_pulses, N_pulses = _get_how_many_peaks_per_waveform(
+            wf_number_arr)
+
+        pulse_count_df = pd.concat(
+            [pd.Series(waveforms_w_pulses, name=&#39;wf_number&#39;),
+             pd.Series(N_pulses, name=&#39;pulse_count&#39;)], axis=1
+        )
+        t1 = time.time()
+        if verbose:
+            print(&#39;Finished conting peaks at: &#39;, t1)
+            print(&#39;Took time in calc: &#39;, t1 - t0)
+        return pulse_count_df
+
+    def get_med_amplitude(self, df: pd.DataFrame,
+                          cut_mask: np.ndarray) -&gt; tuple:
+        &#34;&#34;&#34;Calculate the median and standard deviation of the distribution
+        of amplitudes, applying a given mask.
+
+        Args:
+            df (pd.DataFrame): dataframe with the processed pulse data
+            extra_cut_mask (np.ndarray): cut mask
+
+        Returns:
+            tuple: _description_
+        &#34;&#34;&#34;
+        med_amplitude = np.median(df[cut_mask][&#39;amplitude&#39;])
+        std_amplitude = np.std(df[cut_mask][&#39;amplitude&#39;])
+        return med_amplitude, std_amplitude
+
+    def compute_properties_of_dataset_amplitude_based(self,
+                                                      use_n_pulse_wf: bool = True) -&gt; pd.DataFrame:
+        &#34;&#34;&#34;NOT IMPLEMENTED - Needs review and merge with other compute method
+
+        Calculate the gain, DCR, CTP and BV for the dataset in a single
+        line! This is an alternative method to the main one, using amplitude
+        cuts instead of area cuts.
+
+        Returns:
+            pd.DataFrame: dataframe with all the computed properties with
+                the columns [&#39;V&#39;,&#39;T&#39;,&#39;path&#39;,&#39;module&#39;,&#39;channel&#39;,&#39;Gain&#39;,&#39;DCR&#39;,
+                &#39;CTP&#39;,&#39;DCR_error&#39;,&#39;CTP_error&#39;,&#39;BV&#39;,&#39;OV&#39;]
+        &#34;&#34;&#34;
+        raise NotImplementedError  # needs review and merging with normal
 
 
 class DCR_run():
@@ -494,10 +726,12 @@ class DCR_run():
     __version__ = &#39;0.0.1&#39;
 
     def __init__(self, run: pylars.utils.input.run,
-                 processor: pylars.processing.rawprocessor.run_processor):
+                 processor: pylars.processing.rawprocessor.run_processor,
+                 use_n_pulse: bool = True):
 
         self.run = run
         self.process = processor
+        self.use_n_pulse = use_n_pulse
         self.datasets = self.process.datasets_df
         self.temperatures = self.get_run_temperatures()
         self.plots_flag = False
@@ -529,26 +763,14 @@ class DCR_run():
         &#34;&#34;&#34;Initialize a clean results_df instance in the object.
         &#34;&#34;&#34;
 
-        results_df = pd.DataFrame(columns=[&#39;V&#39;, &#39;T&#39;, &#39;module&#39;, &#39;channel&#39;,
-                                           &#39;Gain&#39;, &#39;DCR&#39;, &#39;CTP&#39;, &#39;DCR_error&#39;,
-                                           &#39;CTP_error&#39;, &#39;BV&#39;, &#39;OV&#39;]
-                                  )
+        results_df = pd.DataFrame(
+            columns=[&#39;T&#39;, &#39;V&#39;, &#39;SPE_area&#39;, &#39;SPE_area_error&#39;, &#39;Gain&#39;,
+                     &#39;Gain_error&#39;, &#39;SPE_res&#39;, &#39;SPE_res_error&#39;, &#39;DCR&#39;,
+                     &#39;DCR_error&#39;, &#39;CTP&#39;, &#39;CTP_error&#39;])
+
         self.results_df = results_df
 
-    def define_run_ADC_config(self, F_amp: float,
-                              model: str = &#39;v1724&#39;) -&gt; None:
-        &#34;&#34;&#34;Load the ADC related quantities for the run.
-
-        Args:
-        model (str): model of the digitizer
-        F_amp (float): signal amplification from the sensor (pre-amp *
-            external amplification on rack).
-        &#34;&#34;&#34;
-
-        self.ADC_config = load_ADC_config(model, F_amp)
-
-    def define_run_SiPM_config(self, livetime: float,
-                               sensor_area: float = 12 * 12,
+    def define_run_SiPM_config(self, sensor_area: float = 12 * 12,
                                ) -&gt; None:
         r&#34;&#34;&#34;Define the SiPM data related quantities for the dataset.
 
@@ -557,8 +779,7 @@ class DCR_run():
             sensor_area (float, optional): Area of the photosensor (mm\*\*2).
                 Defaults to 12\*12.
         &#34;&#34;&#34;
-        SiPM_config = {&#39;livetime&#39;: livetime,
-                       &#39;sensor_area&#39;: sensor_area,
+        SiPM_config = {&#39;sensor_area&#39;: sensor_area,
                        }
         self.SiPM_config = SiPM_config
 
@@ -592,7 +813,9 @@ class DCR_run():
 
     def compute_properties_of_ds(self, temp: float,
                                  module: int,
-                                 channel: str) -&gt; pd.DataFrame:
+                                 channel: str,
+                                 amplitude_based: bool = False
+                                 ) -&gt; pd.DataFrame:
         &#34;&#34;&#34;Loads and computes the properties of a single dataset (temp,
         module, channel) by creating a DCR_dataset object and calling its
         methods.
@@ -601,20 +824,26 @@ class DCR_run():
             temp (float): temperature
             module (int): module
             channel (str): channel
+            amplitude_based (bool): if the computation method is based on
+                amplitude instead of area
 
         Returns:
             pd.DataFrame: dataframe
         &#34;&#34;&#34;
-
-        assert isinstance(self.SiPM_config, dict), &#39;No SiPM_config found!&#39;
-        assert isinstance(self.ADC_config, dict), &#39;No ADC_config found!&#39;
+        assert isinstance(self.run.ADC_config, dict), &#39;No ADC_config found!&#39;
 
         ds = self.load_dataset(temp, module, channel)
         ds.set_plots_flag(self.plots_flag)
-        ds.ADC_config = self.ADC_config
         ds.SiPM_config = self.SiPM_config
 
-        ds_results = ds.compute_properties_of_dataset()
+        if amplitude_based:
+            ds_results = ds.compute_properties_of_dataset_amplitude_based(
+                use_n_pulse_wf=self.use_n_pulse,
+            )
+        else:
+            ds_results = ds.compute_properties_of_dataset(
+                compute_BV_flag=False,
+                use_n_pulse_wf=self.use_n_pulse)
 
         # Add module and channel columns
         module_Series = pd.Series([module] * len(ds_results), name=&#39;module&#39;)
@@ -623,66 +852,47 @@ class DCR_run():
                                axis=1)
         return ds_results
 
-    def read_channel_map(self, path_to_map: str) -&gt; None:
-        &#34;&#34;&#34;Define the active modules and channels for the run.
-
-        UNDER CONSTRUCTION. I know it doesn&#39;t work that nicely but
-        I need to have somthing that works for now, so...
-        Define it with self.channel_map = dict(mod:[ch#,...],...)
+    def compute_properties_of_run(self, amplitude_based: bool = False) -&gt; None:
+        &#34;&#34;&#34;Loads and computes the properties of ALL the datasets.
 
         Args:
-            path_to_map (str): path to csv file with the channel map
-        &#34;&#34;&#34;
-        if self.run.run_number == 7:
-            channel_map = {0: [&#39;wf0&#39;, &#39;wf3&#39;, &#39;wf4&#39;, &#39;wf6&#39;],
-                           1: [&#39;wf0&#39;, &#39;wf3&#39;, &#39;wf4&#39;, &#39;wf6&#39;], }
-
-        elif self.run.run_number == 8:
-            channel_map = {0: [&#39;wf0&#39;, &#39;wf3&#39;, &#39;wf4&#39;, &#39;wf5&#39;, &#39;wf6&#39;],
-                           1: [&#39;wf0&#39;, &#39;wf1&#39;, &#39;wf2&#39;, &#39;wf3&#39;, &#39;wf4&#39;,
-                               &#39;wf6&#39;, &#39;wf7&#39;]}
-
-        else:
-            channel_map = pd.read_csv(path_to_map)
-
-        self.channel_map = channel_map
-
-    def compute_properties_of_run(self) -&gt; None:
-        &#34;&#34;&#34;Loads and computes the properties of ALL the datasets.
+            amplitude_based (bool): Turn True to compute SPE based on
+                amplitude.
 
         Returns:
             pd.DataFrame: The results.
         &#34;&#34;&#34;
         self.initialize_results_df()
 
+        all_channels = pylars.utils.common.get_channel_list(self.process)
         for temperature in self.temperatures:
-            for module in self.channel_map.keys():
-                for channel in tqdm(self.channel_map[module],
-                                    (f&#39;Computing properties for &#39;
-                                     f&#39;T={temperature}; module &#39;
-                                     f&#39;{module}: &#39;)):
-                    _ds_results = self.compute_properties_of_ds(
-                        temp=temperature,
-                        module=module,
-                        channel=channel)
+            for (module, channel) in tqdm(all_channels,
+                                          (f&#39;Computing properties for &#39;
+                                           f&#39;T={temperature}: &#39;)):
+                _ds_results = self.compute_properties_of_ds(
+                    temp=temperature,
+                    module=module,
+                    channel=channel,
+                    amplitude_based=amplitude_based)
 
-                    self.results_df = pd.concat(
-                        [self.results_df, _ds_results],  # type: ignore
-                        ignore_index=True)
+                self.results_df = pd.concat(
+                    [self.results_df, _ds_results],  # type: ignore
+                    ignore_index=True)
 
-        datetime.now()
-
-    def save_results(self, custom_name) -&gt; None:
+    def save_results(self, custom_name: str) -&gt; None:
         &#34;&#34;&#34;Save dataframe of results to a hdf5 file. Saved files go to
         self.analysis_path.
 
         Args:
             name (str): name to give the file (without extension).
         &#34;&#34;&#34;
-        assert isinstance(self.results_df, pd.DataFrame), (&#34;Trying to save &#34;
-                                                           &#34;results that do not exist in the object, c&#39;mon, you know better.&#34;)
+        assert isinstance(
+            self.results_df, pd.DataFrame), (&#34;Trying to save results that do &#34;
+                                             &#34;not exist in the object, c&#39;mon&#34;
+                                             &#34;, you know better.&#34;)
         assert len(self.results_df) &gt; 0, (&#34;Results df is empty, please compute&#34;
-                                          &#34;something before trying to save, otherwire it&#39;s just a waste of &#34;
+                                          &#34;something before trying to save, &#34;
+                                          &#34;otherwire it&#39;s just a waste of &#34;
                                           &#34;disk space&#34;)
 
         name = f&#39;DCR_results_{custom_name}&#39;
@@ -698,7 +908,30 @@ class DCR_run():
         &#34;&#34;&#34;
 
         _df = pd.read_hdf(self.analysis_path + name + &#39;.h5&#39;)
-        self.results_df = _df</code></pre>
+        self.results_df = _df
+
+
+@numba.njit
+def _get_how_many_peaks_per_waveform(wf_number_list: np.ndarray) -&gt; Tuple:
+    &#34;&#34;&#34;Numbafied process of counting how peaks there are in each waveform.
+
+    Not used any longer since &#34;n_pulses&#34; is stored.
+
+    Args:
+        wf_number_list (np.ndarray): the wf number of each identified peak.
+
+    Returns:
+        tuple: (wf number with pulses, the number of pulses in the wf)
+    &#34;&#34;&#34;
+    waveforms_w_pulses = np.unique(wf_number_list)
+    n_waveforms = len(waveforms_w_pulses)
+
+    N_pulses = np.zeros(n_waveforms)
+
+    for i, _wf in enumerate(waveforms_w_pulses):
+        _n_pulses = np.count_nonzero(wf_number_list == _wf)
+        N_pulses[i] = _n_pulses
+    return (waveforms_w_pulses, N_pulses)</code></pre>
 </details>
 </section>
 <section>
@@ -710,131 +943,38 @@ class DCR_run():
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt id="pylars.analysis.darkcount.DCR_dataset"><code class="flex name class">
-<span>class <span class="ident">DCR_dataset</span></span>
-<span>(</span><span>run: <a title="pylars.utils.input.run" href="../utils/input.html#pylars.utils.input.run">run</a>, temperature: float, module: int, channel: str, processor: <a title="pylars.processing.rawprocessor.run_processor" href="../processing/rawprocessor.html#pylars.processing.rawprocessor.run_processor">run_processor</a>)</span>
+<dt id="pylars.analysis.darkcount.DCR_analysis"><code class="flex name class">
+<span>class <span class="ident">DCR_analysis</span></span>
 </code></dt>
 <dd>
-<div class="desc"><p>Object class to hold dark count related instances and
-methods. Collects all the data and properties of a single MMPC,
-meaning the pair (module, channel) for all the available voltages at
-a certain temperature.</p></div>
+<div class="desc"><p>A class with all the methods needed for DCR analysis.</p>
+<p>Why a separate class? DCR_dataset was too messy with @classmethods.
+These we be put in this parent class and DCR_dataset and DCR_run will
+have only object-specific methods.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class DCR_dataset():
-    &#34;&#34;&#34;Object class to hold dark count related instances and
-    methods. Collects all the data and properties of a single MMPC,
-    meaning the pair (module, channel) for all the available voltages at
-    a certain temperature.
+<pre><code class="python">class DCR_analysis():
+    &#34;&#34;&#34;A class with all the methods needed for DCR analysis.
+
+    Why a separate class? DCR_dataset was too messy with @classmethods.
+    These we be put in this parent class and DCR_dataset and DCR_run will
+    have only object-specific methods.
     &#34;&#34;&#34;
 
-    __version__ = &#39;0.0.1&#39;
+    __version__ = &#39;v0.0.1&#39;
 
-    def __init__(self, run: pylars.utils.input.run, temperature: float,
-                 module: int, channel: str,
-                 processor: pylars.processing.rawprocessor.run_processor):
-
-        self.run = run
-        self.temp = temperature
-        self.module = module
-        self.channel = channel
-        self.process = processor
-        self.voltages = self.get_voltages_available()
-        self.plots_flag = False
-
-    def set_plots_flag(self, flag: bool) -&gt; None:
-        &#34;&#34;&#34;Set if computing properties makes plots (True) or not (False).
-        Assumes a ./figures/ directory exists.
-
-        Args:
-            flag (bool): True for plotting stuff, False for not making nice
-                pictures (plots) to hang on the wall. Yes, I hang plots on
-                my bedroom wall and it looks nice.
-        &#34;&#34;&#34;
-        self.plots_flag = flag
-
-    def define_ADC_config(self, F_amp: float, model: str = &#39;v1724&#39;) -&gt; None:
-        &#34;&#34;&#34;Load the ADC related quantities for the dataset.
-
-        Args:
-        model (str): model of the digitizer
-        F_amp (float): signal amplification from the sensor (pre-amp *
-            external amplification on rack).
-        &#34;&#34;&#34;
-
-        self.ADC_config = load_ADC_config(model, F_amp)
-
-    def define_SiPM_config(self, livetime: float,
-                           sensor_area: float = 12 * 12,
-                           ) -&gt; None:
-        r&#34;&#34;&#34;Define the SiPM data related quantities for the dataset.
-
-        Args:
-            livetime (float): livetime of the measurement for DCR porpuses.
-            sensor_area (float, optional): Area of the photosensor (mm\*\*2).
-                Defaults to 12\*12.
-        &#34;&#34;&#34;
-        SiPM_config = {&#39;livetime&#39;: livetime,
-                       &#39;sensor_area&#39;: sensor_area,
-                       }
-
-        self.SiPM_config = SiPM_config
-
-    def get_voltages_available(self) -&gt; np.ndarray:
-        &#34;&#34;&#34;Checks the loaded run for which voltages are available for the
-        defined temperature.
-
-        Returns:
-            np.ndarray: array of the available voltages
-        &#34;&#34;&#34;
-
-        voltages = []
-        for _dataset in self.run.datasets:
-            if (_dataset.temp == self.temp) and (_dataset.kind == &#39;DCR&#39;):
-                voltages.append(_dataset.vbias)
-        voltages = np.unique(voltages)
-
-        return voltages
-
-    def load_processed_data(self, force_processing: bool = False) -&gt; None:
-        &#34;&#34;&#34;For all the voltages of a DCR_dataset (smae temperature) looks
-        for already processed files to load. If force_processing=True and
-        no saved file is found, processes the dataset with standard
-        options (sigma = 5, N_baseline = 50).
-
-        Args:
-            force_processing (bool, optional): Flag to force processing
-                of raw data in case the processed dataset is not found.
-                Defaults to False.
-
-        Returns:
-            dict: dictionary with the data df for each voltage as a key.
-        &#34;&#34;&#34;
-        self.data = {}
-        for _voltage in self.voltages:
-            processed_data = pylars.utils.output.processed_dataset(
-                run=self.run,
-                kind=&#39;DCR&#39;,
-                vbias=_voltage,
-                temp=self.temp,
-                path_processed=(&#39;/disk/gfs_atp/xenoscope/SiPMs/char_campaign/&#39;
-                                &#39;processed_data/&#39;),
-                process_hash=self.process.hash)
-            processed_data.load_data(force=force_processing)
-
-            _df = processed_data.data
-            mask = ((_df[&#39;module&#39;] == self.module) &amp;
-                    (_df[&#39;channel&#39;] == self.channel))
-
-            self.data[_voltage] = copy.deepcopy(_df[mask])
+    def __init__(self):
+        pass
 
     @classmethod
     def get_1pe_value_fit(cls,
                           df: pd.DataFrame,
-                          length_cut: int = 5,
-                          plot: Union[bool, str] = False) -&gt; tuple:
+                          length_cut_min: int = 5,
+                          length_cut_max: int = 80,
+                          plot: Union[bool, str] = False,
+                          use_scipy_find_peaks: bool = False) -&gt; tuple:
         &#34;&#34;&#34;Try to fit the SPE peak in the area histogram and return the
         Gaussian paramenters.
 
@@ -849,14 +989,17 @@ a certain temperature.</p></div>
         &#34;&#34;&#34;
 
         (area_hist_x, DCR_values, DCR_der_x_points,
-         DCR_der_y_points, min_area_x) = cls.get_1pe_rough(df, length_cut)
+         DCR_der_y_points, min_area_x) = cls.get_1pe_rough(
+            df, length_cut_min, length_cut_max,
+            use_scipy_find_peaks=use_scipy_find_peaks)
 
         if plot != False:
             pylars.plotting.plotanalysis.plot_DCR_curve(
                 plot, area_hist_x, DCR_values, DCR_der_x_points,
                 DCR_der_y_points, min_area_x)
 
-        area_hist = np.histogram(df[df[&#39;length&#39;] &gt; length_cut][&#39;area&#39;],
+        area_hist = np.histogram(df[(df[&#39;length&#39;] &gt; length_cut_min) &amp;
+                                    (df[&#39;length&#39;] &lt; length_cut_max)][&#39;area&#39;],
                                  bins=np.linspace(0.5 * min_area_x, 1.5 * min_area_x, 300))
         area_hist_x = area_hist[1]
         area_hist_x = (
@@ -868,59 +1011,97 @@ a certain temperature.</p></div>
 
         if plot != False:
             pylars.plotting.plotanalysis.plot_SPE_fit(
-                df, length_cut, plot, area_hist_x, min_area_x, A, mu, sigma)
+                df, length_cut_min, length_cut_max, plot, area_hist_x, min_area_x, A, mu, sigma)
 
         return (A, mu, sigma), cov
 
     @classmethod
     def get_1pe_rough(cls, df: pd.DataFrame,
-                      length_cut: int,
-                      bins: int or list = 200) -&gt; tuple:
+                      length_cut_min: int,
+                      length_cut_max: int,
+                      bins: int or list = 200,
+                      use_scipy_find_peaks: bool = False) -&gt; tuple:
         &#34;&#34;&#34;From an event df (1 channel), find the rough position of the
         SPE from the DCR vs threshold curve and its derivative
 
         Args:
-            df (_type_): _description_
-            length_cut (_type_): _description_
+            df (pd.DataFrame): dataframe with the processed data.
+            length_cut_min (int): minimum value of lenght to consider
+            length_cut_max (int): maximum value of lenght to consider
             bins (intorlist, optional): number of bins to make the are
                 histogram or list of bin edges to consider on the histogram.
                 Defaults to 200.
 
         Returns:
-            tuple: _description_
+            tuple: computed arrays: area_hist_x, DCR_values, DCR_der_x_points,
+                DCR_der_y_points, min_area_x
         &#34;&#34;&#34;
 
         (area_hist_x, DCR_values) = cls.get_DCR_above_threshold_values(
-            df, length_cut, bins)
+            df, length_cut_min, length_cut_max, bins, output=&#39;values&#39;)  # type: ignore
         grad = np.gradient(DCR_values)
         grad_spline = itp.UnivariateSpline(area_hist_x, grad)
         # , s = len(area_hist_x)*3)
-        _x = np.linspace(area_hist_x[0], area_hist_x[-1], 500)
-        _y = grad_spline(_x)
-        min_idx = np.where(_y == min(_y))
-        min_area_x = _x[min_idx][0]
-        return area_hist_x, DCR_values, _x, _y, min_area_x
+        DCR_der_x_points = np.linspace(area_hist_x[0], area_hist_x[-1], bins)
+        DCR_der_y_points = grad_spline(DCR_der_x_points)
+
+        if use_scipy_find_peaks:
+            pks, props = find_peaks(-1 * DCR_der_y_points,
+                                    prominence=20)
+            peaks_area_values = DCR_der_x_points[pks]
+            if len(peaks_area_values) == 0:
+                print(&#39;Could not find any peaks&#39;)
+                min_area_x = np.nan
+            elif len(peaks_area_values) &gt; 0:
+                if (peaks_area_values[0] &gt; 2000 *
+                        200) or (len(peaks_area_values) == 1):
+                    min_area_x = peaks_area_values[0]
+                else:
+                    min_area_x = peaks_area_values[1]
+        else:
+            min_idx = np.where(DCR_der_y_points == min(DCR_der_y_points))
+            min_area_x = DCR_der_x_points[min_idx][0]
+
+        return (area_hist_x, DCR_values, DCR_der_x_points,
+                DCR_der_y_points, min_area_x)  # type:ignore
 
     @classmethod
     def get_DCR_above_threshold_values(cls, df: pd.DataFrame,
-                                       length_cut: int = 5,
-                                       bins: int or list = 200) -&gt; tuple:
+                                       length_cut_min: int = 5,
+                                       length_cut_max: int = 80,
+                                       bins: int or list = 200,
+                                       output: str = &#39;values&#39;,
+                                       **kwargs) -&gt; Union[
+            tuple,
+            itp.UnivariateSpline,
+            itp.interp1d,
+            None]:
         &#34;&#34;&#34;Computes the event rate in a sweep of area thresholds and
         returns the pair [area thersholds, DCR values]
 
         Args:
             df (pd.DataFrame): a pd.DataFrame with the series &#34;area&#34; and
                 &#34;length&#34;.
-            length_cut (int, optional): cut to impose on the length of
-                the peaks for noise suppression. Defaults to 5.
+            length_cut_min (int, optional): cut to impose on the minimum
+                length of the peaks for noise suppression. Defaults to 5.
+            length_cut_max (int, optional): cut to impose on the maximum
+                length of the peaks for noise suppression. Defaults to 5.
             bins (intorlist, optional): number of bins to make the are
                 histogram or list of bin edges to consider on the histogram.
                 Defaults to 200.
+            output (str): type of output. Can be &#39;values&#39;, &#39;spline&#39; or
+                &#39;interp1d&#39;
 
         Returns:
             tuple: pair of np.ndarrays (area thersholds, DCR values)
         &#34;&#34;&#34;
-        area_hist = np.histogram(df[df[&#39;length&#39;] &gt; length_cut][&#39;area&#39;],
+
+        if output not in [&#39;values&#39;, &#39;spline&#39;, &#39;interp1d&#39;]:
+            raise NotImplementedError(&#34;Specifiy a valid output. Options are &#34;
+                                      &#34;&#39;values&#39;, &#39;spline&#39; or &#39;interp1d&#39;.&#34;)
+
+        area_hist = np.histogram(df[(df[&#39;length&#39;] &gt; length_cut_min) &amp;
+                                    (df[&#39;length&#39;] &lt; length_cut_max)][&#39;area&#39;],
                                  bins=bins)
         area_hist_x = area_hist[1]
         area_hist_x = (area_hist_x +
@@ -929,77 +1110,20 @@ a certain temperature.</p></div>
 
         DCR_values = np.flip(np.cumsum(np.flip(area_hist_y)))
 
-        return (area_hist_x, DCR_values)
-
-    @classmethod
-    def get_DCR_above_threshold_spline(cls, df: pd.DataFrame,
-                                       length_cut: int = 5,
-                                       bins: int or list = 200,
-                                       **kwargs) -&gt; itp.UnivariateSpline:
-        &#34;&#34;&#34;Computes the event rate in a sweep of area thresholds and
-        returns a spline object of the curve.
-
-        Args:
-            df (pd.DataFrame): a pd.DataFrame with the series &#34;area&#34; and
-                &#34;length&#34;.
-            length_cut (int, optional): cut to impose on the length of
-                the peaks for noise suppression. Defaults to 5.
-            bins (intorlist, optional): number of bins to make the are
-                histogram or list of bin edges to consider on the histogram.
-                Defaults to 200.
-
-        Returns:
-            itp.UnivariateSpline: spline object of the DCR vs area
-                threshold curve.
-        &#34;&#34;&#34;
-        area_hist = np.histogram(df[df[&#39;length&#39;] &gt; length_cut][&#39;area&#39;],
-                                 bins=bins)
-        area_hist_x = area_hist[1]
-        area_hist_x = (area_hist_x +
-                       (area_hist_x[1] - area_hist_x[0]) / 2)[:-1]
-        area_hist_y = area_hist[0]
-        DCR_values = np.flip(np.cumsum(np.flip(area_hist_y)))
-        DCR_func = itp.UnivariateSpline(area_hist_x, DCR_values, **kwargs)
-
-        return DCR_func
-
-    @classmethod
-    def get_DCR_above_threshold_interp1d(cls, df: pd.DataFrame,
-                                         length_cut: int = 5,
-                                         bins: int or list = 200
-                                         ) -&gt; itp.interp1d:
-        &#34;&#34;&#34;Computes the event rate in a sweep of area thresholds and
-        returns a 1D interpolation object of the curve.
-
-        Args:
-            df (pd.DataFrame): a pd.DataFrame with the series &#34;area&#34; and
-                &#34;length&#34;.
-            length_cut (int, optional): cut to impose on the length of
-                the peaks for noise suppression. Defaults to 5.
-            bins (intorlist, optional): number of bins to make the are
-                histogram or list of bin edges to consider on the histogram.
-                Defaults to 200.
-
-        Returns:
-            itp.interp1d: 1D interpolation object of the DCR vs area
-                threshold curve.
-        &#34;&#34;&#34;
-        area_hist = np.histogram(df[df[&#39;length&#39;] &gt; length_cut][&#39;area&#39;],
-                                 bins=bins)
-        area_hist_x = area_hist[1]
-        area_hist_x = (area_hist_x +
-                       (area_hist_x[1] - area_hist_x[0]) / 2)[:-1]
-        area_hist_y = area_hist[0]
-        DCR_values = np.flip(np.cumsum(np.flip(area_hist_y)))
-        DCR_func = itp.interp1d(area_hist_x, DCR_values)
-
-        return DCR_func
+        if output == &#39;values&#39;:
+            return (area_hist_x, DCR_values)
+        elif output == &#39;spline&#39;:
+            DCR_func = itp.UnivariateSpline(area_hist_x, DCR_values, **kwargs)
+            return DCR_func
+        elif output == &#39;interp1d&#39;:
+            DCR_func = itp.interp1d(area_hist_x, DCR_values)
+            return DCR_func
 
     @staticmethod
     def get_DCR(df: pd.DataFrame,
                 length_cut_min: int,
                 length_cut_max: int,
-                pe_area: float,
+                spe_area: float,
                 sensor_area: float,
                 t: float) -&gt; tuple:
         &#34;&#34;&#34;Compute the dark count rate (DCR) and crosstalk probability
@@ -1009,7 +1133,7 @@ a certain temperature.</p></div>
             df (pd.DataFrame): DataFrame of the dataset (single ch)
             length_cut_min (int): low length cut to apply
             length_cut_max (int): high length cut to apply
-            pe_area (float): SPE area
+            spe_area (float): SPE area
             sensor_area (float): effective are of the sensor
             t (float): livetime of the dataset
 
@@ -1017,8 +1141,8 @@ a certain temperature.</p></div>
             tuple: DCR value, error of DCR value, CTP value, error of
                 CTP value
         &#34;&#34;&#34;
-        pe_0_5 = pe_area * 0.5
-        pe_1_5 = pe_area * 1.5
+        pe_0_5 = spe_area * 0.5
+        pe_1_5 = spe_area * 1.5
 
         DC_0_5 = len(df[(df[&#39;length&#39;] &gt; length_cut_min) &amp;
                         (df[&#39;length&#39;] &lt; length_cut_max) &amp;
@@ -1026,6 +1150,53 @@ a certain temperature.</p></div>
         DC_1_5 = len(df[(df[&#39;length&#39;] &gt; length_cut_min) &amp;
                         (df[&#39;length&#39;] &lt; length_cut_max) &amp;
                         (df[&#39;area&#39;] &gt; pe_1_5)])
+
+        DC_0_5_error = np.sqrt(DC_0_5)
+        DC_1_5_error = np.sqrt(DC_1_5)
+
+        DCR = DC_0_5 / sensor_area / t
+        DCR_error = DC_0_5_error / sensor_area / t
+
+        CTP = DC_1_5 / DC_0_5
+        CTP_error = np.sqrt((DC_0_5_error / DC_1_5)**2 +
+                            (DC_0_5 * DC_1_5_error / (DC_1_5)**2)**2)
+
+        return DCR, DCR_error, CTP, CTP_error
+
+    @staticmethod
+    def get_DCR_amplitude(df: pd.DataFrame,
+                          length_cut_min: int,
+                          length_cut_max: int,
+                          pe_amplitude: float,
+                          pe_amplitude_std: float,
+                          sensor_area: float,
+                          t: float) -&gt; tuple:
+        &#34;&#34;&#34;Compute the dark count rate (DCR) and crosstalk probability
+        (CTP) of a dataset, amplitude based.
+
+        Args:
+            df (pd.DataFrame): DataFrame of the dataset (single ch)
+            length_cut_min (int): low length cut to apply
+            length_cut_max (int): high length cut to apply
+            pe_amplitude (float): SPE amplitude
+            sensor_area (float): effective are of the sensor
+            t (float): livetime of the dataset
+
+        Returns:
+            tuple: DCR value, error of DCR value, CTP value, error of
+                CTP value
+        &#34;&#34;&#34;
+        pe_0_5 = pe_amplitude * 0.5
+        pe_1_5 = pe_amplitude * 1.5
+        pe_m5sigma = pe_amplitude - 5 * pe_amplitude_std
+        pe_p5sigma = pe_amplitude + 5 * pe_amplitude_std
+
+        DC_0_5 = len(df[(df[&#39;length&#39;] &gt; length_cut_min) &amp;
+                        (df[&#39;length&#39;] &lt; length_cut_max) &amp;
+                        (df[&#39;amplitude&#39;] &lt; pe_p5sigma)])
+        DC_1_5 = len(df[(df[&#39;length&#39;] &gt; length_cut_min) &amp;
+                        (df[&#39;length&#39;] &lt; length_cut_max) &amp;
+                        (df[&#39;area&#39;] &lt; pe_m5sigma)])
 
         DC_0_5_error = np.sqrt(DC_0_5)
         DC_1_5_error = np.sqrt(DC_1_5)
@@ -1053,132 +1224,28 @@ a certain temperature.</p></div>
         &#34;&#34;&#34;
 
         print(f&#39;Your lovely DCR is: ({DCR:.2f} +- {DCR_error:.2f}) Hz/mm^2&#39;)
-        print(f&#39;Your lovely CTP is: ({CTP*100:.2f} +- {CTP_error*100:.2f})%&#39;)
-
-    def get_gain(self, spe_area: float) -&gt; float:
-        &#34;&#34;&#34;Compute the gain given the value of the SPE area
-
-        Args:
-            spe_area (float): Area of the SPE peak in integrated ADC
-                counts [ADC count * ns].
-
-        Raises:
-            ValueError: self.ADC_config not defined for the current dataset.
-                Run dataset.define_ADC_config(...)
-
-        Returns:
-            float: the calculated gain.
-        &#34;&#34;&#34;
-
-        if not isinstance(self.ADC_config, dict):
-            raise ValueError(&#39;Define ADC_config first.&#39;)
-
-        ADC_range = self.ADC_config[&#39;ADC_range&#39;]
-        ADC_impedance = self.ADC_config[&#39;ADC_impedance&#39;]
-        F_amp = self.ADC_config[&#39;F_amp&#39;]
-        ADC_res = self.ADC_config[&#39;ADC_res&#39;]
-        q_e = self.ADC_config[&#39;q_e&#39;]
-
-        gain = (ADC_range * spe_area * 1e-9 / ADC_impedance / F_amp /
-                ADC_res / q_e)
-
-        return gain
-
-    def compute_properties_of_dataset(self,
-                                      length_cut_min: int = 4,
-                                      length_cut_max: int = 20) -&gt; pd.DataFrame:
-        &#34;&#34;&#34;Calculate the gain, DCR, CTP and BV for the dataset in a single
-        line!
-
-        Args:
-            temp (float): temperature to consider in the dataset.
-            module (int): module to load.
-            channel (str): channel to load.
-            length_cut_min (int): lower bound accepted for the length of
-                peaks. Defaults to 4.
-            length_cut_max (int): upper bound accepted for the length of
-                peaks. Defaults to 20.
-
-        Returns:
-            pd.DataFrame: dataframe with all the computed properties with
-                the columns [&#39;V&#39;,&#39;T&#39;,&#39;path&#39;,&#39;module&#39;,&#39;channel&#39;,&#39;Gain&#39;,&#39;DCR&#39;,
-                &#39;CTP&#39;,&#39;DCR_error&#39;,&#39;CTP_error&#39;,&#39;BV&#39;,&#39;OV&#39;]
-        &#34;&#34;&#34;
-
-        assert isinstance(self.data, dict), (&#39;Woops, no data found! Load&#39;
-                                             &#39; data into the dataset first&#39;)
-
-        voltage_list = self.voltages
-
-        _results_dataset = pd.DataFrame(columns=[&#39;T&#39;, &#39;V&#39;, &#39;pe_area&#39;, &#39;Gain&#39;,
-                                                 &#39;res&#39;, &#39;DCR&#39;, &#39;DCR_error&#39;,
-                                                 &#39;CTP&#39;, &#39;CTP_error&#39;])
-
-        for _volt in voltage_list:
-            # select voltage
-            df = self.data[_volt]
-            if self.plots_flag == True:
-                plot_name_1pe_fit = (f&#39;{self.temp}K_{_volt}V_mod{self.module}_&#39;
-                                     f&#39;ch{self.channel}&#39;)
-            else:
-                plot_name_1pe_fit = False
-
-            # Get SPE value from Gaussian fit
-            (A, mu, sigma), cov = self.get_1pe_value_fit(
-                df, plot=plot_name_1pe_fit)
-
-            # Calculate DCR and CTP
-            DCR, DCR_error, CTP, CTP_error = self.get_DCR(
-                df=df,
-                length_cut_min=length_cut_min,
-                length_cut_max=length_cut_max,
-                pe_area=mu,
-                sensor_area=self.SiPM_config[&#39;sensor_area&#39;],
-                t=self.SiPM_config[&#39;livetime&#39;])
-
-            # Calculate gain
-            gain = self.get_gain(mu)
-
-            # Merge into rolling dataframe (I know it&#39;s slow... make a PR, pls)
-            _results_dataset = pd.concat((_results_dataset,
-                                          pd.DataFrame({&#39;T&#39;: [self.temp],
-                                                        &#39;V&#39;: [_volt],
-                                                        &#39;pe_area&#39;: [mu],
-                                                        &#39;Gain&#39;: [gain],
-                                                        &#39;res&#39;: [mu / sigma],
-                                                        &#39;DCR&#39;: [DCR],
-                                                        &#39;DCR_error&#39;: [DCR_error],
-                                                        &#39;CTP&#39;: [CTP],
-                                                        &#39;CTP_error&#39;: [CTP_error]})
-                                          ), ignore_index=True)
-
-        # Compute BV from gain(V) curve and update df
-        if self.plots_flag == True:
-            plot_BV = f&#39;BV_mod{self.module}_ch{self.channel}&#39;
-        else:
-            plot_BV = False
-        _results_dataset = compute_BV(_results_dataset, plot_BV)
-
-        return _results_dataset</code></pre>
+        print(f&#39;Your lovely CTP is: ({CTP*100:.2f} +- {CTP_error*100:.2f})%&#39;)</code></pre>
 </details>
 <h3>Subclasses</h3>
 <ul class="hlist">
-<li><a title="pylars.analysis.fingerplot.fingerplot_dataset" href="fingerplot.html#pylars.analysis.fingerplot.fingerplot_dataset">fingerplot_dataset</a></li>
+<li><a title="pylars.analysis.darkcount.DCR_dataset" href="#pylars.analysis.darkcount.DCR_dataset">DCR_dataset</a></li>
 </ul>
 <h3>Static methods</h3>
 <dl>
-<dt id="pylars.analysis.darkcount.DCR_dataset.get_1pe_rough"><code class="name flex">
-<span>def <span class="ident">get_1pe_rough</span></span>(<span>df: pandas.core.frame.DataFrame, length_cut: int, bins: int = 200) ‑> tuple</span>
+<dt id="pylars.analysis.darkcount.DCR_analysis.get_1pe_rough"><code class="name flex">
+<span>def <span class="ident">get_1pe_rough</span></span>(<span>df: pandas.core.frame.DataFrame, length_cut_min: int, length_cut_max: int, bins: int = 200, use_scipy_find_peaks: bool = False) ‑> tuple</span>
 </code></dt>
 <dd>
 <div class="desc"><p>From an event df (1 channel), find the rough position of the
 SPE from the DCR vs threshold curve and its derivative</p>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>df</code></strong> :&ensp;<code>_type_</code></dt>
-<dd><em>description</em></dd>
-<dt><strong><code>length_cut</code></strong> :&ensp;<code>_type_</code></dt>
-<dd><em>description</em></dd>
+<dt><strong><code>df</code></strong> :&ensp;<code>pd.DataFrame</code></dt>
+<dd>dataframe with the processed data.</dd>
+<dt><strong><code>length_cut_min</code></strong> :&ensp;<code>int</code></dt>
+<dd>minimum value of lenght to consider</dd>
+<dt><strong><code>length_cut_max</code></strong> :&ensp;<code>int</code></dt>
+<dd>maximum value of lenght to consider</dd>
 <dt><strong><code>bins</code></strong> :&ensp;<code>intorlist</code>, optional</dt>
 <dd>number of bins to make the are
 histogram or list of bin edges to consider on the histogram.
@@ -1187,7 +1254,8 @@ Defaults to 200.</dd>
 <h2 id="returns">Returns</h2>
 <dl>
 <dt><code>tuple</code></dt>
-<dd><em>description</em></dd>
+<dd>computed arrays: area_hist_x, DCR_values, DCR_der_x_points,
+DCR_der_y_points, min_area_x</dd>
 </dl></div>
 <details class="source">
 <summary>
@@ -1195,36 +1263,57 @@ Defaults to 200.</dd>
 </summary>
 <pre><code class="python">@classmethod
 def get_1pe_rough(cls, df: pd.DataFrame,
-                  length_cut: int,
-                  bins: int or list = 200) -&gt; tuple:
+                  length_cut_min: int,
+                  length_cut_max: int,
+                  bins: int or list = 200,
+                  use_scipy_find_peaks: bool = False) -&gt; tuple:
     &#34;&#34;&#34;From an event df (1 channel), find the rough position of the
     SPE from the DCR vs threshold curve and its derivative
 
     Args:
-        df (_type_): _description_
-        length_cut (_type_): _description_
+        df (pd.DataFrame): dataframe with the processed data.
+        length_cut_min (int): minimum value of lenght to consider
+        length_cut_max (int): maximum value of lenght to consider
         bins (intorlist, optional): number of bins to make the are
             histogram or list of bin edges to consider on the histogram.
             Defaults to 200.
 
     Returns:
-        tuple: _description_
+        tuple: computed arrays: area_hist_x, DCR_values, DCR_der_x_points,
+            DCR_der_y_points, min_area_x
     &#34;&#34;&#34;
 
     (area_hist_x, DCR_values) = cls.get_DCR_above_threshold_values(
-        df, length_cut, bins)
+        df, length_cut_min, length_cut_max, bins, output=&#39;values&#39;)  # type: ignore
     grad = np.gradient(DCR_values)
     grad_spline = itp.UnivariateSpline(area_hist_x, grad)
     # , s = len(area_hist_x)*3)
-    _x = np.linspace(area_hist_x[0], area_hist_x[-1], 500)
-    _y = grad_spline(_x)
-    min_idx = np.where(_y == min(_y))
-    min_area_x = _x[min_idx][0]
-    return area_hist_x, DCR_values, _x, _y, min_area_x</code></pre>
+    DCR_der_x_points = np.linspace(area_hist_x[0], area_hist_x[-1], bins)
+    DCR_der_y_points = grad_spline(DCR_der_x_points)
+
+    if use_scipy_find_peaks:
+        pks, props = find_peaks(-1 * DCR_der_y_points,
+                                prominence=20)
+        peaks_area_values = DCR_der_x_points[pks]
+        if len(peaks_area_values) == 0:
+            print(&#39;Could not find any peaks&#39;)
+            min_area_x = np.nan
+        elif len(peaks_area_values) &gt; 0:
+            if (peaks_area_values[0] &gt; 2000 *
+                    200) or (len(peaks_area_values) == 1):
+                min_area_x = peaks_area_values[0]
+            else:
+                min_area_x = peaks_area_values[1]
+    else:
+        min_idx = np.where(DCR_der_y_points == min(DCR_der_y_points))
+        min_area_x = DCR_der_x_points[min_idx][0]
+
+    return (area_hist_x, DCR_values, DCR_der_x_points,
+            DCR_der_y_points, min_area_x)  # type:ignore</code></pre>
 </details>
 </dd>
-<dt id="pylars.analysis.darkcount.DCR_dataset.get_1pe_value_fit"><code class="name flex">
-<span>def <span class="ident">get_1pe_value_fit</span></span>(<span>df: pandas.core.frame.DataFrame, length_cut: int = 5, plot: Union[bool, str] = False) ‑> tuple</span>
+<dt id="pylars.analysis.darkcount.DCR_analysis.get_1pe_value_fit"><code class="name flex">
+<span>def <span class="ident">get_1pe_value_fit</span></span>(<span>df: pandas.core.frame.DataFrame, length_cut_min: int = 5, length_cut_max: int = 80, plot: Union[bool, str] = False, use_scipy_find_peaks: bool = False) ‑> tuple</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Try to fit the SPE peak in the area histogram and return the
@@ -1251,8 +1340,10 @@ the peaks for noise suppression. Defaults to 5.</dd>
 <pre><code class="python">@classmethod
 def get_1pe_value_fit(cls,
                       df: pd.DataFrame,
-                      length_cut: int = 5,
-                      plot: Union[bool, str] = False) -&gt; tuple:
+                      length_cut_min: int = 5,
+                      length_cut_max: int = 80,
+                      plot: Union[bool, str] = False,
+                      use_scipy_find_peaks: bool = False) -&gt; tuple:
     &#34;&#34;&#34;Try to fit the SPE peak in the area histogram and return the
     Gaussian paramenters.
 
@@ -1267,14 +1358,17 @@ def get_1pe_value_fit(cls,
     &#34;&#34;&#34;
 
     (area_hist_x, DCR_values, DCR_der_x_points,
-     DCR_der_y_points, min_area_x) = cls.get_1pe_rough(df, length_cut)
+     DCR_der_y_points, min_area_x) = cls.get_1pe_rough(
+        df, length_cut_min, length_cut_max,
+        use_scipy_find_peaks=use_scipy_find_peaks)
 
     if plot != False:
         pylars.plotting.plotanalysis.plot_DCR_curve(
             plot, area_hist_x, DCR_values, DCR_der_x_points,
             DCR_der_y_points, min_area_x)
 
-    area_hist = np.histogram(df[df[&#39;length&#39;] &gt; length_cut][&#39;area&#39;],
+    area_hist = np.histogram(df[(df[&#39;length&#39;] &gt; length_cut_min) &amp;
+                                (df[&#39;length&#39;] &lt; length_cut_max)][&#39;area&#39;],
                              bins=np.linspace(0.5 * min_area_x, 1.5 * min_area_x, 300))
     area_hist_x = area_hist[1]
     area_hist_x = (
@@ -1286,13 +1380,13 @@ def get_1pe_value_fit(cls,
 
     if plot != False:
         pylars.plotting.plotanalysis.plot_SPE_fit(
-            df, length_cut, plot, area_hist_x, min_area_x, A, mu, sigma)
+            df, length_cut_min, length_cut_max, plot, area_hist_x, min_area_x, A, mu, sigma)
 
     return (A, mu, sigma), cov</code></pre>
 </details>
 </dd>
-<dt id="pylars.analysis.darkcount.DCR_dataset.get_DCR"><code class="name flex">
-<span>def <span class="ident">get_DCR</span></span>(<span>df: pandas.core.frame.DataFrame, length_cut_min: int, length_cut_max: int, pe_area: float, sensor_area: float, t: float) ‑> tuple</span>
+<dt id="pylars.analysis.darkcount.DCR_analysis.get_DCR"><code class="name flex">
+<span>def <span class="ident">get_DCR</span></span>(<span>df: pandas.core.frame.DataFrame, length_cut_min: int, length_cut_max: int, spe_area: float, sensor_area: float, t: float) ‑> tuple</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Compute the dark count rate (DCR) and crosstalk probability
@@ -1305,7 +1399,7 @@ def get_1pe_value_fit(cls,
 <dd>low length cut to apply</dd>
 <dt><strong><code>length_cut_max</code></strong> :&ensp;<code>int</code></dt>
 <dd>high length cut to apply</dd>
-<dt><strong><code>pe_area</code></strong> :&ensp;<code>float</code></dt>
+<dt><strong><code>spe_area</code></strong> :&ensp;<code>float</code></dt>
 <dd>SPE area</dd>
 <dt><strong><code>sensor_area</code></strong> :&ensp;<code>float</code></dt>
 <dd>effective are of the sensor</dd>
@@ -1326,7 +1420,7 @@ CTP value</dd>
 def get_DCR(df: pd.DataFrame,
             length_cut_min: int,
             length_cut_max: int,
-            pe_area: float,
+            spe_area: float,
             sensor_area: float,
             t: float) -&gt; tuple:
     &#34;&#34;&#34;Compute the dark count rate (DCR) and crosstalk probability
@@ -1336,7 +1430,7 @@ def get_DCR(df: pd.DataFrame,
         df (pd.DataFrame): DataFrame of the dataset (single ch)
         length_cut_min (int): low length cut to apply
         length_cut_max (int): high length cut to apply
-        pe_area (float): SPE area
+        spe_area (float): SPE area
         sensor_area (float): effective are of the sensor
         t (float): livetime of the dataset
 
@@ -1344,8 +1438,8 @@ def get_DCR(df: pd.DataFrame,
         tuple: DCR value, error of DCR value, CTP value, error of
             CTP value
     &#34;&#34;&#34;
-    pe_0_5 = pe_area * 0.5
-    pe_1_5 = pe_area * 1.5
+    pe_0_5 = spe_area * 0.5
+    pe_1_5 = spe_area * 1.5
 
     DC_0_5 = len(df[(df[&#39;length&#39;] &gt; length_cut_min) &amp;
                     (df[&#39;length&#39;] &lt; length_cut_max) &amp;
@@ -1367,132 +1461,8 @@ def get_DCR(df: pd.DataFrame,
     return DCR, DCR_error, CTP, CTP_error</code></pre>
 </details>
 </dd>
-<dt id="pylars.analysis.darkcount.DCR_dataset.get_DCR_above_threshold_interp1d"><code class="name flex">
-<span>def <span class="ident">get_DCR_above_threshold_interp1d</span></span>(<span>df: pandas.core.frame.DataFrame, length_cut: int = 5, bins: int = 200) ‑> scipy.interpolate.interpolate.interp1d</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Computes the event rate in a sweep of area thresholds and
-returns a 1D interpolation object of the curve.</p>
-<h2 id="args">Args</h2>
-<dl>
-<dt><strong><code>df</code></strong> :&ensp;<code>pd.DataFrame</code></dt>
-<dd>a pd.DataFrame with the series "area" and
-"length".</dd>
-<dt><strong><code>length_cut</code></strong> :&ensp;<code>int</code>, optional</dt>
-<dd>cut to impose on the length of
-the peaks for noise suppression. Defaults to 5.</dd>
-<dt><strong><code>bins</code></strong> :&ensp;<code>intorlist</code>, optional</dt>
-<dd>number of bins to make the are
-histogram or list of bin edges to consider on the histogram.
-Defaults to 200.</dd>
-</dl>
-<h2 id="returns">Returns</h2>
-<dl>
-<dt><code>itp.interp1d</code></dt>
-<dd>1D interpolation object of the DCR vs area
-threshold curve.</dd>
-</dl></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">@classmethod
-def get_DCR_above_threshold_interp1d(cls, df: pd.DataFrame,
-                                     length_cut: int = 5,
-                                     bins: int or list = 200
-                                     ) -&gt; itp.interp1d:
-    &#34;&#34;&#34;Computes the event rate in a sweep of area thresholds and
-    returns a 1D interpolation object of the curve.
-
-    Args:
-        df (pd.DataFrame): a pd.DataFrame with the series &#34;area&#34; and
-            &#34;length&#34;.
-        length_cut (int, optional): cut to impose on the length of
-            the peaks for noise suppression. Defaults to 5.
-        bins (intorlist, optional): number of bins to make the are
-            histogram or list of bin edges to consider on the histogram.
-            Defaults to 200.
-
-    Returns:
-        itp.interp1d: 1D interpolation object of the DCR vs area
-            threshold curve.
-    &#34;&#34;&#34;
-    area_hist = np.histogram(df[df[&#39;length&#39;] &gt; length_cut][&#39;area&#39;],
-                             bins=bins)
-    area_hist_x = area_hist[1]
-    area_hist_x = (area_hist_x +
-                   (area_hist_x[1] - area_hist_x[0]) / 2)[:-1]
-    area_hist_y = area_hist[0]
-    DCR_values = np.flip(np.cumsum(np.flip(area_hist_y)))
-    DCR_func = itp.interp1d(area_hist_x, DCR_values)
-
-    return DCR_func</code></pre>
-</details>
-</dd>
-<dt id="pylars.analysis.darkcount.DCR_dataset.get_DCR_above_threshold_spline"><code class="name flex">
-<span>def <span class="ident">get_DCR_above_threshold_spline</span></span>(<span>df: pandas.core.frame.DataFrame, length_cut: int = 5, bins: int = 200, **kwargs) ‑> scipy.interpolate.fitpack2.UnivariateSpline</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Computes the event rate in a sweep of area thresholds and
-returns a spline object of the curve.</p>
-<h2 id="args">Args</h2>
-<dl>
-<dt><strong><code>df</code></strong> :&ensp;<code>pd.DataFrame</code></dt>
-<dd>a pd.DataFrame with the series "area" and
-"length".</dd>
-<dt><strong><code>length_cut</code></strong> :&ensp;<code>int</code>, optional</dt>
-<dd>cut to impose on the length of
-the peaks for noise suppression. Defaults to 5.</dd>
-<dt><strong><code>bins</code></strong> :&ensp;<code>intorlist</code>, optional</dt>
-<dd>number of bins to make the are
-histogram or list of bin edges to consider on the histogram.
-Defaults to 200.</dd>
-</dl>
-<h2 id="returns">Returns</h2>
-<dl>
-<dt><code>itp.UnivariateSpline</code></dt>
-<dd>spline object of the DCR vs area
-threshold curve.</dd>
-</dl></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">@classmethod
-def get_DCR_above_threshold_spline(cls, df: pd.DataFrame,
-                                   length_cut: int = 5,
-                                   bins: int or list = 200,
-                                   **kwargs) -&gt; itp.UnivariateSpline:
-    &#34;&#34;&#34;Computes the event rate in a sweep of area thresholds and
-    returns a spline object of the curve.
-
-    Args:
-        df (pd.DataFrame): a pd.DataFrame with the series &#34;area&#34; and
-            &#34;length&#34;.
-        length_cut (int, optional): cut to impose on the length of
-            the peaks for noise suppression. Defaults to 5.
-        bins (intorlist, optional): number of bins to make the are
-            histogram or list of bin edges to consider on the histogram.
-            Defaults to 200.
-
-    Returns:
-        itp.UnivariateSpline: spline object of the DCR vs area
-            threshold curve.
-    &#34;&#34;&#34;
-    area_hist = np.histogram(df[df[&#39;length&#39;] &gt; length_cut][&#39;area&#39;],
-                             bins=bins)
-    area_hist_x = area_hist[1]
-    area_hist_x = (area_hist_x +
-                   (area_hist_x[1] - area_hist_x[0]) / 2)[:-1]
-    area_hist_y = area_hist[0]
-    DCR_values = np.flip(np.cumsum(np.flip(area_hist_y)))
-    DCR_func = itp.UnivariateSpline(area_hist_x, DCR_values, **kwargs)
-
-    return DCR_func</code></pre>
-</details>
-</dd>
-<dt id="pylars.analysis.darkcount.DCR_dataset.get_DCR_above_threshold_values"><code class="name flex">
-<span>def <span class="ident">get_DCR_above_threshold_values</span></span>(<span>df: pandas.core.frame.DataFrame, length_cut: int = 5, bins: int = 200) ‑> tuple</span>
+<dt id="pylars.analysis.darkcount.DCR_analysis.get_DCR_above_threshold_values"><code class="name flex">
+<span>def <span class="ident">get_DCR_above_threshold_values</span></span>(<span>df: pandas.core.frame.DataFrame, length_cut_min: int = 5, length_cut_max: int = 80, bins: int = 200, output: str = 'values', **kwargs) ‑> Union[tuple, scipy.interpolate.fitpack2.UnivariateSpline, scipy.interpolate.interpolate.interp1d, NoneType]</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Computes the event rate in a sweep of area thresholds and
@@ -1502,13 +1472,19 @@ returns the pair [area thersholds, DCR values]</p>
 <dt><strong><code>df</code></strong> :&ensp;<code>pd.DataFrame</code></dt>
 <dd>a pd.DataFrame with the series "area" and
 "length".</dd>
-<dt><strong><code>length_cut</code></strong> :&ensp;<code>int</code>, optional</dt>
-<dd>cut to impose on the length of
-the peaks for noise suppression. Defaults to 5.</dd>
+<dt><strong><code>length_cut_min</code></strong> :&ensp;<code>int</code>, optional</dt>
+<dd>cut to impose on the minimum
+length of the peaks for noise suppression. Defaults to 5.</dd>
+<dt><strong><code>length_cut_max</code></strong> :&ensp;<code>int</code>, optional</dt>
+<dd>cut to impose on the maximum
+length of the peaks for noise suppression. Defaults to 5.</dd>
 <dt><strong><code>bins</code></strong> :&ensp;<code>intorlist</code>, optional</dt>
 <dd>number of bins to make the are
 histogram or list of bin edges to consider on the histogram.
 Defaults to 200.</dd>
+<dt><strong><code>output</code></strong> :&ensp;<code>str</code></dt>
+<dd>type of output. Can be 'values', 'spline' or
+'interp1d'</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -1521,24 +1497,41 @@ Defaults to 200.</dd>
 </summary>
 <pre><code class="python">@classmethod
 def get_DCR_above_threshold_values(cls, df: pd.DataFrame,
-                                   length_cut: int = 5,
-                                   bins: int or list = 200) -&gt; tuple:
+                                   length_cut_min: int = 5,
+                                   length_cut_max: int = 80,
+                                   bins: int or list = 200,
+                                   output: str = &#39;values&#39;,
+                                   **kwargs) -&gt; Union[
+        tuple,
+        itp.UnivariateSpline,
+        itp.interp1d,
+        None]:
     &#34;&#34;&#34;Computes the event rate in a sweep of area thresholds and
     returns the pair [area thersholds, DCR values]
 
     Args:
         df (pd.DataFrame): a pd.DataFrame with the series &#34;area&#34; and
             &#34;length&#34;.
-        length_cut (int, optional): cut to impose on the length of
-            the peaks for noise suppression. Defaults to 5.
+        length_cut_min (int, optional): cut to impose on the minimum
+            length of the peaks for noise suppression. Defaults to 5.
+        length_cut_max (int, optional): cut to impose on the maximum
+            length of the peaks for noise suppression. Defaults to 5.
         bins (intorlist, optional): number of bins to make the are
             histogram or list of bin edges to consider on the histogram.
             Defaults to 200.
+        output (str): type of output. Can be &#39;values&#39;, &#39;spline&#39; or
+            &#39;interp1d&#39;
 
     Returns:
         tuple: pair of np.ndarrays (area thersholds, DCR values)
     &#34;&#34;&#34;
-    area_hist = np.histogram(df[df[&#39;length&#39;] &gt; length_cut][&#39;area&#39;],
+
+    if output not in [&#39;values&#39;, &#39;spline&#39;, &#39;interp1d&#39;]:
+        raise NotImplementedError(&#34;Specifiy a valid output. Options are &#34;
+                                  &#34;&#39;values&#39;, &#39;spline&#39; or &#39;interp1d&#39;.&#34;)
+
+    area_hist = np.histogram(df[(df[&#39;length&#39;] &gt; length_cut_min) &amp;
+                                (df[&#39;length&#39;] &lt; length_cut_max)][&#39;area&#39;],
                              bins=bins)
     area_hist_x = area_hist[1]
     area_hist_x = (area_hist_x +
@@ -1547,10 +1540,96 @@ def get_DCR_above_threshold_values(cls, df: pd.DataFrame,
 
     DCR_values = np.flip(np.cumsum(np.flip(area_hist_y)))
 
-    return (area_hist_x, DCR_values)</code></pre>
+    if output == &#39;values&#39;:
+        return (area_hist_x, DCR_values)
+    elif output == &#39;spline&#39;:
+        DCR_func = itp.UnivariateSpline(area_hist_x, DCR_values, **kwargs)
+        return DCR_func
+    elif output == &#39;interp1d&#39;:
+        DCR_func = itp.interp1d(area_hist_x, DCR_values)
+        return DCR_func</code></pre>
 </details>
 </dd>
-<dt id="pylars.analysis.darkcount.DCR_dataset.print_DCR_CTP"><code class="name flex">
+<dt id="pylars.analysis.darkcount.DCR_analysis.get_DCR_amplitude"><code class="name flex">
+<span>def <span class="ident">get_DCR_amplitude</span></span>(<span>df: pandas.core.frame.DataFrame, length_cut_min: int, length_cut_max: int, pe_amplitude: float, pe_amplitude_std: float, sensor_area: float, t: float) ‑> tuple</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Compute the dark count rate (DCR) and crosstalk probability
+(CTP) of a dataset, amplitude based.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>df</code></strong> :&ensp;<code>pd.DataFrame</code></dt>
+<dd>DataFrame of the dataset (single ch)</dd>
+<dt><strong><code>length_cut_min</code></strong> :&ensp;<code>int</code></dt>
+<dd>low length cut to apply</dd>
+<dt><strong><code>length_cut_max</code></strong> :&ensp;<code>int</code></dt>
+<dd>high length cut to apply</dd>
+<dt><strong><code>pe_amplitude</code></strong> :&ensp;<code>float</code></dt>
+<dd>SPE amplitude</dd>
+<dt><strong><code>sensor_area</code></strong> :&ensp;<code>float</code></dt>
+<dd>effective are of the sensor</dd>
+<dt><strong><code>t</code></strong> :&ensp;<code>float</code></dt>
+<dd>livetime of the dataset</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tuple</code></dt>
+<dd>DCR value, error of DCR value, CTP value, error of
+CTP value</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@staticmethod
+def get_DCR_amplitude(df: pd.DataFrame,
+                      length_cut_min: int,
+                      length_cut_max: int,
+                      pe_amplitude: float,
+                      pe_amplitude_std: float,
+                      sensor_area: float,
+                      t: float) -&gt; tuple:
+    &#34;&#34;&#34;Compute the dark count rate (DCR) and crosstalk probability
+    (CTP) of a dataset, amplitude based.
+
+    Args:
+        df (pd.DataFrame): DataFrame of the dataset (single ch)
+        length_cut_min (int): low length cut to apply
+        length_cut_max (int): high length cut to apply
+        pe_amplitude (float): SPE amplitude
+        sensor_area (float): effective are of the sensor
+        t (float): livetime of the dataset
+
+    Returns:
+        tuple: DCR value, error of DCR value, CTP value, error of
+            CTP value
+    &#34;&#34;&#34;
+    pe_0_5 = pe_amplitude * 0.5
+    pe_1_5 = pe_amplitude * 1.5
+    pe_m5sigma = pe_amplitude - 5 * pe_amplitude_std
+    pe_p5sigma = pe_amplitude + 5 * pe_amplitude_std
+
+    DC_0_5 = len(df[(df[&#39;length&#39;] &gt; length_cut_min) &amp;
+                    (df[&#39;length&#39;] &lt; length_cut_max) &amp;
+                    (df[&#39;amplitude&#39;] &lt; pe_p5sigma)])
+    DC_1_5 = len(df[(df[&#39;length&#39;] &gt; length_cut_min) &amp;
+                    (df[&#39;length&#39;] &lt; length_cut_max) &amp;
+                    (df[&#39;area&#39;] &lt; pe_m5sigma)])
+
+    DC_0_5_error = np.sqrt(DC_0_5)
+    DC_1_5_error = np.sqrt(DC_1_5)
+
+    DCR = DC_0_5 / sensor_area / t
+    DCR_error = DC_0_5_error / sensor_area / t
+
+    CTP = DC_1_5 / DC_0_5
+    CTP_error = np.sqrt((DC_0_5_error / DC_1_5)**2 +
+                        (DC_0_5 * DC_1_5_error / (DC_1_5)**2)**2)
+
+    return DCR, DCR_error, CTP, CTP_error</code></pre>
+</details>
+</dd>
+<dt id="pylars.analysis.darkcount.DCR_analysis.print_DCR_CTP"><code class="name flex">
 <span>def <span class="ident">print_DCR_CTP</span></span>(<span>DCR: float, DCR_error: float, CTP: float, CTP_error: float) ‑> NoneType</span>
 </code></dt>
 <dd>
@@ -1589,29 +1668,628 @@ def print_DCR_CTP(DCR: float, DCR_error: float,
 </details>
 </dd>
 </dl>
+</dd>
+<dt id="pylars.analysis.darkcount.DCR_dataset"><code class="flex name class">
+<span>class <span class="ident">DCR_dataset</span></span>
+<span>(</span><span>run: <a title="pylars.utils.input.run" href="../utils/input.html#pylars.utils.input.run">run</a>, temperature: float, module: int, channel: str, processor: <a title="pylars.processing.rawprocessor.run_processor" href="../processing/rawprocessor.html#pylars.processing.rawprocessor.run_processor">run_processor</a>)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Object class to hold dark count related instances and
+methods. Collects all the data and properties of a single MMPC,
+meaning the pair (module, channel) for all the available voltages at
+a certain temperature.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class DCR_dataset(DCR_analysis):
+    &#34;&#34;&#34;Object class to hold dark count related instances and
+    methods. Collects all the data and properties of a single MMPC,
+    meaning the pair (module, channel) for all the available voltages at
+    a certain temperature.
+    &#34;&#34;&#34;
+
+    __version__ = &#39;0.0.2&#39;
+
+    def __init__(self, run: pylars.utils.input.run, temperature: float,
+                 module: int, channel: str,
+                 processor: pylars.processing.rawprocessor.run_processor):
+
+        self.run = run
+        self.temp = temperature
+        self.module = module
+        self.channel = channel
+        self.process = processor
+        self.voltages = self.get_voltages_available()
+        self.plots_flag = False
+        self.livetimes = self.get_livetimes()
+
+        self.set_standard_cuts()
+
+        # There are better ways to set these options but this is stil
+        # better then a lot of flags
+        self.use_scipy_find_peaks = False
+        self.amplitude_based = False
+
+    def set_plots_flag(self, flag: bool) -&gt; None:
+        &#34;&#34;&#34;Set if computing properties makes plots (True) or not (False).
+        Assumes a ./figures/ directory exists.
+
+        Args:
+            flag (bool): True for plotting stuff, False for not making nice
+                pictures (plots) to hang on the wall. Yes, I hang plots on
+                my bedroom wall and it looks nice.
+        &#34;&#34;&#34;
+        self.plots_flag = flag
+
+    def define_SiPM_config(self,
+                           sensor_area: float = 12 * 12,
+                           ) -&gt; None:
+        r&#34;&#34;&#34;Define the SiPM data related quantities for the dataset.
+
+        Args:
+            sensor_area (float, optional): Area of the photosensor (mm\*\*2).
+                Defaults to 12\*12.
+        &#34;&#34;&#34;
+        SiPM_config = {&#39;sensor_area&#39;: sensor_area,
+                       }
+
+        self.SiPM_config = SiPM_config
+
+    def get_voltages_available(self) -&gt; np.ndarray:
+        &#34;&#34;&#34;Checks the loaded run for which voltages are available for the
+        defined temperature.
+
+        Returns:
+            np.ndarray: array of the available voltages
+        &#34;&#34;&#34;
+
+        voltages = []
+        for _dataset in self.run.datasets:
+            if (_dataset.temp == self.temp) and (_dataset.kind == &#39;DCR&#39;):
+                voltages.append(_dataset.vbias)
+        voltages = np.unique(voltages)
+
+        return voltages
+
+    def get_livetimes(self) -&gt; dict:
+        &#34;&#34;&#34;Fetch the livetimes of a dataset.
+
+        Based on the propertied of the DCR_dataset, creates its dataset object
+        and computes the livetime for each vbias by multiplying the number
+        of samples per waveform with the number of waveforms in the dataset
+        and the duration of a sample (given by `self.run.ADC_config[&#39;dt&#39;]`).
+        Provides the result in dict format where the keys are the vbias of
+        the dataset.
+
+        Returns:
+            dict: _description_
+        &#34;&#34;&#34;
+        livetimes = {}
+        for v in self.voltages:
+
+            # Need all this to find the correct path...
+            self.datasets_df = self.run.get_run_df()
+            selection = ((self.datasets_df[&#39;kind&#39;] == &#39;DCR&#39;) &amp;
+                         (self.datasets_df[&#39;vbias&#39;] == v) &amp;
+                         (self.datasets_df[&#39;temp&#39;] == self.temp) &amp;
+                         # to end with just one of the modules.
+                         # It&#39;s assumed both have the same number of
+                         # entries and size of entries
+                         (self.datasets_df[&#39;module&#39;] == 0))
+
+            ds_selected = self.datasets_df[selection]
+
+            assert len(
+                self.datasets_df[selection]) == 1, &#34;Found more than 1 ds with the same config. Help.&#34;
+
+            ds_temp = pylars.utils.input.dataset(path=str(ds_selected[&#39;path&#39;].values[0]),
+                                                 kind=&#39;DCR&#39;,
+                                                 module=0,
+                                                 temp=self.temp,
+                                                 vbias=v)
+            try:
+                n_waveforms, n_samples = ds_temp.read_sizes()
+                livetimes[v] = n_waveforms * \
+                    n_samples * self.run.ADC_config[&#39;dt&#39;]
+            except BaseException:
+                livetimes[v] = np.nan
+
+        return livetimes
+
+    def set_standard_cuts(self,
+                          cut_area_min: float = 5,
+                          cut_area_max: float = 1e6,
+                          cut_length_min: int = 4,
+                          cut_length_max: int = 70,
+                          cut_n_pulses_min: float = 0,
+                          cut_n_pulses_max: float = 2) -&gt; None:
+        &#34;&#34;&#34;Sets the cuts to use in analysis as object variables.
+
+        Args:
+            cut_area_min (float, optional): Area minimum value. Defaults to 5.
+            cut_area_max (float, optional): Area maximum value. Defaults
+                to 1e6.
+            cut_length_min (float, optional): Lenght minimum value.
+                Defaults to 4.
+            cut_length_max (float, optional): Lenght minimum value.
+                 Defaults to 70.
+            cut_n_pulses_min (float, optional): Minimum number of pulses in
+                the waveform. Defaults to 0.
+            cut_n_pulses_max (float, optional): Maximum number of pulses in
+                the waveform. Defaults to 2.
+        &#34;&#34;&#34;
+
+        self.cut_area_min = cut_area_min
+        self.cut_area_max = cut_area_max
+        self.cut_length_min = cut_length_min
+        self.cut_length_max = cut_length_max
+        self.cut_n_pulses_min = cut_n_pulses_min
+        self.cut_n_pulses_max = cut_n_pulses_max
+
+    def load_processed_data(self, force_processing: bool = False) -&gt; None:
+        &#34;&#34;&#34;For all the voltages of a DCR_dataset (smae temperature) looks
+        for already processed files to load. If force_processing=True and
+        no saved file is found, processes the dataset with standard
+        options (sigma = 5, N_baseline = 50).
+
+        Args:
+            force_processing (bool, optional): Flag to force processing
+                of raw data in case the processed dataset is not found.
+                Defaults to False.
+
+        Returns:
+            dict: dictionary with the data df for each voltage as a key.
+        &#34;&#34;&#34;
+        self.data = {}
+        for _voltage in tqdm(self.voltages,
+                             desc=f&#39;Loading processed data for DCR &#39; +
+                             f&#39;data at {self.temp}K: &#39;,
+                             total=len(self.voltages),
+                             leave=False):
+            processed_data = pylars.utils.output.processed_dataset(
+                run=self.run,
+                kind=&#39;DCR&#39;,
+                vbias=_voltage,
+                temp=self.temp,
+                path_processed=(&#39;/disk/gfs_atp/xenoscope/SiPMs/char_campaign/&#39;
+                                &#39;processed_data/&#39;),
+                process_hash=self.process.hash)
+            processed_data.load_data(force=force_processing)
+
+            _df = processed_data.data
+            mask = ((_df[&#39;module&#39;] == self.module) &amp;
+                    (_df[&#39;channel&#39;] == self.channel))
+
+            self.data[_voltage] = copy.deepcopy(_df[mask])
+
+    def compute_properties_of_dataset(
+            self,
+            use_n_pulse_wf: bool = False,
+            compute_BV_flag: bool = True,
+            amplitude_based: bool = False) -&gt; pd.DataFrame:
+        &#34;&#34;&#34;Calculate the gain, DCR, CTP and BV for the dataset in a single
+        line!
+
+        Args:
+            use_1_pulse_wf (bool):
+            compute_BV_flag (bool):
+
+        Returns:
+            pd.DataFrame: dataframe with all the computed properties with
+                the columns [&#39;T&#39;, &#39;V&#39;, &#39;SPE_area&#39;,&#39;SPE_area_error&#39;, &#39;Gain&#39;,
+                &#39;Gain_error&#39;, &#39;SPE_res&#39;, &#39;SPE_res_error&#39;, &#39;DCR&#39;,
+                &#39;DCR_error&#39;, &#39;CTP&#39;, &#39;CTP_error&#39;]
+        &#34;&#34;&#34;
+
+        assert isinstance(self.data, dict), (&#39;Woops, no data found! Load&#39;
+                                             &#39; data into the dataset first&#39;)
+
+        if amplitude_based:
+            raise NotImplementedError
+
+        voltage_list = self.voltages
+
+        _results_dataset = pd.DataFrame(
+            columns=[&#39;T&#39;, &#39;V&#39;, &#39;SPE_area&#39;, &#39;SPE_area_error&#39;, &#39;Gain&#39;,
+                     &#39;Gain_error&#39;, &#39;SPE_res&#39;, &#39;SPE_res_error&#39;, &#39;DCR&#39;,
+                     &#39;DCR_error&#39;, &#39;CTP&#39;, &#39;CTP_error&#39;])
+
+        for _volt in voltage_list:
+            # select voltage
+            df = self.data[_volt]
+            if use_n_pulse_wf == True:
+                df = df[(df[&#39;n_pulses&#39;] &gt; self.cut_n_pulses_min) &amp;
+                        (df[&#39;n_pulses&#39;] &lt;= self.cut_n_pulses_max)]
+            if self.plots_flag == True:
+                plot_name_1pe_fit = (f&#39;{self.temp}K_{_volt}V_mod{self.module}_&#39;
+                                     f&#39;ch{self.channel}&#39;)
+            else:
+                plot_name_1pe_fit = False
+
+            try:
+                # Get SPE value from Gaussian fit
+                (A, mu, sigma), cov = self.get_1pe_value_fit(
+                    df, plot=plot_name_1pe_fit,
+                    length_cut_min=self.cut_length_min,
+                    length_cut_max=self.cut_length_max,
+                    use_scipy_find_peaks=self.use_scipy_find_peaks)
+
+                A_err, mu_err, sigma_err = np.sqrt(np.diag(cov))
+
+                # Calculate DCR and CTP
+                DCR, DCR_error, CTP, CTP_error = self.get_DCR(
+                    df=df,
+                    length_cut_min=self.cut_length_min,
+                    length_cut_max=self.cut_length_max,
+                    spe_area=mu,
+                    sensor_area=self.SiPM_config[&#39;sensor_area&#39;],
+                    t=self.livetimes[_volt])
+
+                # Calculate gain
+                gain = get_gain(F_amp=self.run.ADC_config[&#39;F_amp&#39;],
+                                spe_area=mu,
+                                ADC_range=self.run.ADC_config[&#39;ADC_range&#39;],
+                                ADC_impedance=self.run.ADC_config[&#39;ADC_impedance&#39;],
+                                ADC_res=self.run.ADC_config[&#39;ADC_res&#39;],
+                                q_e=self.run.ADC_config[&#39;q_e&#39;])
+                gain_error = get_gain(F_amp=self.run.ADC_config[&#39;F_amp&#39;],
+                                      spe_area=mu_err,
+                                      ADC_range=self.run.ADC_config[&#39;ADC_range&#39;],
+                                      ADC_impedance=self.run.ADC_config[&#39;ADC_impedance&#39;],
+                                      ADC_res=self.run.ADC_config[&#39;ADC_res&#39;],
+                                      q_e=self.run.ADC_config[&#39;q_e&#39;])
+
+                SPE_res = np.abs(sigma / mu) * 100  # in %
+                SPE_res_err = np.sqrt(
+                    (sigma_err / mu)**2 + (sigma * mu_err / mu**2)**2) * 100  # in %
+
+                # Merge into rolling dataframe (I know it&#39;s slow... make a PR,
+                # pls)
+                _results_dataset = pd.concat(
+                    (_results_dataset,
+                     pd.DataFrame({&#39;T&#39;: [self.temp],
+                                   &#39;V&#39;: [_volt],
+                                   &#39;SPE_area&#39;: [mu],
+                                   &#39;SPE_area_error&#39;: [mu_err],
+                                   &#39;Gain&#39;: [gain],
+                                   &#39;Gain_error&#39;: [gain_error],
+                                   &#39;SPE_res&#39;: [SPE_res],
+                                   &#39;SPE_res_error&#39;: [SPE_res_err],
+                                   &#39;DCR&#39;: [DCR],
+                                   &#39;DCR_error&#39;: [DCR_error],
+                                   &#39;CTP&#39;: [CTP * 100],
+                                   &#39;CTP_error&#39;: [CTP_error * 100]})
+                     ), ignore_index=True
+                )
+            except BaseException:
+                print(f&#39;Could not compute properties of module {self.module}, &#39;
+                      f&#39;channel {self.channel}, {self.temp} K, {_volt} V. &#39;
+                      f&#39;Skipping dataset.&#39;)
+                _results_dataset = pd.concat(
+                    (_results_dataset,
+                     pd.DataFrame({&#39;T&#39;: [self.temp],
+                                   &#39;V&#39;: [_volt],
+                                   &#39;SPE_area&#39;: [np.nan],
+                                   &#39;SPE_area_error&#39;: [np.nan],
+                                   &#39;Gain&#39;: [np.nan],
+                                   &#39;Gain_error&#39;: [np.nan],
+                                   &#39;SPE_res&#39;: [np.nan],
+                                   &#39;SPE_res_error&#39;: [np.nan],
+                                   &#39;DCR&#39;: [np.nan],
+                                   &#39;DCR_error&#39;: [np.nan],
+                                   &#39;CTP&#39;: [np.nan],
+                                   &#39;CTP_error&#39;: [np.nan]})
+                     ), ignore_index=True
+                )
+
+        # Compute BV from gain(V) curve and update df
+        if compute_BV_flag == True:
+            if self.plots_flag == True:
+                plot_BV = f&#39;BV_mod{self.module}_ch{self.channel}&#39;
+            else:
+                plot_BV = False
+            _results_dataset, _a, _b, _b_err = compute_BV_df(
+                _results_dataset, plot_BV)
+
+        return _results_dataset
+
+    @staticmethod
+    def get_how_many_peaks_per_waveform(df: pd.DataFrame,
+                                        verbose: bool = False) -&gt; pd.DataFrame:
+        &#34;&#34;&#34;Finds how many peaks each waveform has.
+        Only looks in wavforms with at least 1 peak
+
+        Since commit 6f8e0c72b8e3e0bf7c5307941b49bdf57879d554 this method
+        is not needed as n_pulses is stored during processing.
+
+        Args:
+            df (pd.DataFrame): dataframe with the processed pulse data.
+            verbose (bool): print info during processing.
+
+        Returns:
+            pd.DataFrame: dataframe with the pairs: wf_number - pulse_count.
+        &#34;&#34;&#34;
+        t0 = time.time()
+        if verbose:
+            print(&#39;Starting counting peaks at:&#39;, t0)
+        wf_number_arr = np.array(df[&#39;wf_number&#39;].values)
+        waveforms_w_pulses, N_pulses = _get_how_many_peaks_per_waveform(
+            wf_number_arr)
+
+        pulse_count_df = pd.concat(
+            [pd.Series(waveforms_w_pulses, name=&#39;wf_number&#39;),
+             pd.Series(N_pulses, name=&#39;pulse_count&#39;)], axis=1
+        )
+        t1 = time.time()
+        if verbose:
+            print(&#39;Finished conting peaks at: &#39;, t1)
+            print(&#39;Took time in calc: &#39;, t1 - t0)
+        return pulse_count_df
+
+    def get_med_amplitude(self, df: pd.DataFrame,
+                          cut_mask: np.ndarray) -&gt; tuple:
+        &#34;&#34;&#34;Calculate the median and standard deviation of the distribution
+        of amplitudes, applying a given mask.
+
+        Args:
+            df (pd.DataFrame): dataframe with the processed pulse data
+            extra_cut_mask (np.ndarray): cut mask
+
+        Returns:
+            tuple: _description_
+        &#34;&#34;&#34;
+        med_amplitude = np.median(df[cut_mask][&#39;amplitude&#39;])
+        std_amplitude = np.std(df[cut_mask][&#39;amplitude&#39;])
+        return med_amplitude, std_amplitude
+
+    def compute_properties_of_dataset_amplitude_based(self,
+                                                      use_n_pulse_wf: bool = True) -&gt; pd.DataFrame:
+        &#34;&#34;&#34;NOT IMPLEMENTED - Needs review and merge with other compute method
+
+        Calculate the gain, DCR, CTP and BV for the dataset in a single
+        line! This is an alternative method to the main one, using amplitude
+        cuts instead of area cuts.
+
+        Returns:
+            pd.DataFrame: dataframe with all the computed properties with
+                the columns [&#39;V&#39;,&#39;T&#39;,&#39;path&#39;,&#39;module&#39;,&#39;channel&#39;,&#39;Gain&#39;,&#39;DCR&#39;,
+                &#39;CTP&#39;,&#39;DCR_error&#39;,&#39;CTP_error&#39;,&#39;BV&#39;,&#39;OV&#39;]
+        &#34;&#34;&#34;
+        raise NotImplementedError  # needs review and merging with normal</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li><a title="pylars.analysis.darkcount.DCR_analysis" href="#pylars.analysis.darkcount.DCR_analysis">DCR_analysis</a></li>
+</ul>
+<h3>Subclasses</h3>
+<ul class="hlist">
+<li><a title="pylars.analysis.fingerplot.fingerplot_dataset" href="fingerplot.html#pylars.analysis.fingerplot.fingerplot_dataset">fingerplot_dataset</a></li>
+</ul>
+<h3>Static methods</h3>
+<dl>
+<dt id="pylars.analysis.darkcount.DCR_dataset.get_how_many_peaks_per_waveform"><code class="name flex">
+<span>def <span class="ident">get_how_many_peaks_per_waveform</span></span>(<span>df: pandas.core.frame.DataFrame, verbose: bool = False) ‑> pandas.core.frame.DataFrame</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Finds how many peaks each waveform has.
+Only looks in wavforms with at least 1 peak</p>
+<p>Since commit 6f8e0c72b8e3e0bf7c5307941b49bdf57879d554 this method
+is not needed as n_pulses is stored during processing.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>df</code></strong> :&ensp;<code>pd.DataFrame</code></dt>
+<dd>dataframe with the processed pulse data.</dd>
+<dt><strong><code>verbose</code></strong> :&ensp;<code>bool</code></dt>
+<dd>print info during processing.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>pd.DataFrame</code></dt>
+<dd>dataframe with the pairs: wf_number - pulse_count.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@staticmethod
+def get_how_many_peaks_per_waveform(df: pd.DataFrame,
+                                    verbose: bool = False) -&gt; pd.DataFrame:
+    &#34;&#34;&#34;Finds how many peaks each waveform has.
+    Only looks in wavforms with at least 1 peak
+
+    Since commit 6f8e0c72b8e3e0bf7c5307941b49bdf57879d554 this method
+    is not needed as n_pulses is stored during processing.
+
+    Args:
+        df (pd.DataFrame): dataframe with the processed pulse data.
+        verbose (bool): print info during processing.
+
+    Returns:
+        pd.DataFrame: dataframe with the pairs: wf_number - pulse_count.
+    &#34;&#34;&#34;
+    t0 = time.time()
+    if verbose:
+        print(&#39;Starting counting peaks at:&#39;, t0)
+    wf_number_arr = np.array(df[&#39;wf_number&#39;].values)
+    waveforms_w_pulses, N_pulses = _get_how_many_peaks_per_waveform(
+        wf_number_arr)
+
+    pulse_count_df = pd.concat(
+        [pd.Series(waveforms_w_pulses, name=&#39;wf_number&#39;),
+         pd.Series(N_pulses, name=&#39;pulse_count&#39;)], axis=1
+    )
+    t1 = time.time()
+    if verbose:
+        print(&#39;Finished conting peaks at: &#39;, t1)
+        print(&#39;Took time in calc: &#39;, t1 - t0)
+    return pulse_count_df</code></pre>
+</details>
+</dd>
+</dl>
 <h3>Methods</h3>
 <dl>
 <dt id="pylars.analysis.darkcount.DCR_dataset.compute_properties_of_dataset"><code class="name flex">
-<span>def <span class="ident">compute_properties_of_dataset</span></span>(<span>self, length_cut_min: int = 4, length_cut_max: int = 20) ‑> pandas.core.frame.DataFrame</span>
+<span>def <span class="ident">compute_properties_of_dataset</span></span>(<span>self, use_n_pulse_wf: bool = False, compute_BV_flag: bool = True, amplitude_based: bool = False) ‑> pandas.core.frame.DataFrame</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Calculate the gain, DCR, CTP and BV for the dataset in a single
 line!</p>
 <h2 id="args">Args</h2>
+<p>use_1_pulse_wf (bool):
+compute_BV_flag (bool):</p>
+<h2 id="returns">Returns</h2>
 <dl>
-<dt><strong><code>temp</code></strong> :&ensp;<code>float</code></dt>
-<dd>temperature to consider in the dataset.</dd>
-<dt><strong><code>module</code></strong> :&ensp;<code>int</code></dt>
-<dd>module to load.</dd>
-<dt><strong><code>channel</code></strong> :&ensp;<code>str</code></dt>
-<dd>channel to load.</dd>
-<dt><strong><code>length_cut_min</code></strong> :&ensp;<code>int</code></dt>
-<dd>lower bound accepted for the length of
-peaks. Defaults to 4.</dd>
-<dt><strong><code>length_cut_max</code></strong> :&ensp;<code>int</code></dt>
-<dd>upper bound accepted for the length of
-peaks. Defaults to 20.</dd>
-</dl>
+<dt><code>pd.DataFrame</code></dt>
+<dd>dataframe with all the computed properties with
+the columns ['T', 'V', 'SPE_area','SPE_area_error', 'Gain',
+'Gain_error', 'SPE_res', 'SPE_res_error', 'DCR',
+'DCR_error', 'CTP', 'CTP_error']</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def compute_properties_of_dataset(
+        self,
+        use_n_pulse_wf: bool = False,
+        compute_BV_flag: bool = True,
+        amplitude_based: bool = False) -&gt; pd.DataFrame:
+    &#34;&#34;&#34;Calculate the gain, DCR, CTP and BV for the dataset in a single
+    line!
+
+    Args:
+        use_1_pulse_wf (bool):
+        compute_BV_flag (bool):
+
+    Returns:
+        pd.DataFrame: dataframe with all the computed properties with
+            the columns [&#39;T&#39;, &#39;V&#39;, &#39;SPE_area&#39;,&#39;SPE_area_error&#39;, &#39;Gain&#39;,
+            &#39;Gain_error&#39;, &#39;SPE_res&#39;, &#39;SPE_res_error&#39;, &#39;DCR&#39;,
+            &#39;DCR_error&#39;, &#39;CTP&#39;, &#39;CTP_error&#39;]
+    &#34;&#34;&#34;
+
+    assert isinstance(self.data, dict), (&#39;Woops, no data found! Load&#39;
+                                         &#39; data into the dataset first&#39;)
+
+    if amplitude_based:
+        raise NotImplementedError
+
+    voltage_list = self.voltages
+
+    _results_dataset = pd.DataFrame(
+        columns=[&#39;T&#39;, &#39;V&#39;, &#39;SPE_area&#39;, &#39;SPE_area_error&#39;, &#39;Gain&#39;,
+                 &#39;Gain_error&#39;, &#39;SPE_res&#39;, &#39;SPE_res_error&#39;, &#39;DCR&#39;,
+                 &#39;DCR_error&#39;, &#39;CTP&#39;, &#39;CTP_error&#39;])
+
+    for _volt in voltage_list:
+        # select voltage
+        df = self.data[_volt]
+        if use_n_pulse_wf == True:
+            df = df[(df[&#39;n_pulses&#39;] &gt; self.cut_n_pulses_min) &amp;
+                    (df[&#39;n_pulses&#39;] &lt;= self.cut_n_pulses_max)]
+        if self.plots_flag == True:
+            plot_name_1pe_fit = (f&#39;{self.temp}K_{_volt}V_mod{self.module}_&#39;
+                                 f&#39;ch{self.channel}&#39;)
+        else:
+            plot_name_1pe_fit = False
+
+        try:
+            # Get SPE value from Gaussian fit
+            (A, mu, sigma), cov = self.get_1pe_value_fit(
+                df, plot=plot_name_1pe_fit,
+                length_cut_min=self.cut_length_min,
+                length_cut_max=self.cut_length_max,
+                use_scipy_find_peaks=self.use_scipy_find_peaks)
+
+            A_err, mu_err, sigma_err = np.sqrt(np.diag(cov))
+
+            # Calculate DCR and CTP
+            DCR, DCR_error, CTP, CTP_error = self.get_DCR(
+                df=df,
+                length_cut_min=self.cut_length_min,
+                length_cut_max=self.cut_length_max,
+                spe_area=mu,
+                sensor_area=self.SiPM_config[&#39;sensor_area&#39;],
+                t=self.livetimes[_volt])
+
+            # Calculate gain
+            gain = get_gain(F_amp=self.run.ADC_config[&#39;F_amp&#39;],
+                            spe_area=mu,
+                            ADC_range=self.run.ADC_config[&#39;ADC_range&#39;],
+                            ADC_impedance=self.run.ADC_config[&#39;ADC_impedance&#39;],
+                            ADC_res=self.run.ADC_config[&#39;ADC_res&#39;],
+                            q_e=self.run.ADC_config[&#39;q_e&#39;])
+            gain_error = get_gain(F_amp=self.run.ADC_config[&#39;F_amp&#39;],
+                                  spe_area=mu_err,
+                                  ADC_range=self.run.ADC_config[&#39;ADC_range&#39;],
+                                  ADC_impedance=self.run.ADC_config[&#39;ADC_impedance&#39;],
+                                  ADC_res=self.run.ADC_config[&#39;ADC_res&#39;],
+                                  q_e=self.run.ADC_config[&#39;q_e&#39;])
+
+            SPE_res = np.abs(sigma / mu) * 100  # in %
+            SPE_res_err = np.sqrt(
+                (sigma_err / mu)**2 + (sigma * mu_err / mu**2)**2) * 100  # in %
+
+            # Merge into rolling dataframe (I know it&#39;s slow... make a PR,
+            # pls)
+            _results_dataset = pd.concat(
+                (_results_dataset,
+                 pd.DataFrame({&#39;T&#39;: [self.temp],
+                               &#39;V&#39;: [_volt],
+                               &#39;SPE_area&#39;: [mu],
+                               &#39;SPE_area_error&#39;: [mu_err],
+                               &#39;Gain&#39;: [gain],
+                               &#39;Gain_error&#39;: [gain_error],
+                               &#39;SPE_res&#39;: [SPE_res],
+                               &#39;SPE_res_error&#39;: [SPE_res_err],
+                               &#39;DCR&#39;: [DCR],
+                               &#39;DCR_error&#39;: [DCR_error],
+                               &#39;CTP&#39;: [CTP * 100],
+                               &#39;CTP_error&#39;: [CTP_error * 100]})
+                 ), ignore_index=True
+            )
+        except BaseException:
+            print(f&#39;Could not compute properties of module {self.module}, &#39;
+                  f&#39;channel {self.channel}, {self.temp} K, {_volt} V. &#39;
+                  f&#39;Skipping dataset.&#39;)
+            _results_dataset = pd.concat(
+                (_results_dataset,
+                 pd.DataFrame({&#39;T&#39;: [self.temp],
+                               &#39;V&#39;: [_volt],
+                               &#39;SPE_area&#39;: [np.nan],
+                               &#39;SPE_area_error&#39;: [np.nan],
+                               &#39;Gain&#39;: [np.nan],
+                               &#39;Gain_error&#39;: [np.nan],
+                               &#39;SPE_res&#39;: [np.nan],
+                               &#39;SPE_res_error&#39;: [np.nan],
+                               &#39;DCR&#39;: [np.nan],
+                               &#39;DCR_error&#39;: [np.nan],
+                               &#39;CTP&#39;: [np.nan],
+                               &#39;CTP_error&#39;: [np.nan]})
+                 ), ignore_index=True
+            )
+
+    # Compute BV from gain(V) curve and update df
+    if compute_BV_flag == True:
+        if self.plots_flag == True:
+            plot_BV = f&#39;BV_mod{self.module}_ch{self.channel}&#39;
+        else:
+            plot_BV = False
+        _results_dataset, _a, _b, _b_err = compute_BV_df(
+            _results_dataset, plot_BV)
+
+    return _results_dataset</code></pre>
+</details>
+</dd>
+<dt id="pylars.analysis.darkcount.DCR_dataset.compute_properties_of_dataset_amplitude_based"><code class="name flex">
+<span>def <span class="ident">compute_properties_of_dataset_amplitude_based</span></span>(<span>self, use_n_pulse_wf: bool = True) ‑> pandas.core.frame.DataFrame</span>
+</code></dt>
+<dd>
+<div class="desc"><p>NOT IMPLEMENTED - Needs review and merge with other compute method</p>
+<p>Calculate the gain, DCR, CTP and BV for the dataset in a single
+line! This is an alternative method to the main one, using amplitude
+cuts instead of area cuts.</p>
 <h2 id="returns">Returns</h2>
 <dl>
 <dt><code>pd.DataFrame</code></dt>
@@ -1623,118 +2301,29 @@ the columns ['V','T','path','module','channel','Gain','DCR',
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def compute_properties_of_dataset(self,
-                                  length_cut_min: int = 4,
-                                  length_cut_max: int = 20) -&gt; pd.DataFrame:
-    &#34;&#34;&#34;Calculate the gain, DCR, CTP and BV for the dataset in a single
-    line!
+<pre><code class="python">def compute_properties_of_dataset_amplitude_based(self,
+                                                  use_n_pulse_wf: bool = True) -&gt; pd.DataFrame:
+    &#34;&#34;&#34;NOT IMPLEMENTED - Needs review and merge with other compute method
 
-    Args:
-        temp (float): temperature to consider in the dataset.
-        module (int): module to load.
-        channel (str): channel to load.
-        length_cut_min (int): lower bound accepted for the length of
-            peaks. Defaults to 4.
-        length_cut_max (int): upper bound accepted for the length of
-            peaks. Defaults to 20.
+    Calculate the gain, DCR, CTP and BV for the dataset in a single
+    line! This is an alternative method to the main one, using amplitude
+    cuts instead of area cuts.
 
     Returns:
         pd.DataFrame: dataframe with all the computed properties with
             the columns [&#39;V&#39;,&#39;T&#39;,&#39;path&#39;,&#39;module&#39;,&#39;channel&#39;,&#39;Gain&#39;,&#39;DCR&#39;,
             &#39;CTP&#39;,&#39;DCR_error&#39;,&#39;CTP_error&#39;,&#39;BV&#39;,&#39;OV&#39;]
     &#34;&#34;&#34;
-
-    assert isinstance(self.data, dict), (&#39;Woops, no data found! Load&#39;
-                                         &#39; data into the dataset first&#39;)
-
-    voltage_list = self.voltages
-
-    _results_dataset = pd.DataFrame(columns=[&#39;T&#39;, &#39;V&#39;, &#39;pe_area&#39;, &#39;Gain&#39;,
-                                             &#39;res&#39;, &#39;DCR&#39;, &#39;DCR_error&#39;,
-                                             &#39;CTP&#39;, &#39;CTP_error&#39;])
-
-    for _volt in voltage_list:
-        # select voltage
-        df = self.data[_volt]
-        if self.plots_flag == True:
-            plot_name_1pe_fit = (f&#39;{self.temp}K_{_volt}V_mod{self.module}_&#39;
-                                 f&#39;ch{self.channel}&#39;)
-        else:
-            plot_name_1pe_fit = False
-
-        # Get SPE value from Gaussian fit
-        (A, mu, sigma), cov = self.get_1pe_value_fit(
-            df, plot=plot_name_1pe_fit)
-
-        # Calculate DCR and CTP
-        DCR, DCR_error, CTP, CTP_error = self.get_DCR(
-            df=df,
-            length_cut_min=length_cut_min,
-            length_cut_max=length_cut_max,
-            pe_area=mu,
-            sensor_area=self.SiPM_config[&#39;sensor_area&#39;],
-            t=self.SiPM_config[&#39;livetime&#39;])
-
-        # Calculate gain
-        gain = self.get_gain(mu)
-
-        # Merge into rolling dataframe (I know it&#39;s slow... make a PR, pls)
-        _results_dataset = pd.concat((_results_dataset,
-                                      pd.DataFrame({&#39;T&#39;: [self.temp],
-                                                    &#39;V&#39;: [_volt],
-                                                    &#39;pe_area&#39;: [mu],
-                                                    &#39;Gain&#39;: [gain],
-                                                    &#39;res&#39;: [mu / sigma],
-                                                    &#39;DCR&#39;: [DCR],
-                                                    &#39;DCR_error&#39;: [DCR_error],
-                                                    &#39;CTP&#39;: [CTP],
-                                                    &#39;CTP_error&#39;: [CTP_error]})
-                                      ), ignore_index=True)
-
-    # Compute BV from gain(V) curve and update df
-    if self.plots_flag == True:
-        plot_BV = f&#39;BV_mod{self.module}_ch{self.channel}&#39;
-    else:
-        plot_BV = False
-    _results_dataset = compute_BV(_results_dataset, plot_BV)
-
-    return _results_dataset</code></pre>
-</details>
-</dd>
-<dt id="pylars.analysis.darkcount.DCR_dataset.define_ADC_config"><code class="name flex">
-<span>def <span class="ident">define_ADC_config</span></span>(<span>self, F_amp: float, model: str = 'v1724') ‑> NoneType</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Load the ADC related quantities for the dataset.</p>
-<p>Args:
-model (str): model of the digitizer
-F_amp (float): signal amplification from the sensor (pre-amp *
-external amplification on rack).</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def define_ADC_config(self, F_amp: float, model: str = &#39;v1724&#39;) -&gt; None:
-    &#34;&#34;&#34;Load the ADC related quantities for the dataset.
-
-    Args:
-    model (str): model of the digitizer
-    F_amp (float): signal amplification from the sensor (pre-amp *
-        external amplification on rack).
-    &#34;&#34;&#34;
-
-    self.ADC_config = load_ADC_config(model, F_amp)</code></pre>
+    raise NotImplementedError  # needs review and merging with normal</code></pre>
 </details>
 </dd>
 <dt id="pylars.analysis.darkcount.DCR_dataset.define_SiPM_config"><code class="name flex">
-<span>def <span class="ident">define_SiPM_config</span></span>(<span>self, livetime: float, sensor_area: float = 144) ‑> NoneType</span>
+<span>def <span class="ident">define_SiPM_config</span></span>(<span>self, sensor_area: float = 144) ‑> NoneType</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Define the SiPM data related quantities for the dataset.</p>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>livetime</code></strong> :&ensp;<code>float</code></dt>
-<dd>livetime of the measurement for DCR porpuses.</dd>
 <dt><strong><code>sensor_area</code></strong> :&ensp;<code>float</code>, optional</dt>
 <dd>Area of the photosensor (mm**2).
 Defaults to 12*12.</dd>
@@ -1743,77 +2332,124 @@ Defaults to 12*12.</dd>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def define_SiPM_config(self, livetime: float,
+<pre><code class="python">def define_SiPM_config(self,
                        sensor_area: float = 12 * 12,
                        ) -&gt; None:
     r&#34;&#34;&#34;Define the SiPM data related quantities for the dataset.
 
     Args:
-        livetime (float): livetime of the measurement for DCR porpuses.
         sensor_area (float, optional): Area of the photosensor (mm\*\*2).
             Defaults to 12\*12.
     &#34;&#34;&#34;
-    SiPM_config = {&#39;livetime&#39;: livetime,
-                   &#39;sensor_area&#39;: sensor_area,
+    SiPM_config = {&#39;sensor_area&#39;: sensor_area,
                    }
 
     self.SiPM_config = SiPM_config</code></pre>
 </details>
 </dd>
-<dt id="pylars.analysis.darkcount.DCR_dataset.get_gain"><code class="name flex">
-<span>def <span class="ident">get_gain</span></span>(<span>self, spe_area: float) ‑> float</span>
+<dt id="pylars.analysis.darkcount.DCR_dataset.get_livetimes"><code class="name flex">
+<span>def <span class="ident">get_livetimes</span></span>(<span>self) ‑> dict</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Compute the gain given the value of the SPE area</p>
-<h2 id="args">Args</h2>
-<dl>
-<dt><strong><code>spe_area</code></strong> :&ensp;<code>float</code></dt>
-<dd>Area of the SPE peak in integrated ADC
-counts [ADC count * ns].</dd>
-</dl>
-<h2 id="raises">Raises</h2>
-<dl>
-<dt><code>ValueError</code></dt>
-<dd>self.ADC_config not defined for the current dataset.
-Run dataset.define_ADC_config(&hellip;)</dd>
-</dl>
+<div class="desc"><p>Fetch the livetimes of a dataset.</p>
+<p>Based on the propertied of the DCR_dataset, creates its dataset object
+and computes the livetime for each vbias by multiplying the number
+of samples per waveform with the number of waveforms in the dataset
+and the duration of a sample (given by <code>self.run.ADC_config['dt']</code>).
+Provides the result in dict format where the keys are the vbias of
+the dataset.</p>
 <h2 id="returns">Returns</h2>
 <dl>
-<dt><code>float</code></dt>
-<dd>the calculated gain.</dd>
+<dt><code>dict</code></dt>
+<dd><em>description</em></dd>
 </dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def get_gain(self, spe_area: float) -&gt; float:
-    &#34;&#34;&#34;Compute the gain given the value of the SPE area
+<pre><code class="python">def get_livetimes(self) -&gt; dict:
+    &#34;&#34;&#34;Fetch the livetimes of a dataset.
 
-    Args:
-        spe_area (float): Area of the SPE peak in integrated ADC
-            counts [ADC count * ns].
-
-    Raises:
-        ValueError: self.ADC_config not defined for the current dataset.
-            Run dataset.define_ADC_config(...)
+    Based on the propertied of the DCR_dataset, creates its dataset object
+    and computes the livetime for each vbias by multiplying the number
+    of samples per waveform with the number of waveforms in the dataset
+    and the duration of a sample (given by `self.run.ADC_config[&#39;dt&#39;]`).
+    Provides the result in dict format where the keys are the vbias of
+    the dataset.
 
     Returns:
-        float: the calculated gain.
+        dict: _description_
     &#34;&#34;&#34;
+    livetimes = {}
+    for v in self.voltages:
 
-    if not isinstance(self.ADC_config, dict):
-        raise ValueError(&#39;Define ADC_config first.&#39;)
+        # Need all this to find the correct path...
+        self.datasets_df = self.run.get_run_df()
+        selection = ((self.datasets_df[&#39;kind&#39;] == &#39;DCR&#39;) &amp;
+                     (self.datasets_df[&#39;vbias&#39;] == v) &amp;
+                     (self.datasets_df[&#39;temp&#39;] == self.temp) &amp;
+                     # to end with just one of the modules.
+                     # It&#39;s assumed both have the same number of
+                     # entries and size of entries
+                     (self.datasets_df[&#39;module&#39;] == 0))
 
-    ADC_range = self.ADC_config[&#39;ADC_range&#39;]
-    ADC_impedance = self.ADC_config[&#39;ADC_impedance&#39;]
-    F_amp = self.ADC_config[&#39;F_amp&#39;]
-    ADC_res = self.ADC_config[&#39;ADC_res&#39;]
-    q_e = self.ADC_config[&#39;q_e&#39;]
+        ds_selected = self.datasets_df[selection]
 
-    gain = (ADC_range * spe_area * 1e-9 / ADC_impedance / F_amp /
-            ADC_res / q_e)
+        assert len(
+            self.datasets_df[selection]) == 1, &#34;Found more than 1 ds with the same config. Help.&#34;
 
-    return gain</code></pre>
+        ds_temp = pylars.utils.input.dataset(path=str(ds_selected[&#39;path&#39;].values[0]),
+                                             kind=&#39;DCR&#39;,
+                                             module=0,
+                                             temp=self.temp,
+                                             vbias=v)
+        try:
+            n_waveforms, n_samples = ds_temp.read_sizes()
+            livetimes[v] = n_waveforms * \
+                n_samples * self.run.ADC_config[&#39;dt&#39;]
+        except BaseException:
+            livetimes[v] = np.nan
+
+    return livetimes</code></pre>
+</details>
+</dd>
+<dt id="pylars.analysis.darkcount.DCR_dataset.get_med_amplitude"><code class="name flex">
+<span>def <span class="ident">get_med_amplitude</span></span>(<span>self, df: pandas.core.frame.DataFrame, cut_mask: numpy.ndarray) ‑> tuple</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Calculate the median and standard deviation of the distribution
+of amplitudes, applying a given mask.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>df</code></strong> :&ensp;<code>pd.DataFrame</code></dt>
+<dd>dataframe with the processed pulse data</dd>
+<dt><strong><code>extra_cut_mask</code></strong> :&ensp;<code>np.ndarray</code></dt>
+<dd>cut mask</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tuple</code></dt>
+<dd><em>description</em></dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_med_amplitude(self, df: pd.DataFrame,
+                      cut_mask: np.ndarray) -&gt; tuple:
+    &#34;&#34;&#34;Calculate the median and standard deviation of the distribution
+    of amplitudes, applying a given mask.
+
+    Args:
+        df (pd.DataFrame): dataframe with the processed pulse data
+        extra_cut_mask (np.ndarray): cut mask
+
+    Returns:
+        tuple: _description_
+    &#34;&#34;&#34;
+    med_amplitude = np.median(df[cut_mask][&#39;amplitude&#39;])
+    std_amplitude = np.std(df[cut_mask][&#39;amplitude&#39;])
+    return med_amplitude, std_amplitude</code></pre>
 </details>
 </dd>
 <dt id="pylars.analysis.darkcount.DCR_dataset.get_voltages_available"><code class="name flex">
@@ -1887,7 +2523,11 @@ Defaults to False.</dd>
         dict: dictionary with the data df for each voltage as a key.
     &#34;&#34;&#34;
     self.data = {}
-    for _voltage in self.voltages:
+    for _voltage in tqdm(self.voltages,
+                         desc=f&#39;Loading processed data for DCR &#39; +
+                         f&#39;data at {self.temp}K: &#39;,
+                         total=len(self.voltages),
+                         leave=False):
         processed_data = pylars.utils.output.processed_dataset(
             run=self.run,
             kind=&#39;DCR&#39;,
@@ -1934,11 +2574,84 @@ my bedroom wall and it looks nice.</dd>
     self.plots_flag = flag</code></pre>
 </details>
 </dd>
+<dt id="pylars.analysis.darkcount.DCR_dataset.set_standard_cuts"><code class="name flex">
+<span>def <span class="ident">set_standard_cuts</span></span>(<span>self, cut_area_min: float = 5, cut_area_max: float = 1000000.0, cut_length_min: int = 4, cut_length_max: int = 70, cut_n_pulses_min: float = 0, cut_n_pulses_max: float = 2) ‑> NoneType</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Sets the cuts to use in analysis as object variables.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>cut_area_min</code></strong> :&ensp;<code>float</code>, optional</dt>
+<dd>Area minimum value. Defaults to 5.</dd>
+<dt><strong><code>cut_area_max</code></strong> :&ensp;<code>float</code>, optional</dt>
+<dd>Area maximum value. Defaults
+to 1e6.</dd>
+<dt><strong><code>cut_length_min</code></strong> :&ensp;<code>float</code>, optional</dt>
+<dd>Lenght minimum value.
+Defaults to 4.</dd>
+<dt><strong><code>cut_length_max</code></strong> :&ensp;<code>float</code>, optional</dt>
+<dd>Lenght minimum value.
+Defaults to 70.</dd>
+<dt><strong><code>cut_n_pulses_min</code></strong> :&ensp;<code>float</code>, optional</dt>
+<dd>Minimum number of pulses in
+the waveform. Defaults to 0.</dd>
+<dt><strong><code>cut_n_pulses_max</code></strong> :&ensp;<code>float</code>, optional</dt>
+<dd>Maximum number of pulses in
+the waveform. Defaults to 2.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def set_standard_cuts(self,
+                      cut_area_min: float = 5,
+                      cut_area_max: float = 1e6,
+                      cut_length_min: int = 4,
+                      cut_length_max: int = 70,
+                      cut_n_pulses_min: float = 0,
+                      cut_n_pulses_max: float = 2) -&gt; None:
+    &#34;&#34;&#34;Sets the cuts to use in analysis as object variables.
+
+    Args:
+        cut_area_min (float, optional): Area minimum value. Defaults to 5.
+        cut_area_max (float, optional): Area maximum value. Defaults
+            to 1e6.
+        cut_length_min (float, optional): Lenght minimum value.
+            Defaults to 4.
+        cut_length_max (float, optional): Lenght minimum value.
+             Defaults to 70.
+        cut_n_pulses_min (float, optional): Minimum number of pulses in
+            the waveform. Defaults to 0.
+        cut_n_pulses_max (float, optional): Maximum number of pulses in
+            the waveform. Defaults to 2.
+    &#34;&#34;&#34;
+
+    self.cut_area_min = cut_area_min
+    self.cut_area_max = cut_area_max
+    self.cut_length_min = cut_length_min
+    self.cut_length_max = cut_length_max
+    self.cut_n_pulses_min = cut_n_pulses_min
+    self.cut_n_pulses_max = cut_n_pulses_max</code></pre>
+</details>
+</dd>
 </dl>
+<h3>Inherited members</h3>
+<ul class="hlist">
+<li><code><b><a title="pylars.analysis.darkcount.DCR_analysis" href="#pylars.analysis.darkcount.DCR_analysis">DCR_analysis</a></b></code>:
+<ul class="hlist">
+<li><code><a title="pylars.analysis.darkcount.DCR_analysis.get_1pe_rough" href="#pylars.analysis.darkcount.DCR_analysis.get_1pe_rough">get_1pe_rough</a></code></li>
+<li><code><a title="pylars.analysis.darkcount.DCR_analysis.get_1pe_value_fit" href="#pylars.analysis.darkcount.DCR_analysis.get_1pe_value_fit">get_1pe_value_fit</a></code></li>
+<li><code><a title="pylars.analysis.darkcount.DCR_analysis.get_DCR" href="#pylars.analysis.darkcount.DCR_analysis.get_DCR">get_DCR</a></code></li>
+<li><code><a title="pylars.analysis.darkcount.DCR_analysis.get_DCR_above_threshold_values" href="#pylars.analysis.darkcount.DCR_analysis.get_DCR_above_threshold_values">get_DCR_above_threshold_values</a></code></li>
+<li><code><a title="pylars.analysis.darkcount.DCR_analysis.get_DCR_amplitude" href="#pylars.analysis.darkcount.DCR_analysis.get_DCR_amplitude">get_DCR_amplitude</a></code></li>
+<li><code><a title="pylars.analysis.darkcount.DCR_analysis.print_DCR_CTP" href="#pylars.analysis.darkcount.DCR_analysis.print_DCR_CTP">print_DCR_CTP</a></code></li>
+</ul>
+</li>
+</ul>
 </dd>
 <dt id="pylars.analysis.darkcount.DCR_run"><code class="flex name class">
 <span>class <span class="ident">DCR_run</span></span>
-<span>(</span><span>run: <a title="pylars.utils.input.run" href="../utils/input.html#pylars.utils.input.run">run</a>, processor: <a title="pylars.processing.rawprocessor.run_processor" href="../processing/rawprocessor.html#pylars.processing.rawprocessor.run_processor">run_processor</a>)</span>
+<span>(</span><span>run: <a title="pylars.utils.input.run" href="../utils/input.html#pylars.utils.input.run">run</a>, processor: <a title="pylars.processing.rawprocessor.run_processor" href="../processing/rawprocessor.html#pylars.processing.rawprocessor.run_processor">run_processor</a>, use_n_pulse: bool = True)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Collection of all the DCR_datasets results for a run, ie, for all
@@ -1960,10 +2673,12 @@ DCR_run.results_df .</p></div>
     __version__ = &#39;0.0.1&#39;
 
     def __init__(self, run: pylars.utils.input.run,
-                 processor: pylars.processing.rawprocessor.run_processor):
+                 processor: pylars.processing.rawprocessor.run_processor,
+                 use_n_pulse: bool = True):
 
         self.run = run
         self.process = processor
+        self.use_n_pulse = use_n_pulse
         self.datasets = self.process.datasets_df
         self.temperatures = self.get_run_temperatures()
         self.plots_flag = False
@@ -1995,26 +2710,14 @@ DCR_run.results_df .</p></div>
         &#34;&#34;&#34;Initialize a clean results_df instance in the object.
         &#34;&#34;&#34;
 
-        results_df = pd.DataFrame(columns=[&#39;V&#39;, &#39;T&#39;, &#39;module&#39;, &#39;channel&#39;,
-                                           &#39;Gain&#39;, &#39;DCR&#39;, &#39;CTP&#39;, &#39;DCR_error&#39;,
-                                           &#39;CTP_error&#39;, &#39;BV&#39;, &#39;OV&#39;]
-                                  )
+        results_df = pd.DataFrame(
+            columns=[&#39;T&#39;, &#39;V&#39;, &#39;SPE_area&#39;, &#39;SPE_area_error&#39;, &#39;Gain&#39;,
+                     &#39;Gain_error&#39;, &#39;SPE_res&#39;, &#39;SPE_res_error&#39;, &#39;DCR&#39;,
+                     &#39;DCR_error&#39;, &#39;CTP&#39;, &#39;CTP_error&#39;])
+
         self.results_df = results_df
 
-    def define_run_ADC_config(self, F_amp: float,
-                              model: str = &#39;v1724&#39;) -&gt; None:
-        &#34;&#34;&#34;Load the ADC related quantities for the run.
-
-        Args:
-        model (str): model of the digitizer
-        F_amp (float): signal amplification from the sensor (pre-amp *
-            external amplification on rack).
-        &#34;&#34;&#34;
-
-        self.ADC_config = load_ADC_config(model, F_amp)
-
-    def define_run_SiPM_config(self, livetime: float,
-                               sensor_area: float = 12 * 12,
+    def define_run_SiPM_config(self, sensor_area: float = 12 * 12,
                                ) -&gt; None:
         r&#34;&#34;&#34;Define the SiPM data related quantities for the dataset.
 
@@ -2023,8 +2726,7 @@ DCR_run.results_df .</p></div>
             sensor_area (float, optional): Area of the photosensor (mm\*\*2).
                 Defaults to 12\*12.
         &#34;&#34;&#34;
-        SiPM_config = {&#39;livetime&#39;: livetime,
-                       &#39;sensor_area&#39;: sensor_area,
+        SiPM_config = {&#39;sensor_area&#39;: sensor_area,
                        }
         self.SiPM_config = SiPM_config
 
@@ -2058,7 +2760,9 @@ DCR_run.results_df .</p></div>
 
     def compute_properties_of_ds(self, temp: float,
                                  module: int,
-                                 channel: str) -&gt; pd.DataFrame:
+                                 channel: str,
+                                 amplitude_based: bool = False
+                                 ) -&gt; pd.DataFrame:
         &#34;&#34;&#34;Loads and computes the properties of a single dataset (temp,
         module, channel) by creating a DCR_dataset object and calling its
         methods.
@@ -2067,20 +2771,26 @@ DCR_run.results_df .</p></div>
             temp (float): temperature
             module (int): module
             channel (str): channel
+            amplitude_based (bool): if the computation method is based on
+                amplitude instead of area
 
         Returns:
             pd.DataFrame: dataframe
         &#34;&#34;&#34;
-
-        assert isinstance(self.SiPM_config, dict), &#39;No SiPM_config found!&#39;
-        assert isinstance(self.ADC_config, dict), &#39;No ADC_config found!&#39;
+        assert isinstance(self.run.ADC_config, dict), &#39;No ADC_config found!&#39;
 
         ds = self.load_dataset(temp, module, channel)
         ds.set_plots_flag(self.plots_flag)
-        ds.ADC_config = self.ADC_config
         ds.SiPM_config = self.SiPM_config
 
-        ds_results = ds.compute_properties_of_dataset()
+        if amplitude_based:
+            ds_results = ds.compute_properties_of_dataset_amplitude_based(
+                use_n_pulse_wf=self.use_n_pulse,
+            )
+        else:
+            ds_results = ds.compute_properties_of_dataset(
+                compute_BV_flag=False,
+                use_n_pulse_wf=self.use_n_pulse)
 
         # Add module and channel columns
         module_Series = pd.Series([module] * len(ds_results), name=&#39;module&#39;)
@@ -2089,66 +2799,47 @@ DCR_run.results_df .</p></div>
                                axis=1)
         return ds_results
 
-    def read_channel_map(self, path_to_map: str) -&gt; None:
-        &#34;&#34;&#34;Define the active modules and channels for the run.
-
-        UNDER CONSTRUCTION. I know it doesn&#39;t work that nicely but
-        I need to have somthing that works for now, so...
-        Define it with self.channel_map = dict(mod:[ch#,...],...)
+    def compute_properties_of_run(self, amplitude_based: bool = False) -&gt; None:
+        &#34;&#34;&#34;Loads and computes the properties of ALL the datasets.
 
         Args:
-            path_to_map (str): path to csv file with the channel map
-        &#34;&#34;&#34;
-        if self.run.run_number == 7:
-            channel_map = {0: [&#39;wf0&#39;, &#39;wf3&#39;, &#39;wf4&#39;, &#39;wf6&#39;],
-                           1: [&#39;wf0&#39;, &#39;wf3&#39;, &#39;wf4&#39;, &#39;wf6&#39;], }
-
-        elif self.run.run_number == 8:
-            channel_map = {0: [&#39;wf0&#39;, &#39;wf3&#39;, &#39;wf4&#39;, &#39;wf5&#39;, &#39;wf6&#39;],
-                           1: [&#39;wf0&#39;, &#39;wf1&#39;, &#39;wf2&#39;, &#39;wf3&#39;, &#39;wf4&#39;,
-                               &#39;wf6&#39;, &#39;wf7&#39;]}
-
-        else:
-            channel_map = pd.read_csv(path_to_map)
-
-        self.channel_map = channel_map
-
-    def compute_properties_of_run(self) -&gt; None:
-        &#34;&#34;&#34;Loads and computes the properties of ALL the datasets.
+            amplitude_based (bool): Turn True to compute SPE based on
+                amplitude.
 
         Returns:
             pd.DataFrame: The results.
         &#34;&#34;&#34;
         self.initialize_results_df()
 
+        all_channels = pylars.utils.common.get_channel_list(self.process)
         for temperature in self.temperatures:
-            for module in self.channel_map.keys():
-                for channel in tqdm(self.channel_map[module],
-                                    (f&#39;Computing properties for &#39;
-                                     f&#39;T={temperature}; module &#39;
-                                     f&#39;{module}: &#39;)):
-                    _ds_results = self.compute_properties_of_ds(
-                        temp=temperature,
-                        module=module,
-                        channel=channel)
+            for (module, channel) in tqdm(all_channels,
+                                          (f&#39;Computing properties for &#39;
+                                           f&#39;T={temperature}: &#39;)):
+                _ds_results = self.compute_properties_of_ds(
+                    temp=temperature,
+                    module=module,
+                    channel=channel,
+                    amplitude_based=amplitude_based)
 
-                    self.results_df = pd.concat(
-                        [self.results_df, _ds_results],  # type: ignore
-                        ignore_index=True)
+                self.results_df = pd.concat(
+                    [self.results_df, _ds_results],  # type: ignore
+                    ignore_index=True)
 
-        datetime.now()
-
-    def save_results(self, custom_name) -&gt; None:
+    def save_results(self, custom_name: str) -&gt; None:
         &#34;&#34;&#34;Save dataframe of results to a hdf5 file. Saved files go to
         self.analysis_path.
 
         Args:
             name (str): name to give the file (without extension).
         &#34;&#34;&#34;
-        assert isinstance(self.results_df, pd.DataFrame), (&#34;Trying to save &#34;
-                                                           &#34;results that do not exist in the object, c&#39;mon, you know better.&#34;)
+        assert isinstance(
+            self.results_df, pd.DataFrame), (&#34;Trying to save results that do &#34;
+                                             &#34;not exist in the object, c&#39;mon&#34;
+                                             &#34;, you know better.&#34;)
         assert len(self.results_df) &gt; 0, (&#34;Results df is empty, please compute&#34;
-                                          &#34;something before trying to save, otherwire it&#39;s just a waste of &#34;
+                                          &#34;something before trying to save, &#34;
+                                          &#34;otherwire it&#39;s just a waste of &#34;
                                           &#34;disk space&#34;)
 
         name = f&#39;DCR_results_{custom_name}&#39;
@@ -2169,7 +2860,7 @@ DCR_run.results_df .</p></div>
 <h3>Methods</h3>
 <dl>
 <dt id="pylars.analysis.darkcount.DCR_run.compute_properties_of_ds"><code class="name flex">
-<span>def <span class="ident">compute_properties_of_ds</span></span>(<span>self, temp: float, module: int, channel: str) ‑> pandas.core.frame.DataFrame</span>
+<span>def <span class="ident">compute_properties_of_ds</span></span>(<span>self, temp: float, module: int, channel: str, amplitude_based: bool = False) ‑> pandas.core.frame.DataFrame</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Loads and computes the properties of a single dataset (temp,
@@ -2183,6 +2874,9 @@ methods.</p>
 <dd>module</dd>
 <dt><strong><code>channel</code></strong> :&ensp;<code>str</code></dt>
 <dd>channel</dd>
+<dt><strong><code>amplitude_based</code></strong> :&ensp;<code>bool</code></dt>
+<dd>if the computation method is based on
+amplitude instead of area</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -2195,7 +2889,9 @@ methods.</p>
 </summary>
 <pre><code class="python">def compute_properties_of_ds(self, temp: float,
                              module: int,
-                             channel: str) -&gt; pd.DataFrame:
+                             channel: str,
+                             amplitude_based: bool = False
+                             ) -&gt; pd.DataFrame:
     &#34;&#34;&#34;Loads and computes the properties of a single dataset (temp,
     module, channel) by creating a DCR_dataset object and calling its
     methods.
@@ -2204,20 +2900,26 @@ methods.</p>
         temp (float): temperature
         module (int): module
         channel (str): channel
+        amplitude_based (bool): if the computation method is based on
+            amplitude instead of area
 
     Returns:
         pd.DataFrame: dataframe
     &#34;&#34;&#34;
-
-    assert isinstance(self.SiPM_config, dict), &#39;No SiPM_config found!&#39;
-    assert isinstance(self.ADC_config, dict), &#39;No ADC_config found!&#39;
+    assert isinstance(self.run.ADC_config, dict), &#39;No ADC_config found!&#39;
 
     ds = self.load_dataset(temp, module, channel)
     ds.set_plots_flag(self.plots_flag)
-    ds.ADC_config = self.ADC_config
     ds.SiPM_config = self.SiPM_config
 
-    ds_results = ds.compute_properties_of_dataset()
+    if amplitude_based:
+        ds_results = ds.compute_properties_of_dataset_amplitude_based(
+            use_n_pulse_wf=self.use_n_pulse,
+        )
+    else:
+        ds_results = ds.compute_properties_of_dataset(
+            compute_BV_flag=False,
+            use_n_pulse_wf=self.use_n_pulse)
 
     # Add module and channel columns
     module_Series = pd.Series([module] * len(ds_results), name=&#39;module&#39;)
@@ -2228,10 +2930,16 @@ methods.</p>
 </details>
 </dd>
 <dt id="pylars.analysis.darkcount.DCR_run.compute_properties_of_run"><code class="name flex">
-<span>def <span class="ident">compute_properties_of_run</span></span>(<span>self) ‑> NoneType</span>
+<span>def <span class="ident">compute_properties_of_run</span></span>(<span>self, amplitude_based: bool = False) ‑> NoneType</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Loads and computes the properties of ALL the datasets.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>amplitude_based</code></strong> :&ensp;<code>bool</code></dt>
+<dd>Turn True to compute SPE based on
+amplitude.</dd>
+</dl>
 <h2 id="returns">Returns</h2>
 <dl>
 <dt><code>pd.DataFrame</code></dt>
@@ -2241,60 +2949,36 @@ methods.</p>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def compute_properties_of_run(self) -&gt; None:
+<pre><code class="python">def compute_properties_of_run(self, amplitude_based: bool = False) -&gt; None:
     &#34;&#34;&#34;Loads and computes the properties of ALL the datasets.
+
+    Args:
+        amplitude_based (bool): Turn True to compute SPE based on
+            amplitude.
 
     Returns:
         pd.DataFrame: The results.
     &#34;&#34;&#34;
     self.initialize_results_df()
 
+    all_channels = pylars.utils.common.get_channel_list(self.process)
     for temperature in self.temperatures:
-        for module in self.channel_map.keys():
-            for channel in tqdm(self.channel_map[module],
-                                (f&#39;Computing properties for &#39;
-                                 f&#39;T={temperature}; module &#39;
-                                 f&#39;{module}: &#39;)):
-                _ds_results = self.compute_properties_of_ds(
-                    temp=temperature,
-                    module=module,
-                    channel=channel)
+        for (module, channel) in tqdm(all_channels,
+                                      (f&#39;Computing properties for &#39;
+                                       f&#39;T={temperature}: &#39;)):
+            _ds_results = self.compute_properties_of_ds(
+                temp=temperature,
+                module=module,
+                channel=channel,
+                amplitude_based=amplitude_based)
 
-                self.results_df = pd.concat(
-                    [self.results_df, _ds_results],  # type: ignore
-                    ignore_index=True)
-
-    datetime.now()</code></pre>
-</details>
-</dd>
-<dt id="pylars.analysis.darkcount.DCR_run.define_run_ADC_config"><code class="name flex">
-<span>def <span class="ident">define_run_ADC_config</span></span>(<span>self, F_amp: float, model: str = 'v1724') ‑> NoneType</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Load the ADC related quantities for the run.</p>
-<p>Args:
-model (str): model of the digitizer
-F_amp (float): signal amplification from the sensor (pre-amp *
-external amplification on rack).</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def define_run_ADC_config(self, F_amp: float,
-                          model: str = &#39;v1724&#39;) -&gt; None:
-    &#34;&#34;&#34;Load the ADC related quantities for the run.
-
-    Args:
-    model (str): model of the digitizer
-    F_amp (float): signal amplification from the sensor (pre-amp *
-        external amplification on rack).
-    &#34;&#34;&#34;
-
-    self.ADC_config = load_ADC_config(model, F_amp)</code></pre>
+            self.results_df = pd.concat(
+                [self.results_df, _ds_results],  # type: ignore
+                ignore_index=True)</code></pre>
 </details>
 </dd>
 <dt id="pylars.analysis.darkcount.DCR_run.define_run_SiPM_config"><code class="name flex">
-<span>def <span class="ident">define_run_SiPM_config</span></span>(<span>self, livetime: float, sensor_area: float = 144) ‑> NoneType</span>
+<span>def <span class="ident">define_run_SiPM_config</span></span>(<span>self, sensor_area: float = 144) ‑> NoneType</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Define the SiPM data related quantities for the dataset.</p>
@@ -2310,8 +2994,7 @@ Defaults to 12*12.</dd>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def define_run_SiPM_config(self, livetime: float,
-                           sensor_area: float = 12 * 12,
+<pre><code class="python">def define_run_SiPM_config(self, sensor_area: float = 12 * 12,
                            ) -&gt; None:
     r&#34;&#34;&#34;Define the SiPM data related quantities for the dataset.
 
@@ -2320,8 +3003,7 @@ Defaults to 12*12.</dd>
         sensor_area (float, optional): Area of the photosensor (mm\*\*2).
             Defaults to 12\*12.
     &#34;&#34;&#34;
-    SiPM_config = {&#39;livetime&#39;: livetime,
-                   &#39;sensor_area&#39;: sensor_area,
+    SiPM_config = {&#39;sensor_area&#39;: sensor_area,
                    }
     self.SiPM_config = SiPM_config</code></pre>
 </details>
@@ -2364,10 +3046,11 @@ Defaults to 12*12.</dd>
     &#34;&#34;&#34;Initialize a clean results_df instance in the object.
     &#34;&#34;&#34;
 
-    results_df = pd.DataFrame(columns=[&#39;V&#39;, &#39;T&#39;, &#39;module&#39;, &#39;channel&#39;,
-                                       &#39;Gain&#39;, &#39;DCR&#39;, &#39;CTP&#39;, &#39;DCR_error&#39;,
-                                       &#39;CTP_error&#39;, &#39;BV&#39;, &#39;OV&#39;]
-                              )
+    results_df = pd.DataFrame(
+        columns=[&#39;T&#39;, &#39;V&#39;, &#39;SPE_area&#39;, &#39;SPE_area_error&#39;, &#39;Gain&#39;,
+                 &#39;Gain_error&#39;, &#39;SPE_res&#39;, &#39;SPE_res_error&#39;, &#39;DCR&#39;,
+                 &#39;DCR_error&#39;, &#39;CTP&#39;, &#39;CTP_error&#39;])
+
     self.results_df = results_df</code></pre>
 </details>
 </dd>
@@ -2453,50 +3136,8 @@ the standard analysis cache directory.</p>
     self.results_df = _df</code></pre>
 </details>
 </dd>
-<dt id="pylars.analysis.darkcount.DCR_run.read_channel_map"><code class="name flex">
-<span>def <span class="ident">read_channel_map</span></span>(<span>self, path_to_map: str) ‑> NoneType</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Define the active modules and channels for the run.</p>
-<p>UNDER CONSTRUCTION. I know it doesn't work that nicely but
-I need to have somthing that works for now, so&hellip;
-Define it with self.channel_map = dict(mod:[ch#,&hellip;],&hellip;)</p>
-<h2 id="args">Args</h2>
-<dl>
-<dt><strong><code>path_to_map</code></strong> :&ensp;<code>str</code></dt>
-<dd>path to csv file with the channel map</dd>
-</dl></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def read_channel_map(self, path_to_map: str) -&gt; None:
-    &#34;&#34;&#34;Define the active modules and channels for the run.
-
-    UNDER CONSTRUCTION. I know it doesn&#39;t work that nicely but
-    I need to have somthing that works for now, so...
-    Define it with self.channel_map = dict(mod:[ch#,...],...)
-
-    Args:
-        path_to_map (str): path to csv file with the channel map
-    &#34;&#34;&#34;
-    if self.run.run_number == 7:
-        channel_map = {0: [&#39;wf0&#39;, &#39;wf3&#39;, &#39;wf4&#39;, &#39;wf6&#39;],
-                       1: [&#39;wf0&#39;, &#39;wf3&#39;, &#39;wf4&#39;, &#39;wf6&#39;], }
-
-    elif self.run.run_number == 8:
-        channel_map = {0: [&#39;wf0&#39;, &#39;wf3&#39;, &#39;wf4&#39;, &#39;wf5&#39;, &#39;wf6&#39;],
-                       1: [&#39;wf0&#39;, &#39;wf1&#39;, &#39;wf2&#39;, &#39;wf3&#39;, &#39;wf4&#39;,
-                           &#39;wf6&#39;, &#39;wf7&#39;]}
-
-    else:
-        channel_map = pd.read_csv(path_to_map)
-
-    self.channel_map = channel_map</code></pre>
-</details>
-</dd>
 <dt id="pylars.analysis.darkcount.DCR_run.save_results"><code class="name flex">
-<span>def <span class="ident">save_results</span></span>(<span>self, custom_name) ‑> NoneType</span>
+<span>def <span class="ident">save_results</span></span>(<span>self, custom_name: str) ‑> NoneType</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Save dataframe of results to a hdf5 file. Saved files go to
@@ -2510,17 +3151,20 @@ self.analysis_path.</p>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def save_results(self, custom_name) -&gt; None:
+<pre><code class="python">def save_results(self, custom_name: str) -&gt; None:
     &#34;&#34;&#34;Save dataframe of results to a hdf5 file. Saved files go to
     self.analysis_path.
 
     Args:
         name (str): name to give the file (without extension).
     &#34;&#34;&#34;
-    assert isinstance(self.results_df, pd.DataFrame), (&#34;Trying to save &#34;
-                                                       &#34;results that do not exist in the object, c&#39;mon, you know better.&#34;)
+    assert isinstance(
+        self.results_df, pd.DataFrame), (&#34;Trying to save results that do &#34;
+                                         &#34;not exist in the object, c&#39;mon&#34;
+                                         &#34;, you know better.&#34;)
     assert len(self.results_df) &gt; 0, (&#34;Results df is empty, please compute&#34;
-                                      &#34;something before trying to save, otherwire it&#39;s just a waste of &#34;
+                                      &#34;something before trying to save, &#34;
+                                      &#34;otherwire it&#39;s just a waste of &#34;
                                       &#34;disk space&#34;)
 
     name = f&#39;DCR_results_{custom_name}&#39;
@@ -2576,22 +3220,29 @@ bedroom wall and it looks nice.</dd>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
+<h4><code><a title="pylars.analysis.darkcount.DCR_analysis" href="#pylars.analysis.darkcount.DCR_analysis">DCR_analysis</a></code></h4>
+<ul class="">
+<li><code><a title="pylars.analysis.darkcount.DCR_analysis.get_1pe_rough" href="#pylars.analysis.darkcount.DCR_analysis.get_1pe_rough">get_1pe_rough</a></code></li>
+<li><code><a title="pylars.analysis.darkcount.DCR_analysis.get_1pe_value_fit" href="#pylars.analysis.darkcount.DCR_analysis.get_1pe_value_fit">get_1pe_value_fit</a></code></li>
+<li><code><a title="pylars.analysis.darkcount.DCR_analysis.get_DCR" href="#pylars.analysis.darkcount.DCR_analysis.get_DCR">get_DCR</a></code></li>
+<li><code><a title="pylars.analysis.darkcount.DCR_analysis.get_DCR_above_threshold_values" href="#pylars.analysis.darkcount.DCR_analysis.get_DCR_above_threshold_values">get_DCR_above_threshold_values</a></code></li>
+<li><code><a title="pylars.analysis.darkcount.DCR_analysis.get_DCR_amplitude" href="#pylars.analysis.darkcount.DCR_analysis.get_DCR_amplitude">get_DCR_amplitude</a></code></li>
+<li><code><a title="pylars.analysis.darkcount.DCR_analysis.print_DCR_CTP" href="#pylars.analysis.darkcount.DCR_analysis.print_DCR_CTP">print_DCR_CTP</a></code></li>
+</ul>
+</li>
+<li>
 <h4><code><a title="pylars.analysis.darkcount.DCR_dataset" href="#pylars.analysis.darkcount.DCR_dataset">DCR_dataset</a></code></h4>
 <ul class="">
 <li><code><a title="pylars.analysis.darkcount.DCR_dataset.compute_properties_of_dataset" href="#pylars.analysis.darkcount.DCR_dataset.compute_properties_of_dataset">compute_properties_of_dataset</a></code></li>
-<li><code><a title="pylars.analysis.darkcount.DCR_dataset.define_ADC_config" href="#pylars.analysis.darkcount.DCR_dataset.define_ADC_config">define_ADC_config</a></code></li>
+<li><code><a title="pylars.analysis.darkcount.DCR_dataset.compute_properties_of_dataset_amplitude_based" href="#pylars.analysis.darkcount.DCR_dataset.compute_properties_of_dataset_amplitude_based">compute_properties_of_dataset_amplitude_based</a></code></li>
 <li><code><a title="pylars.analysis.darkcount.DCR_dataset.define_SiPM_config" href="#pylars.analysis.darkcount.DCR_dataset.define_SiPM_config">define_SiPM_config</a></code></li>
-<li><code><a title="pylars.analysis.darkcount.DCR_dataset.get_1pe_rough" href="#pylars.analysis.darkcount.DCR_dataset.get_1pe_rough">get_1pe_rough</a></code></li>
-<li><code><a title="pylars.analysis.darkcount.DCR_dataset.get_1pe_value_fit" href="#pylars.analysis.darkcount.DCR_dataset.get_1pe_value_fit">get_1pe_value_fit</a></code></li>
-<li><code><a title="pylars.analysis.darkcount.DCR_dataset.get_DCR" href="#pylars.analysis.darkcount.DCR_dataset.get_DCR">get_DCR</a></code></li>
-<li><code><a title="pylars.analysis.darkcount.DCR_dataset.get_DCR_above_threshold_interp1d" href="#pylars.analysis.darkcount.DCR_dataset.get_DCR_above_threshold_interp1d">get_DCR_above_threshold_interp1d</a></code></li>
-<li><code><a title="pylars.analysis.darkcount.DCR_dataset.get_DCR_above_threshold_spline" href="#pylars.analysis.darkcount.DCR_dataset.get_DCR_above_threshold_spline">get_DCR_above_threshold_spline</a></code></li>
-<li><code><a title="pylars.analysis.darkcount.DCR_dataset.get_DCR_above_threshold_values" href="#pylars.analysis.darkcount.DCR_dataset.get_DCR_above_threshold_values">get_DCR_above_threshold_values</a></code></li>
-<li><code><a title="pylars.analysis.darkcount.DCR_dataset.get_gain" href="#pylars.analysis.darkcount.DCR_dataset.get_gain">get_gain</a></code></li>
+<li><code><a title="pylars.analysis.darkcount.DCR_dataset.get_how_many_peaks_per_waveform" href="#pylars.analysis.darkcount.DCR_dataset.get_how_many_peaks_per_waveform">get_how_many_peaks_per_waveform</a></code></li>
+<li><code><a title="pylars.analysis.darkcount.DCR_dataset.get_livetimes" href="#pylars.analysis.darkcount.DCR_dataset.get_livetimes">get_livetimes</a></code></li>
+<li><code><a title="pylars.analysis.darkcount.DCR_dataset.get_med_amplitude" href="#pylars.analysis.darkcount.DCR_dataset.get_med_amplitude">get_med_amplitude</a></code></li>
 <li><code><a title="pylars.analysis.darkcount.DCR_dataset.get_voltages_available" href="#pylars.analysis.darkcount.DCR_dataset.get_voltages_available">get_voltages_available</a></code></li>
 <li><code><a title="pylars.analysis.darkcount.DCR_dataset.load_processed_data" href="#pylars.analysis.darkcount.DCR_dataset.load_processed_data">load_processed_data</a></code></li>
-<li><code><a title="pylars.analysis.darkcount.DCR_dataset.print_DCR_CTP" href="#pylars.analysis.darkcount.DCR_dataset.print_DCR_CTP">print_DCR_CTP</a></code></li>
 <li><code><a title="pylars.analysis.darkcount.DCR_dataset.set_plots_flag" href="#pylars.analysis.darkcount.DCR_dataset.set_plots_flag">set_plots_flag</a></code></li>
+<li><code><a title="pylars.analysis.darkcount.DCR_dataset.set_standard_cuts" href="#pylars.analysis.darkcount.DCR_dataset.set_standard_cuts">set_standard_cuts</a></code></li>
 </ul>
 </li>
 <li>
@@ -2599,13 +3250,11 @@ bedroom wall and it looks nice.</dd>
 <ul class="">
 <li><code><a title="pylars.analysis.darkcount.DCR_run.compute_properties_of_ds" href="#pylars.analysis.darkcount.DCR_run.compute_properties_of_ds">compute_properties_of_ds</a></code></li>
 <li><code><a title="pylars.analysis.darkcount.DCR_run.compute_properties_of_run" href="#pylars.analysis.darkcount.DCR_run.compute_properties_of_run">compute_properties_of_run</a></code></li>
-<li><code><a title="pylars.analysis.darkcount.DCR_run.define_run_ADC_config" href="#pylars.analysis.darkcount.DCR_run.define_run_ADC_config">define_run_ADC_config</a></code></li>
 <li><code><a title="pylars.analysis.darkcount.DCR_run.define_run_SiPM_config" href="#pylars.analysis.darkcount.DCR_run.define_run_SiPM_config">define_run_SiPM_config</a></code></li>
 <li><code><a title="pylars.analysis.darkcount.DCR_run.get_run_temperatures" href="#pylars.analysis.darkcount.DCR_run.get_run_temperatures">get_run_temperatures</a></code></li>
 <li><code><a title="pylars.analysis.darkcount.DCR_run.initialize_results_df" href="#pylars.analysis.darkcount.DCR_run.initialize_results_df">initialize_results_df</a></code></li>
 <li><code><a title="pylars.analysis.darkcount.DCR_run.load_dataset" href="#pylars.analysis.darkcount.DCR_run.load_dataset">load_dataset</a></code></li>
 <li><code><a title="pylars.analysis.darkcount.DCR_run.load_results" href="#pylars.analysis.darkcount.DCR_run.load_results">load_results</a></code></li>
-<li><code><a title="pylars.analysis.darkcount.DCR_run.read_channel_map" href="#pylars.analysis.darkcount.DCR_run.read_channel_map">read_channel_map</a></code></li>
 <li><code><a title="pylars.analysis.darkcount.DCR_run.save_results" href="#pylars.analysis.darkcount.DCR_run.save_results">save_results</a></code></li>
 <li><code><a title="pylars.analysis.darkcount.DCR_run.set_plots_flag" href="#pylars.analysis.darkcount.DCR_run.set_plots_flag">set_plots_flag</a></code></li>
 </ul>

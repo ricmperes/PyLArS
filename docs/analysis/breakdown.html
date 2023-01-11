@@ -5,7 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.9.2" />
 <title>pylars.analysis.breakdown API documentation</title>
-<meta name="description" content="" />
+<meta name="description" content="`breakdown.py` contains the methods and tools for analysis of an LED ON
+dataset and functions to compute the breakdown voltage out of V vs Gain plots
+…" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
 <link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
@@ -22,12 +24,19 @@
 <h1 class="title">Module <code>pylars.analysis.breakdown</code></h1>
 </header>
 <section id="section-intro">
+<p><code>breakdown.py</code> contains the methods and tools for analysis of an LED ON
+dataset and functions to compute the breakdown voltage out of V vs Gain plots
+of LED OFF runs.</p>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">import copy
-from typing import Union
+<pre><code class="python">r&#34;&#34;&#34;`breakdown.py` contains the methods and tools for analysis of an LED ON
+dataset and functions to compute the breakdown voltage out of V vs Gain plots
+of LED OFF runs.
+&#34;&#34;&#34;
+import copy
+from typing import Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -35,10 +44,7 @@ import pylars
 import pylars.plotting.plotanalysis
 import pylars.utils.input
 import pylars.utils.output
-from pylars.utils.common import func_linear, find_minmax
-import scipy.ndimage
-from scipy.optimize import curve_fit
-from scipy.signal import find_peaks
+from pylars.utils.common import get_peak_rough_positions
 from scipy import stats
 from tqdm.autonotebook import tqdm
 
@@ -124,41 +130,6 @@ class BV_dataset():
 
             self.data[_voltage] = copy.deepcopy(_df[mask])
 
-    @classmethod
-    def get_peak_rough_positions(cls, area_array: np.ndarray,
-                                 cut_mask,
-                                 bins: Union[int, np.ndarray, list] = 1000,
-                                 filt=scipy.ndimage.gaussian_filter1d,
-                                 filter_options=3,
-                                 plot: Union[bool, str] = False) -&gt; tuple:
-        &#39;&#39;&#39;Takes the area histogram (fingerplot) and looks for peaks
-        and valeys. SPE should be the 2nd peak on most cases. Higher
-        PE values might be properly unrecognized
-        Returns two lists: list of the x value of the peaks, list of
-        the x value of the valeys.
-        Optional plot feature:
-        - False: no plot
-        - True: displays plot in notebook
-        - string - sufix on the name of the file&#39;&#39;&#39;
-
-        area_hist = np.histogram(
-            area_array[cut_mask], bins=bins)
-
-        area_x = area_hist[1]
-        area_x = (area_x + (area_x[1] - area_x[0]) / 2)[:-1]
-        area_y = area_hist[0]
-
-        area_filt = filt(area_y, filter_options)
-        area_peaks_x, peak_properties = find_peaks(area_filt,
-                                                   prominence=20,
-                                                   distance=50)
-
-        if plot != False:
-            pylars.plotting.plotanalysis.plot_peaks(
-                area_x, area_y, area_filt, area_peaks_x)
-
-        return area_x[area_peaks_x], peak_properties
-
     def compute_BV_LED_simple(self, LED_position: int,
                               plot: bool = False) -&gt; tuple:
         &#34;&#34;&#34;Comute BV for a given T dataset with the first no-noise peak
@@ -180,22 +151,32 @@ class BV_dataset():
         v_list = self.voltages
 
         for i, v in enumerate(v_list):
+
+            # For very low bias voltage the SiPM shows a pulse when the LED
+            # shines but it could be not yet in Geiger-Mode.
+            if v &lt; 48:
+                continue
+
             _df = self.data[v]
-            _cuts = _cuts = (
-                            (_df[&#39;length&#39;] &gt; 3) &amp;
-                            (_df[&#39;position&#39;] &gt; LED_position - 10) &amp;
-                            (_df[&#39;position&#39;] &lt; LED_position + 20)
+            _cuts = (
+                (_df[&#39;length&#39;] &gt; 3) &amp;
+                (_df[&#39;position&#39;] &gt; LED_position - 10) &amp;
+                (_df[&#39;position&#39;] &lt; LED_position + 20)
             )
-            peaks, peak_prop = BV_dataset.get_peak_rough_positions(
+            peaks, peak_prop = get_peak_rough_positions(
                 _df[&#39;area&#39;],
                 _cuts,
-                bins=np.linspace(0, np.percentile(_df[&#39;area&#39;], 95), 500),
+                bins=np.linspace(0, np.percentile(_df[&#39;area&#39;], 99), 1500),
                 plot=False)
 
-            if len(peaks) == 0:
+            if len(peaks &gt; 5):
+                # likely there is a nice LED fingerplot dominating everything
+                first_good_peak = np.median(_df[_cuts][&#39;area&#39;])
+
+            elif len(peaks) == 0:
                 print(&#39;Could not compute LED area for V=&#39;, v)
                 continue
-            if len(peaks) &gt; 0:
+            elif len(peaks) &gt; 0:
                 if (peaks[0] &gt; 3500) or (len(peaks) == 1):
                     first_good_peak = peaks[0]
                 else:
@@ -219,14 +200,16 @@ class BV_dataset():
                 gains=good_peaks,
                 a=linres.slope,  # type: ignore
                 b=linres.intercept,  # type: ignore
-                _breakdown_v=linres.intercept)  # type: ignore
+                _breakdown_v=linres.intercept,  # type: ignore
+                _breakdown_v_error=linres.intercept_stderr)  # type: ignore
 
-        return (linres.intercept, linres.intercept_stderr,
+        return (linres.intercept, linres.intercept_stderr,  # type: ignore
                 linres.rvalue**2)  # type: ignore
 
 
-def compute_BV(df_results: pd.DataFrame,
-               plot: Union[bool, str] = False) -&gt; pd.DataFrame:
+def compute_BV_df(df_results: pd.DataFrame,
+                  plot: Union[bool, str] = False
+                  ) -&gt; Tuple[pd.DataFrame, float, float, float]:
     &#34;&#34;&#34;Computes the breakdown voltage with a linear fit of gain over
     V points.
 
@@ -256,8 +239,17 @@ def compute_BV(df_results: pd.DataFrame,
             df_results[df_results[&#39;T&#39;] == _temp][&#39;V&#39;])
         gain_list_in_temp = np.unique(
             df_results[df_results[&#39;T&#39;] == _temp][&#39;Gain&#39;])
-        (a, b), cov = curve_fit(func_linear, volt_list_in_temp, gain_list_in_temp)
-        _breakdown_v = -b / a
+
+        linres = stats.linregress(gain_list_in_temp, volt_list_in_temp)
+        a = linres.slope,  # type: ignore
+        b = linres.intercept,  # type: ignore
+        b_err = linres.intercept_stderr  # type: ignore
+        a = float(a[0])  # why is this needed? Who knows...
+        b = float(b[0])
+        b_err = float(b_err)
+
+        _breakdown_v = b  # type: ignore
+        _breakdown_v_error = b_err  # type: ignore
         # print(_breakdown_v)
         df_results.loc[df_results[&#39;T&#39;] == _temp, &#39;BV&#39;] = _breakdown_v
 
@@ -266,11 +258,60 @@ def compute_BV(df_results: pd.DataFrame,
                                                      volt_list_in_temp,
                                                      gain_list_in_temp,
                                                      a, b,
-                                                     _breakdown_v)
+                                                     _breakdown_v,
+                                                     _breakdown_v_error)
 
     df_results[&#39;OV&#39;] = df_results[&#39;V&#39;] - df_results[&#39;BV&#39;]
 
-    return df_results</code></pre>
+    return df_results, a, _breakdown_v, _breakdown_v_error  # type: ignore
+
+
+def compute_BV_DCRds_results(
+        results_df: pd.DataFrame, plot: bool) -&gt; pd.DataFrame:
+    &#34;&#34;&#34;Compute BVs for a finished DCR analysis results dataframe.
+
+    Args:
+        results_df (pd.DataFrame): DCR analysis result df (without BV)
+        plot (bool): save plot of V vs Gain fit.
+
+    Returns:
+        pd.DataFrame: a df with all the BV and their std.
+    &#34;&#34;&#34;
+    temps = np.unique(results_df[&#39;T&#39;])
+    BVs = pd.DataFrame(columns=[&#39;T&#39;, &#39;module&#39;, &#39;channel&#39;, &#39;BV&#39;, &#39;BV_error&#39;])
+    for _temp in temps:
+        _select_temp = (results_df[&#39;T&#39;] == _temp)
+        for mod in np.unique(results_df[_select_temp][&#39;module&#39;]):
+            _select_mod = (results_df[&#39;module&#39;] == mod)
+            for ch in np.unique(
+                    results_df[_select_temp &amp; _select_mod][&#39;channel&#39;]):
+                _select = (_select_temp &amp; _select_mod &amp;
+                           (results_df[&#39;channel&#39;] == ch))
+                df = results_df[_select]
+                if plot == True:
+                    plot_BV = f&#39;BV_mod{mod}_ch{ch}&#39;
+                else:
+                    plot_BV = False
+
+                try:
+                    df, a, bv, bv_err = compute_BV_df(df,  # type: ignore
+                                                      plot=plot_BV)
+                    BVs = pd.concat([BVs,
+                                     pd.DataFrame({&#39;T&#39;: [_temp],
+                                                   &#39;module&#39;: [mod],
+                                                   &#39;channel&#39;: [ch],
+                                                   &#39;BV&#39;: [bv],
+                                                   &#39;BV_error&#39;: [bv_err]})],
+                                    ignore_index=True)
+                except BaseException:
+                    BVs = pd.concat([BVs,
+                                    pd.DataFrame({&#39;T&#39;: [_temp],
+                                                  &#39;module&#39;: [mod],
+                                                  &#39;channel&#39;: [ch],
+                                                  &#39;BV&#39;: [np.nan],
+                                                  &#39;BV_error&#39;: [np.nan]})],
+                                    ignore_index=True)
+    return BVs</code></pre>
 </details>
 </section>
 <section>
@@ -280,8 +321,77 @@ def compute_BV(df_results: pd.DataFrame,
 <section>
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
-<dt id="pylars.analysis.breakdown.compute_BV"><code class="name flex">
-<span>def <span class="ident">compute_BV</span></span>(<span>df_results: pandas.core.frame.DataFrame, plot: Union[bool, str] = False) ‑> pandas.core.frame.DataFrame</span>
+<dt id="pylars.analysis.breakdown.compute_BV_DCRds_results"><code class="name flex">
+<span>def <span class="ident">compute_BV_DCRds_results</span></span>(<span>results_df: pandas.core.frame.DataFrame, plot: bool) ‑> pandas.core.frame.DataFrame</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Compute BVs for a finished DCR analysis results dataframe.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>results_df</code></strong> :&ensp;<code>pd.DataFrame</code></dt>
+<dd>DCR analysis result df (without BV)</dd>
+<dt><strong><code>plot</code></strong> :&ensp;<code>bool</code></dt>
+<dd>save plot of V vs Gain fit.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>pd.DataFrame</code></dt>
+<dd>a df with all the BV and their std.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def compute_BV_DCRds_results(
+        results_df: pd.DataFrame, plot: bool) -&gt; pd.DataFrame:
+    &#34;&#34;&#34;Compute BVs for a finished DCR analysis results dataframe.
+
+    Args:
+        results_df (pd.DataFrame): DCR analysis result df (without BV)
+        plot (bool): save plot of V vs Gain fit.
+
+    Returns:
+        pd.DataFrame: a df with all the BV and their std.
+    &#34;&#34;&#34;
+    temps = np.unique(results_df[&#39;T&#39;])
+    BVs = pd.DataFrame(columns=[&#39;T&#39;, &#39;module&#39;, &#39;channel&#39;, &#39;BV&#39;, &#39;BV_error&#39;])
+    for _temp in temps:
+        _select_temp = (results_df[&#39;T&#39;] == _temp)
+        for mod in np.unique(results_df[_select_temp][&#39;module&#39;]):
+            _select_mod = (results_df[&#39;module&#39;] == mod)
+            for ch in np.unique(
+                    results_df[_select_temp &amp; _select_mod][&#39;channel&#39;]):
+                _select = (_select_temp &amp; _select_mod &amp;
+                           (results_df[&#39;channel&#39;] == ch))
+                df = results_df[_select]
+                if plot == True:
+                    plot_BV = f&#39;BV_mod{mod}_ch{ch}&#39;
+                else:
+                    plot_BV = False
+
+                try:
+                    df, a, bv, bv_err = compute_BV_df(df,  # type: ignore
+                                                      plot=plot_BV)
+                    BVs = pd.concat([BVs,
+                                     pd.DataFrame({&#39;T&#39;: [_temp],
+                                                   &#39;module&#39;: [mod],
+                                                   &#39;channel&#39;: [ch],
+                                                   &#39;BV&#39;: [bv],
+                                                   &#39;BV_error&#39;: [bv_err]})],
+                                    ignore_index=True)
+                except BaseException:
+                    BVs = pd.concat([BVs,
+                                    pd.DataFrame({&#39;T&#39;: [_temp],
+                                                  &#39;module&#39;: [mod],
+                                                  &#39;channel&#39;: [ch],
+                                                  &#39;BV&#39;: [np.nan],
+                                                  &#39;BV_error&#39;: [np.nan]})],
+                                    ignore_index=True)
+    return BVs</code></pre>
+</details>
+</dd>
+<dt id="pylars.analysis.breakdown.compute_BV_df"><code class="name flex">
+<span>def <span class="ident">compute_BV_df</span></span>(<span>df_results: pandas.core.frame.DataFrame, plot: Union[bool, str] = False) ‑> Tuple[pandas.core.frame.DataFrame, float, float, float]</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Computes the breakdown voltage with a linear fit of gain over
@@ -307,8 +417,9 @@ False.</dd>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def compute_BV(df_results: pd.DataFrame,
-               plot: Union[bool, str] = False) -&gt; pd.DataFrame:
+<pre><code class="python">def compute_BV_df(df_results: pd.DataFrame,
+                  plot: Union[bool, str] = False
+                  ) -&gt; Tuple[pd.DataFrame, float, float, float]:
     &#34;&#34;&#34;Computes the breakdown voltage with a linear fit of gain over
     V points.
 
@@ -338,8 +449,17 @@ False.</dd>
             df_results[df_results[&#39;T&#39;] == _temp][&#39;V&#39;])
         gain_list_in_temp = np.unique(
             df_results[df_results[&#39;T&#39;] == _temp][&#39;Gain&#39;])
-        (a, b), cov = curve_fit(func_linear, volt_list_in_temp, gain_list_in_temp)
-        _breakdown_v = -b / a
+
+        linres = stats.linregress(gain_list_in_temp, volt_list_in_temp)
+        a = linres.slope,  # type: ignore
+        b = linres.intercept,  # type: ignore
+        b_err = linres.intercept_stderr  # type: ignore
+        a = float(a[0])  # why is this needed? Who knows...
+        b = float(b[0])
+        b_err = float(b_err)
+
+        _breakdown_v = b  # type: ignore
+        _breakdown_v_error = b_err  # type: ignore
         # print(_breakdown_v)
         df_results.loc[df_results[&#39;T&#39;] == _temp, &#39;BV&#39;] = _breakdown_v
 
@@ -348,11 +468,12 @@ False.</dd>
                                                      volt_list_in_temp,
                                                      gain_list_in_temp,
                                                      a, b,
-                                                     _breakdown_v)
+                                                     _breakdown_v,
+                                                     _breakdown_v_error)
 
     df_results[&#39;OV&#39;] = df_results[&#39;V&#39;] - df_results[&#39;BV&#39;]
 
-    return df_results</code></pre>
+    return df_results, a, _breakdown_v, _breakdown_v_error  # type: ignore</code></pre>
 </details>
 </dd>
 </dl>
@@ -454,41 +575,6 @@ a certain temperature.</p></div>
 
             self.data[_voltage] = copy.deepcopy(_df[mask])
 
-    @classmethod
-    def get_peak_rough_positions(cls, area_array: np.ndarray,
-                                 cut_mask,
-                                 bins: Union[int, np.ndarray, list] = 1000,
-                                 filt=scipy.ndimage.gaussian_filter1d,
-                                 filter_options=3,
-                                 plot: Union[bool, str] = False) -&gt; tuple:
-        &#39;&#39;&#39;Takes the area histogram (fingerplot) and looks for peaks
-        and valeys. SPE should be the 2nd peak on most cases. Higher
-        PE values might be properly unrecognized
-        Returns two lists: list of the x value of the peaks, list of
-        the x value of the valeys.
-        Optional plot feature:
-        - False: no plot
-        - True: displays plot in notebook
-        - string - sufix on the name of the file&#39;&#39;&#39;
-
-        area_hist = np.histogram(
-            area_array[cut_mask], bins=bins)
-
-        area_x = area_hist[1]
-        area_x = (area_x + (area_x[1] - area_x[0]) / 2)[:-1]
-        area_y = area_hist[0]
-
-        area_filt = filt(area_y, filter_options)
-        area_peaks_x, peak_properties = find_peaks(area_filt,
-                                                   prominence=20,
-                                                   distance=50)
-
-        if plot != False:
-            pylars.plotting.plotanalysis.plot_peaks(
-                area_x, area_y, area_filt, area_peaks_x)
-
-        return area_x[area_peaks_x], peak_properties
-
     def compute_BV_LED_simple(self, LED_position: int,
                               plot: bool = False) -&gt; tuple:
         &#34;&#34;&#34;Comute BV for a given T dataset with the first no-noise peak
@@ -510,22 +596,32 @@ a certain temperature.</p></div>
         v_list = self.voltages
 
         for i, v in enumerate(v_list):
+
+            # For very low bias voltage the SiPM shows a pulse when the LED
+            # shines but it could be not yet in Geiger-Mode.
+            if v &lt; 48:
+                continue
+
             _df = self.data[v]
-            _cuts = _cuts = (
-                            (_df[&#39;length&#39;] &gt; 3) &amp;
-                            (_df[&#39;position&#39;] &gt; LED_position - 10) &amp;
-                            (_df[&#39;position&#39;] &lt; LED_position + 20)
+            _cuts = (
+                (_df[&#39;length&#39;] &gt; 3) &amp;
+                (_df[&#39;position&#39;] &gt; LED_position - 10) &amp;
+                (_df[&#39;position&#39;] &lt; LED_position + 20)
             )
-            peaks, peak_prop = BV_dataset.get_peak_rough_positions(
+            peaks, peak_prop = get_peak_rough_positions(
                 _df[&#39;area&#39;],
                 _cuts,
-                bins=np.linspace(0, np.percentile(_df[&#39;area&#39;], 95), 500),
+                bins=np.linspace(0, np.percentile(_df[&#39;area&#39;], 99), 1500),
                 plot=False)
 
-            if len(peaks) == 0:
+            if len(peaks &gt; 5):
+                # likely there is a nice LED fingerplot dominating everything
+                first_good_peak = np.median(_df[_cuts][&#39;area&#39;])
+
+            elif len(peaks) == 0:
                 print(&#39;Could not compute LED area for V=&#39;, v)
                 continue
-            if len(peaks) &gt; 0:
+            elif len(peaks) &gt; 0:
                 if (peaks[0] &gt; 3500) or (len(peaks) == 1):
                     first_good_peak = peaks[0]
                 else:
@@ -549,67 +645,12 @@ a certain temperature.</p></div>
                 gains=good_peaks,
                 a=linres.slope,  # type: ignore
                 b=linres.intercept,  # type: ignore
-                _breakdown_v=linres.intercept)  # type: ignore
+                _breakdown_v=linres.intercept,  # type: ignore
+                _breakdown_v_error=linres.intercept_stderr)  # type: ignore
 
-        return (linres.intercept, linres.intercept_stderr,
+        return (linres.intercept, linres.intercept_stderr,  # type: ignore
                 linres.rvalue**2)  # type: ignore</code></pre>
 </details>
-<h3>Static methods</h3>
-<dl>
-<dt id="pylars.analysis.breakdown.BV_dataset.get_peak_rough_positions"><code class="name flex">
-<span>def <span class="ident">get_peak_rough_positions</span></span>(<span>area_array: numpy.ndarray, cut_mask, bins: Union[int, numpy.ndarray, list] = 1000, filt=&lt;function gaussian_filter1d&gt;, filter_options=3, plot: Union[bool, str] = False) ‑> tuple</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Takes the area histogram (fingerplot) and looks for peaks
-and valeys. SPE should be the 2nd peak on most cases. Higher
-PE values might be properly unrecognized
-Returns two lists: list of the x value of the peaks, list of
-the x value of the valeys.
-Optional plot feature:
-- False: no plot
-- True: displays plot in notebook
-- string - sufix on the name of the file</p></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">@classmethod
-def get_peak_rough_positions(cls, area_array: np.ndarray,
-                             cut_mask,
-                             bins: Union[int, np.ndarray, list] = 1000,
-                             filt=scipy.ndimage.gaussian_filter1d,
-                             filter_options=3,
-                             plot: Union[bool, str] = False) -&gt; tuple:
-    &#39;&#39;&#39;Takes the area histogram (fingerplot) and looks for peaks
-    and valeys. SPE should be the 2nd peak on most cases. Higher
-    PE values might be properly unrecognized
-    Returns two lists: list of the x value of the peaks, list of
-    the x value of the valeys.
-    Optional plot feature:
-    - False: no plot
-    - True: displays plot in notebook
-    - string - sufix on the name of the file&#39;&#39;&#39;
-
-    area_hist = np.histogram(
-        area_array[cut_mask], bins=bins)
-
-    area_x = area_hist[1]
-    area_x = (area_x + (area_x[1] - area_x[0]) / 2)[:-1]
-    area_y = area_hist[0]
-
-    area_filt = filt(area_y, filter_options)
-    area_peaks_x, peak_properties = find_peaks(area_filt,
-                                               prominence=20,
-                                               distance=50)
-
-    if plot != False:
-        pylars.plotting.plotanalysis.plot_peaks(
-            area_x, area_y, area_filt, area_peaks_x)
-
-    return area_x[area_peaks_x], peak_properties</code></pre>
-</details>
-</dd>
-</dl>
 <h3>Methods</h3>
 <dl>
 <dt id="pylars.analysis.breakdown.BV_dataset.compute_BV_LED_simple"><code class="name flex">
@@ -658,22 +699,32 @@ regression. Returns on the form <code>(BV, BV_std, r2)</code>.</dd>
     v_list = self.voltages
 
     for i, v in enumerate(v_list):
+
+        # For very low bias voltage the SiPM shows a pulse when the LED
+        # shines but it could be not yet in Geiger-Mode.
+        if v &lt; 48:
+            continue
+
         _df = self.data[v]
-        _cuts = _cuts = (
-                        (_df[&#39;length&#39;] &gt; 3) &amp;
-                        (_df[&#39;position&#39;] &gt; LED_position - 10) &amp;
-                        (_df[&#39;position&#39;] &lt; LED_position + 20)
+        _cuts = (
+            (_df[&#39;length&#39;] &gt; 3) &amp;
+            (_df[&#39;position&#39;] &gt; LED_position - 10) &amp;
+            (_df[&#39;position&#39;] &lt; LED_position + 20)
         )
-        peaks, peak_prop = BV_dataset.get_peak_rough_positions(
+        peaks, peak_prop = get_peak_rough_positions(
             _df[&#39;area&#39;],
             _cuts,
-            bins=np.linspace(0, np.percentile(_df[&#39;area&#39;], 95), 500),
+            bins=np.linspace(0, np.percentile(_df[&#39;area&#39;], 99), 1500),
             plot=False)
 
-        if len(peaks) == 0:
+        if len(peaks &gt; 5):
+            # likely there is a nice LED fingerplot dominating everything
+            first_good_peak = np.median(_df[_cuts][&#39;area&#39;])
+
+        elif len(peaks) == 0:
             print(&#39;Could not compute LED area for V=&#39;, v)
             continue
-        if len(peaks) &gt; 0:
+        elif len(peaks) &gt; 0:
             if (peaks[0] &gt; 3500) or (len(peaks) == 1):
                 first_good_peak = peaks[0]
             else:
@@ -697,9 +748,10 @@ regression. Returns on the form <code>(BV, BV_std, r2)</code>.</dd>
             gains=good_peaks,
             a=linres.slope,  # type: ignore
             b=linres.intercept,  # type: ignore
-            _breakdown_v=linres.intercept)  # type: ignore
+            _breakdown_v=linres.intercept,  # type: ignore
+            _breakdown_v_error=linres.intercept_stderr)  # type: ignore
 
-    return (linres.intercept, linres.intercept_stderr,
+    return (linres.intercept, linres.intercept_stderr,  # type: ignore
             linres.rvalue**2)  # type: ignore</code></pre>
 </details>
 </dd>
@@ -842,7 +894,8 @@ my bedroom wall and it looks nice.</dd>
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
-<li><code><a title="pylars.analysis.breakdown.compute_BV" href="#pylars.analysis.breakdown.compute_BV">compute_BV</a></code></li>
+<li><code><a title="pylars.analysis.breakdown.compute_BV_DCRds_results" href="#pylars.analysis.breakdown.compute_BV_DCRds_results">compute_BV_DCRds_results</a></code></li>
+<li><code><a title="pylars.analysis.breakdown.compute_BV_df" href="#pylars.analysis.breakdown.compute_BV_df">compute_BV_df</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-classes">Classes</a></h3>
@@ -851,7 +904,6 @@ my bedroom wall and it looks nice.</dd>
 <h4><code><a title="pylars.analysis.breakdown.BV_dataset" href="#pylars.analysis.breakdown.BV_dataset">BV_dataset</a></code></h4>
 <ul class="">
 <li><code><a title="pylars.analysis.breakdown.BV_dataset.compute_BV_LED_simple" href="#pylars.analysis.breakdown.BV_dataset.compute_BV_LED_simple">compute_BV_LED_simple</a></code></li>
-<li><code><a title="pylars.analysis.breakdown.BV_dataset.get_peak_rough_positions" href="#pylars.analysis.breakdown.BV_dataset.get_peak_rough_positions">get_peak_rough_positions</a></code></li>
 <li><code><a title="pylars.analysis.breakdown.BV_dataset.get_voltages_available" href="#pylars.analysis.breakdown.BV_dataset.get_voltages_available">get_voltages_available</a></code></li>
 <li><code><a title="pylars.analysis.breakdown.BV_dataset.load_processed_data" href="#pylars.analysis.breakdown.BV_dataset.load_processed_data">load_processed_data</a></code></li>
 <li><code><a title="pylars.analysis.breakdown.BV_dataset.set_plots_flag" href="#pylars.analysis.breakdown.BV_dataset.set_plots_flag">set_plots_flag</a></code></li>

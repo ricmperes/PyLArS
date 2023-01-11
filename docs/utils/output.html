@@ -27,7 +27,7 @@
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">from .input import run
-from pylars.processing.rawprocessor import run_processor
+import pylars
 import pandas as pd
 from glob import glob
 
@@ -148,10 +148,10 @@ class processed_dataset():
                     print(&#39;Loaded file: &#39;, file_name + &#39;.h5&#39;)
 
             else:
-                processor = run_processor(run_to_process=self.run,
-                                          processor_type=&#39;simple&#39;,
-                                          sigma_level=5,
-                                          baseline_samples=50)
+                processor = pylars.processing.rawprocessor.run_processor(run_to_process=self.run,
+                                                                         processor_type=&#39;simple&#39;,
+                                                                         sigma_level=5,
+                                                                         baseline_samples=50)
                 if verbose &gt; 0:
                     print((
                         f&#39;Using Default values for sigma &#39;
@@ -305,10 +305,10 @@ saving/loading cached processed files.</p></div>
                     print(&#39;Loaded file: &#39;, file_name + &#39;.h5&#39;)
 
             else:
-                processor = run_processor(run_to_process=self.run,
-                                          processor_type=&#39;simple&#39;,
-                                          sigma_level=5,
-                                          baseline_samples=50)
+                processor = pylars.processing.rawprocessor.run_processor(run_to_process=self.run,
+                                                                         processor_type=&#39;simple&#39;,
+                                                                         sigma_level=5,
+                                                                         baseline_samples=50)
                 if verbose &gt; 0:
                     print((
                         f&#39;Using Default values for sigma &#39;
@@ -430,10 +430,10 @@ options. Defaults to False.</dd>
                 print(&#39;Loaded file: &#39;, file_name + &#39;.h5&#39;)
 
         else:
-            processor = run_processor(run_to_process=self.run,
-                                      processor_type=&#39;simple&#39;,
-                                      sigma_level=5,
-                                      baseline_samples=50)
+            processor = pylars.processing.rawprocessor.run_processor(run_to_process=self.run,
+                                                                     processor_type=&#39;simple&#39;,
+                                                                     sigma_level=5,
+                                                                     baseline_samples=50)
             if verbose &gt; 0:
                 print((
                     f&#39;Using Default values for sigma &#39;

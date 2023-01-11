@@ -26,50 +26,78 @@
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">import numpy as np
-import matplotlib.pyplot as plt
+<pre><code class="python">import matplotlib.pyplot as plt
 
 
-def plot_hist_area(df_results, ax=None, color=None):
+def plot_hist_area(df_results, bins=800, ax=None, color=None):
+    &#34;&#34;&#34;Histogram of area values.&#34;&#34;&#34;
     if ax is None:
         fig, ax = plt.subplots(1, 1)
 
-    ax.hist(df_results[&#39;area&#39;], bins=800, histtype=&#39;step&#39;, color=color)
+    ax.hist(df_results[&#39;area&#39;], bins=bins, histtype=&#39;step&#39;, color=color)
     ax.set_xlabel(&#39;Area [integrated ADC counts]&#39;)
     ax.set_ylabel(&#39;# events&#39;)
 
     return ax
 
 
-def plot_hist_length(df_results, ax=None, color=None):
+def plot_hist_length(df_results, bins=50, ax=None, color=None):
+    &#34;&#34;&#34;Histogram of length values.&#34;&#34;&#34;
     if ax is None:
         fig, ax = plt.subplots(1, 1)
 
-    ax.hist(df_results[&#39;length&#39;], bins=50, color=color)
+    ax.hist(df_results[&#39;length&#39;], bins=bins, color=color)
     ax.set_xlabel(&#39;Length [# samples]&#39;)
     ax.set_ylabel(&#39;# events&#39;)
 
     return ax
 
 
-def plot_hist_position(df_results, ax=None, color=None):
+def plot_hist_position(df_results, bins=200, ax=None, color=None):
+    &#34;&#34;&#34;Histogram of position values.&#34;&#34;&#34;
     if ax is None:
         fig, ax = plt.subplots(1, 1)
 
-    ax.hist(df_results[&#39;position&#39;], bins=200, color=color)
+    ax.hist(df_results[&#39;position&#39;], bins=bins, color=color)
     ax.set_xlabel(&#39;Position [sample #]&#39;)
     ax.set_ylabel(&#39;# events&#39;)
 
     return ax
 
 
+def plot_hist_amplitude(df_results, bins=800, ax=None, color=None):
+    &#34;&#34;&#34;Histogram of amplitude values.&#34;&#34;&#34;
+    if ax is None:
+        fig, ax = plt.subplots(1, 1)
+
+    ax.hist(df_results[&#39;amplitude&#39;], bins=bins, histtype=&#39;step&#39;, color=color)
+    ax.set_xlabel(&#39;Amplitude [ADC counts]&#39;)
+    ax.set_ylabel(&#39;# events&#39;)
+
+    return ax
+
+
 def plot_3hists(df_results, axs=None, color=None):
+    &#34;&#34;&#34;Histograms of area, length and position values.&#34;&#34;&#34;
     if axs is None:
         fig, axs = plt.subplots(1, 3, figsize=(15, 4))
 
     axs[0] = plot_hist_area(df_results, ax=axs[0], color=color)
     axs[1] = plot_hist_length(df_results, ax=axs[1], color=color)
     axs[2] = plot_hist_position(df_results, ax=axs[2], color=color)
+
+    return axs
+
+
+def plot_4hists(df_results, axs=None, color=None):
+    &#34;&#34;&#34;Histograms of area, amplitude, length and position values.&#34;&#34;&#34;
+    if axs is None:
+        fig, axs = plt.subplots(1, 4, figsize=(15, 4))
+
+    axs[0] = plot_hist_area(df_results, ax=axs[0], color=color)
+    axs[1] = plot_hist_amplitude(df_results, ax=axs[1], color=color)
+    axs[2] = plot_hist_length(df_results, ax=axs[2], color=color)
+    axs[3] = plot_hist_position(df_results, ax=axs[3], color=color)
 
     return axs</code></pre>
 </details>
@@ -85,12 +113,13 @@ def plot_3hists(df_results, axs=None, color=None):
 <span>def <span class="ident">plot_3hists</span></span>(<span>df_results, axs=None, color=None)</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Histograms of area, length and position values.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def plot_3hists(df_results, axs=None, color=None):
+    &#34;&#34;&#34;Histograms of area, length and position values.&#34;&#34;&#34;
     if axs is None:
         fig, axs = plt.subplots(1, 3, figsize=(15, 4))
 
@@ -101,20 +130,64 @@ def plot_3hists(df_results, axs=None, color=None):
     return axs</code></pre>
 </details>
 </dd>
-<dt id="pylars.plotting.plotprocessed.plot_hist_area"><code class="name flex">
-<span>def <span class="ident">plot_hist_area</span></span>(<span>df_results, ax=None, color=None)</span>
+<dt id="pylars.plotting.plotprocessed.plot_4hists"><code class="name flex">
+<span>def <span class="ident">plot_4hists</span></span>(<span>df_results, axs=None, color=None)</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Histograms of area, amplitude, length and position values.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def plot_hist_area(df_results, ax=None, color=None):
+<pre><code class="python">def plot_4hists(df_results, axs=None, color=None):
+    &#34;&#34;&#34;Histograms of area, amplitude, length and position values.&#34;&#34;&#34;
+    if axs is None:
+        fig, axs = plt.subplots(1, 4, figsize=(15, 4))
+
+    axs[0] = plot_hist_area(df_results, ax=axs[0], color=color)
+    axs[1] = plot_hist_amplitude(df_results, ax=axs[1], color=color)
+    axs[2] = plot_hist_length(df_results, ax=axs[2], color=color)
+    axs[3] = plot_hist_position(df_results, ax=axs[3], color=color)
+
+    return axs</code></pre>
+</details>
+</dd>
+<dt id="pylars.plotting.plotprocessed.plot_hist_amplitude"><code class="name flex">
+<span>def <span class="ident">plot_hist_amplitude</span></span>(<span>df_results, bins=800, ax=None, color=None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Histogram of amplitude values.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plot_hist_amplitude(df_results, bins=800, ax=None, color=None):
+    &#34;&#34;&#34;Histogram of amplitude values.&#34;&#34;&#34;
     if ax is None:
         fig, ax = plt.subplots(1, 1)
 
-    ax.hist(df_results[&#39;area&#39;], bins=800, histtype=&#39;step&#39;, color=color)
+    ax.hist(df_results[&#39;amplitude&#39;], bins=bins, histtype=&#39;step&#39;, color=color)
+    ax.set_xlabel(&#39;Amplitude [ADC counts]&#39;)
+    ax.set_ylabel(&#39;# events&#39;)
+
+    return ax</code></pre>
+</details>
+</dd>
+<dt id="pylars.plotting.plotprocessed.plot_hist_area"><code class="name flex">
+<span>def <span class="ident">plot_hist_area</span></span>(<span>df_results, bins=800, ax=None, color=None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Histogram of area values.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plot_hist_area(df_results, bins=800, ax=None, color=None):
+    &#34;&#34;&#34;Histogram of area values.&#34;&#34;&#34;
+    if ax is None:
+        fig, ax = plt.subplots(1, 1)
+
+    ax.hist(df_results[&#39;area&#39;], bins=bins, histtype=&#39;step&#39;, color=color)
     ax.set_xlabel(&#39;Area [integrated ADC counts]&#39;)
     ax.set_ylabel(&#39;# events&#39;)
 
@@ -122,19 +195,20 @@ def plot_3hists(df_results, axs=None, color=None):
 </details>
 </dd>
 <dt id="pylars.plotting.plotprocessed.plot_hist_length"><code class="name flex">
-<span>def <span class="ident">plot_hist_length</span></span>(<span>df_results, ax=None, color=None)</span>
+<span>def <span class="ident">plot_hist_length</span></span>(<span>df_results, bins=50, ax=None, color=None)</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Histogram of length values.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def plot_hist_length(df_results, ax=None, color=None):
+<pre><code class="python">def plot_hist_length(df_results, bins=50, ax=None, color=None):
+    &#34;&#34;&#34;Histogram of length values.&#34;&#34;&#34;
     if ax is None:
         fig, ax = plt.subplots(1, 1)
 
-    ax.hist(df_results[&#39;length&#39;], bins=50, color=color)
+    ax.hist(df_results[&#39;length&#39;], bins=bins, color=color)
     ax.set_xlabel(&#39;Length [# samples]&#39;)
     ax.set_ylabel(&#39;# events&#39;)
 
@@ -142,19 +216,20 @@ def plot_3hists(df_results, axs=None, color=None):
 </details>
 </dd>
 <dt id="pylars.plotting.plotprocessed.plot_hist_position"><code class="name flex">
-<span>def <span class="ident">plot_hist_position</span></span>(<span>df_results, ax=None, color=None)</span>
+<span>def <span class="ident">plot_hist_position</span></span>(<span>df_results, bins=200, ax=None, color=None)</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Histogram of position values.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def plot_hist_position(df_results, ax=None, color=None):
+<pre><code class="python">def plot_hist_position(df_results, bins=200, ax=None, color=None):
+    &#34;&#34;&#34;Histogram of position values.&#34;&#34;&#34;
     if ax is None:
         fig, ax = plt.subplots(1, 1)
 
-    ax.hist(df_results[&#39;position&#39;], bins=200, color=color)
+    ax.hist(df_results[&#39;position&#39;], bins=bins, color=color)
     ax.set_xlabel(&#39;Position [sample #]&#39;)
     ax.set_ylabel(&#39;# events&#39;)
 
@@ -178,8 +253,10 @@ def plot_3hists(df_results, axs=None, color=None):
 </ul>
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
-<ul class="">
+<ul class="two-column">
 <li><code><a title="pylars.plotting.plotprocessed.plot_3hists" href="#pylars.plotting.plotprocessed.plot_3hists">plot_3hists</a></code></li>
+<li><code><a title="pylars.plotting.plotprocessed.plot_4hists" href="#pylars.plotting.plotprocessed.plot_4hists">plot_4hists</a></code></li>
+<li><code><a title="pylars.plotting.plotprocessed.plot_hist_amplitude" href="#pylars.plotting.plotprocessed.plot_hist_amplitude">plot_hist_amplitude</a></code></li>
 <li><code><a title="pylars.plotting.plotprocessed.plot_hist_area" href="#pylars.plotting.plotprocessed.plot_hist_area">plot_hist_area</a></code></li>
 <li><code><a title="pylars.plotting.plotprocessed.plot_hist_length" href="#pylars.plotting.plotprocessed.plot_hist_length">plot_hist_length</a></code></li>
 <li><code><a title="pylars.plotting.plotprocessed.plot_hist_position" href="#pylars.plotting.plotprocessed.plot_hist_position">plot_hist_position</a></code></li>

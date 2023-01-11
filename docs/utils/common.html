@@ -30,10 +30,12 @@
 import hashlib
 import itertools
 import json
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Tuple
 
 import numpy as np
 import pylars.utils.input
+from scipy.signal import find_peaks
+import scipy.ndimage
 
 
 def Gaussean(x, A, mu, sigma):
@@ -109,6 +111,36 @@ def load_ADC_config(model: str, F_amp: float) -&gt; Dict[str, Union[int, float]]
     return ADC_config
 
 
+def get_gain(F_amp: float,
+             spe_area: float,
+             ADC_range: float = 2.25,
+             ADC_impedance: float = 50,
+             ADC_res: float = 2**16,
+             q_e: float = 1.602176634e-19,
+             ) -&gt; float:
+    &#34;&#34;&#34;Compute the gain given the value of the SPE area and the ADC
+        paramenters.
+
+    Args:
+        F_amp (float): Total signal amplification factor.
+        spe_area (float): mean area of spe (in ADC bins x ns).
+        ADC_range (float, optional): Dynamic range of the ADC. Defaults
+            to 2.25.
+        ADC_impedance (float, optional): Impedance of the ADC. Defaults to 50.
+        ADC_res (float, optional): bit.wise resolution of the ADC. Defaults
+            to 2**16.
+        q_e (float, optional): electron charge [C]. Defaults to 1.602176634e-19.
+
+    Returns:
+        float: the calculated gain.
+    &#34;&#34;&#34;
+
+    gain = (ADC_range * spe_area * 1e-9 / ADC_impedance / F_amp /
+            ADC_res / q_e)
+
+    return gain
+
+
 def find_minmax(array: np.ndarray) -&gt; List[np.ndarray]:
     &#34;&#34;&#34;Return local peaks and valeys of an 1d array.
 
@@ -126,7 +158,17 @@ def find_minmax(array: np.ndarray) -&gt; List[np.ndarray]:
     return [peaks, valeys]
 
 
-def get_channel_list(process):
+def get_channel_list(process) -&gt; List[Tuple[int, str]]:
+    &#34;&#34;&#34;Fetch the channels available for a dataset by reading the original
+    ROOT file.
+
+    Args:
+        process (run_processor): initiated `run_processor` object.
+
+    Returns:
+        List[Tuple[int,str]]: list with the available channels of a given
+            dataset in the format [(mod, ch)_i]
+    &#34;&#34;&#34;
     _datasets = process.datasets_df
     modules = np.unique(_datasets[&#39;module&#39;])
     ch_list = []
@@ -141,7 +183,64 @@ def get_channel_list(process):
         raw.get_available_channels()
         channels = raw.channels
         ch_list += list(itertools.product([mod], channels))
-    return ch_list</code></pre>
+    return ch_list
+
+
+def wstd(array: np.ndarray, waverage: float, weights: np.ndarray) -&gt; float:
+    &#34;&#34;&#34;Compute weighted standard deviation.
+
+    Args:
+        array (np.ndarray): 1D array to compute wstd of
+        waverage (float): weighted average value
+        weights (np.ndarray): weights to consider
+
+    Returns:
+        float: value of the weighted standard deviation
+    &#34;&#34;&#34;
+
+    N = np.count_nonzero(weights)
+
+    wvar = N * np.sum(weights * (array - waverage)**2) / \
+        (N - 1) / np.sum(weights)
+    wstd = np.sqrt(wvar)
+
+    return wstd
+
+
+def get_peak_rough_positions(area_array: np.ndarray,
+                             cut_mask,
+                             bins: Union[int, np.ndarray, list] = 1000,
+                             filt=scipy.ndimage.gaussian_filter1d,
+                             filter_options=3,
+                             plot: Union[bool, str] = False) -&gt; tuple:
+    &#39;&#39;&#39;Takes the area histogram (fingerplot) and looks for peaks
+    and valeys. SPE should be the 2nd peak on most cases. Higher
+    PE values might be properly unrecognized
+    Returns two lists: list of the x value of the peaks, list of
+    the x value of the valeys.
+    Optional plot feature:
+    - False: no plot
+    - True: displays plot in notebook
+    - string - sufix on the name of the file&#39;&#39;&#39;
+
+    area_hist = np.histogram(
+        area_array[cut_mask], bins=bins)
+
+    area_x = area_hist[1]
+    area_x = (area_x + (area_x[1] - area_x[0]) / 2)[:-1]
+    area_y = area_hist[0]
+
+    area_filt = filt(area_y, filter_options)
+    area_peaks_x, peak_properties = find_peaks(area_filt,
+                                               prominence=20,
+                                               distance=50)
+
+    if plot != False:
+        from pylars.plotting.plotanalysis import plot_found_area_peaks
+        plot_found_area_peaks(
+            area_x, area_y, area_filt, area_peaks_x)
+
+    return area_x[area_peaks_x], peak_properties</code></pre>
 </details>
 </section>
 <section>
@@ -216,15 +315,37 @@ were identified, valeys at res[1].</dd>
 </details>
 </dd>
 <dt id="pylars.utils.common.get_channel_list"><code class="name flex">
-<span>def <span class="ident">get_channel_list</span></span>(<span>process)</span>
+<span>def <span class="ident">get_channel_list</span></span>(<span>process) ‑> List[Tuple[int, str]]</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Fetch the channels available for a dataset by reading the original
+ROOT file.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>process</code></strong> :&ensp;<code>run_processor</code></dt>
+<dd>initiated <code>run_processor</code> object.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>List[Tuple[int,str]]</code></dt>
+<dd>list with the available channels of a given
+dataset in the format [(mod, ch)_i]</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def get_channel_list(process):
+<pre><code class="python">def get_channel_list(process) -&gt; List[Tuple[int, str]]:
+    &#34;&#34;&#34;Fetch the channels available for a dataset by reading the original
+    ROOT file.
+
+    Args:
+        process (run_processor): initiated `run_processor` object.
+
+    Returns:
+        List[Tuple[int,str]]: list with the available channels of a given
+            dataset in the format [(mod, ch)_i]
+    &#34;&#34;&#34;
     _datasets = process.datasets_df
     modules = np.unique(_datasets[&#39;module&#39;])
     ch_list = []
@@ -283,6 +404,121 @@ from hashing the configs. Based on
     digest = hashlib.sha1(jsonned.encode(&#39;ascii&#39;)).digest()
     readable_hash = base64.b32encode(digest)[:7].decode(&#39;ascii&#39;).lower()
     return readable_hash</code></pre>
+</details>
+</dd>
+<dt id="pylars.utils.common.get_gain"><code class="name flex">
+<span>def <span class="ident">get_gain</span></span>(<span>F_amp: float, spe_area: float, ADC_range: float = 2.25, ADC_impedance: float = 50, ADC_res: float = 65536, q_e: float = 1.602176634e-19) ‑> float</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Compute the gain given the value of the SPE area and the ADC
+paramenters.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>F_amp</code></strong> :&ensp;<code>float</code></dt>
+<dd>Total signal amplification factor.</dd>
+<dt><strong><code>spe_area</code></strong> :&ensp;<code>float</code></dt>
+<dd>mean area of spe (in ADC bins x ns).</dd>
+<dt><strong><code>ADC_range</code></strong> :&ensp;<code>float</code>, optional</dt>
+<dd>Dynamic range of the ADC. Defaults
+to 2.25.</dd>
+<dt><strong><code>ADC_impedance</code></strong> :&ensp;<code>float</code>, optional</dt>
+<dd>Impedance of the ADC. Defaults to 50.</dd>
+<dt><strong><code>ADC_res</code></strong> :&ensp;<code>float</code>, optional</dt>
+<dd>bit.wise resolution of the ADC. Defaults
+to 2**16.</dd>
+<dt><strong><code>q_e</code></strong> :&ensp;<code>float</code>, optional</dt>
+<dd>electron charge [C]. Defaults to 1.602176634e-19.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>float</code></dt>
+<dd>the calculated gain.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_gain(F_amp: float,
+             spe_area: float,
+             ADC_range: float = 2.25,
+             ADC_impedance: float = 50,
+             ADC_res: float = 2**16,
+             q_e: float = 1.602176634e-19,
+             ) -&gt; float:
+    &#34;&#34;&#34;Compute the gain given the value of the SPE area and the ADC
+        paramenters.
+
+    Args:
+        F_amp (float): Total signal amplification factor.
+        spe_area (float): mean area of spe (in ADC bins x ns).
+        ADC_range (float, optional): Dynamic range of the ADC. Defaults
+            to 2.25.
+        ADC_impedance (float, optional): Impedance of the ADC. Defaults to 50.
+        ADC_res (float, optional): bit.wise resolution of the ADC. Defaults
+            to 2**16.
+        q_e (float, optional): electron charge [C]. Defaults to 1.602176634e-19.
+
+    Returns:
+        float: the calculated gain.
+    &#34;&#34;&#34;
+
+    gain = (ADC_range * spe_area * 1e-9 / ADC_impedance / F_amp /
+            ADC_res / q_e)
+
+    return gain</code></pre>
+</details>
+</dd>
+<dt id="pylars.utils.common.get_peak_rough_positions"><code class="name flex">
+<span>def <span class="ident">get_peak_rough_positions</span></span>(<span>area_array: numpy.ndarray, cut_mask, bins: Union[int, numpy.ndarray, list] = 1000, filt=&lt;function gaussian_filter1d&gt;, filter_options=3, plot: Union[bool, str] = False) ‑> tuple</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Takes the area histogram (fingerplot) and looks for peaks
+and valeys. SPE should be the 2nd peak on most cases. Higher
+PE values might be properly unrecognized
+Returns two lists: list of the x value of the peaks, list of
+the x value of the valeys.
+Optional plot feature:
+- False: no plot
+- True: displays plot in notebook
+- string - sufix on the name of the file</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_peak_rough_positions(area_array: np.ndarray,
+                             cut_mask,
+                             bins: Union[int, np.ndarray, list] = 1000,
+                             filt=scipy.ndimage.gaussian_filter1d,
+                             filter_options=3,
+                             plot: Union[bool, str] = False) -&gt; tuple:
+    &#39;&#39;&#39;Takes the area histogram (fingerplot) and looks for peaks
+    and valeys. SPE should be the 2nd peak on most cases. Higher
+    PE values might be properly unrecognized
+    Returns two lists: list of the x value of the peaks, list of
+    the x value of the valeys.
+    Optional plot feature:
+    - False: no plot
+    - True: displays plot in notebook
+    - string - sufix on the name of the file&#39;&#39;&#39;
+
+    area_hist = np.histogram(
+        area_array[cut_mask], bins=bins)
+
+    area_x = area_hist[1]
+    area_x = (area_x + (area_x[1] - area_x[0]) / 2)[:-1]
+    area_y = area_hist[0]
+
+    area_filt = filt(area_y, filter_options)
+    area_peaks_x, peak_properties = find_peaks(area_filt,
+                                               prominence=20,
+                                               distance=50)
+
+    if plot != False:
+        from pylars.plotting.plotanalysis import plot_found_area_peaks
+        plot_found_area_peaks(
+            area_x, area_y, area_filt, area_peaks_x)
+
+    return area_x[area_peaks_x], peak_properties</code></pre>
 </details>
 </dd>
 <dt id="pylars.utils.common.load_ADC_config"><code class="name flex">
@@ -357,6 +593,50 @@ implemented</dd>
     return ADC_config</code></pre>
 </details>
 </dd>
+<dt id="pylars.utils.common.wstd"><code class="name flex">
+<span>def <span class="ident">wstd</span></span>(<span>array: numpy.ndarray, waverage: float, weights: numpy.ndarray) ‑> float</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Compute weighted standard deviation.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>array</code></strong> :&ensp;<code>np.ndarray</code></dt>
+<dd>1D array to compute wstd of</dd>
+<dt><strong><code>waverage</code></strong> :&ensp;<code>float</code></dt>
+<dd>weighted average value</dd>
+<dt><strong><code>weights</code></strong> :&ensp;<code>np.ndarray</code></dt>
+<dd>weights to consider</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>float</code></dt>
+<dd>value of the weighted standard deviation</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def wstd(array: np.ndarray, waverage: float, weights: np.ndarray) -&gt; float:
+    &#34;&#34;&#34;Compute weighted standard deviation.
+
+    Args:
+        array (np.ndarray): 1D array to compute wstd of
+        waverage (float): weighted average value
+        weights (np.ndarray): weights to consider
+
+    Returns:
+        float: value of the weighted standard deviation
+    &#34;&#34;&#34;
+
+    N = np.count_nonzero(weights)
+
+    wvar = N * np.sum(weights * (array - waverage)**2) / \
+        (N - 1) / np.sum(weights)
+    wstd = np.sqrt(wvar)
+
+    return wstd</code></pre>
+</details>
+</dd>
 </dl>
 </section>
 <section>
@@ -380,7 +660,10 @@ implemented</dd>
 <li><code><a title="pylars.utils.common.func_linear" href="#pylars.utils.common.func_linear">func_linear</a></code></li>
 <li><code><a title="pylars.utils.common.get_channel_list" href="#pylars.utils.common.get_channel_list">get_channel_list</a></code></li>
 <li><code><a title="pylars.utils.common.get_deterministic_hash" href="#pylars.utils.common.get_deterministic_hash">get_deterministic_hash</a></code></li>
+<li><code><a title="pylars.utils.common.get_gain" href="#pylars.utils.common.get_gain">get_gain</a></code></li>
+<li><code><a title="pylars.utils.common.get_peak_rough_positions" href="#pylars.utils.common.get_peak_rough_positions">get_peak_rough_positions</a></code></li>
 <li><code><a title="pylars.utils.common.load_ADC_config" href="#pylars.utils.common.load_ADC_config">load_ADC_config</a></code></li>
+<li><code><a title="pylars.utils.common.wstd" href="#pylars.utils.common.wstd">wstd</a></code></li>
 </ul>
 </li>
 </ul>

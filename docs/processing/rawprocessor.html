@@ -28,10 +28,10 @@
 </summary>
 <pre><code class="python">import numpy as np
 import pandas as pd
+from pylars.utils.common import get_deterministic_hash
+from pylars.utils.input import raw_data, run
 from tqdm.autonotebook import tqdm
 
-from pylars.utils.input import raw_data, run
-from pylars.utils.common import get_deterministic_hash
 from .waveforms import waveform_processing
 
 
@@ -39,7 +39,7 @@ class simple_processor():
     &#34;&#34;&#34;Define the atributes and functions for a simple processor.
     &#34;&#34;&#34;
 
-    version = &#39;0.0.2&#39;
+    version = &#39;0.0.3&#39;
     processing_method = &#39;simple&#39;
 
     def __init__(self, sigma_level: float, baseline_samples: int):
@@ -119,6 +119,7 @@ class simple_processor():
                    &#39;channel&#39;: [],
                    &#39;wf_number&#39;: [],
                    &#39;pulse_number&#39;: [],
+                   &#39;n_pulses&#39;: [],
                    &#39;area&#39;: [],
                    &#39;length&#39;: [],
                    &#39;position&#39;: [],
@@ -141,7 +142,6 @@ class simple_processor():
 
                 assert len(areas) == len(positions) == len(
                     lengths) == len(amplitudes)
-
                 # check if any pulses were found
                 if len(areas) == 0:
                     continue
@@ -150,11 +150,13 @@ class simple_processor():
                 ch_name = [ch] * len(areas)
                 wf_number = np.ones(len(areas), dtype=int) * i
                 pulse_number = np.arange(len(areas))
+                n_pulses = np.ones(len(areas), dtype=int) * len(areas)
 
                 results[&#39;module&#39;] += module_number
                 results[&#39;channel&#39;] += ch_name
                 results[&#39;wf_number&#39;] += list(wf_number)
                 results[&#39;pulse_number&#39;] += list(pulse_number)
+                results[&#39;n_pulses&#39;] += list(n_pulses)
                 results[&#39;area&#39;] += list(areas)
                 results[&#39;length&#39;] += list(lengths)
                 results[&#39;position&#39;] += list(positions)
@@ -586,7 +588,7 @@ of the pulse.</p></div>
     &#34;&#34;&#34;Define the atributes and functions for a simple processor.
     &#34;&#34;&#34;
 
-    version = &#39;0.0.2&#39;
+    version = &#39;0.0.3&#39;
     processing_method = &#39;simple&#39;
 
     def __init__(self, sigma_level: float, baseline_samples: int):
@@ -666,6 +668,7 @@ of the pulse.</p></div>
                    &#39;channel&#39;: [],
                    &#39;wf_number&#39;: [],
                    &#39;pulse_number&#39;: [],
+                   &#39;n_pulses&#39;: [],
                    &#39;area&#39;: [],
                    &#39;length&#39;: [],
                    &#39;position&#39;: [],
@@ -688,7 +691,6 @@ of the pulse.</p></div>
 
                 assert len(areas) == len(positions) == len(
                     lengths) == len(amplitudes)
-
                 # check if any pulses were found
                 if len(areas) == 0:
                     continue
@@ -697,11 +699,13 @@ of the pulse.</p></div>
                 ch_name = [ch] * len(areas)
                 wf_number = np.ones(len(areas), dtype=int) * i
                 pulse_number = np.arange(len(areas))
+                n_pulses = np.ones(len(areas), dtype=int) * len(areas)
 
                 results[&#39;module&#39;] += module_number
                 results[&#39;channel&#39;] += ch_name
                 results[&#39;wf_number&#39;] += list(wf_number)
                 results[&#39;pulse_number&#39;] += list(pulse_number)
+                results[&#39;n_pulses&#39;] += list(n_pulses)
                 results[&#39;area&#39;] += list(areas)
                 results[&#39;length&#39;] += list(lengths)
                 results[&#39;position&#39;] += list(positions)
@@ -879,6 +883,7 @@ properties: areas, lengths, positions and amplitudes.
                &#39;channel&#39;: [],
                &#39;wf_number&#39;: [],
                &#39;pulse_number&#39;: [],
+               &#39;n_pulses&#39;: [],
                &#39;area&#39;: [],
                &#39;length&#39;: [],
                &#39;position&#39;: [],
@@ -901,7 +906,6 @@ properties: areas, lengths, positions and amplitudes.
 
             assert len(areas) == len(positions) == len(
                 lengths) == len(amplitudes)
-
             # check if any pulses were found
             if len(areas) == 0:
                 continue
@@ -910,11 +914,13 @@ properties: areas, lengths, positions and amplitudes.
             ch_name = [ch] * len(areas)
             wf_number = np.ones(len(areas), dtype=int) * i
             pulse_number = np.arange(len(areas))
+            n_pulses = np.ones(len(areas), dtype=int) * len(areas)
 
             results[&#39;module&#39;] += module_number
             results[&#39;channel&#39;] += ch_name
             results[&#39;wf_number&#39;] += list(wf_number)
             results[&#39;pulse_number&#39;] += list(pulse_number)
+            results[&#39;n_pulses&#39;] += list(n_pulses)
             results[&#39;area&#39;] += list(areas)
             results[&#39;length&#39;] += list(lengths)
             results[&#39;position&#39;] += list(positions)
