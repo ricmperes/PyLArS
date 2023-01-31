@@ -231,8 +231,8 @@ class DCR_analysis():
         DCR_error = DC_0_5_error / sensor_area / t
 
         CTP = DC_1_5 / DC_0_5
-        CTP_error = np.sqrt((DC_0_5_error / DC_1_5)**2 +
-                            (DC_0_5 * DC_1_5_error / (DC_1_5)**2)**2)
+        CTP_error = np.sqrt((DC_1_5_error / DC_0_5)**2 +
+                            (DC_1_5 * DC_0_5_error / (DC_0_5)**2)**2)
 
         return DCR, DCR_error, CTP, CTP_error
 
