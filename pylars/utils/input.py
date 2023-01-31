@@ -111,15 +111,16 @@ class run():
     conditions but the layout of the array stays the same."""
 
     def __init__(self, run_number: int, main_data_path: str, F_amp: float,
-                 ADC_model: str = 'v1724'):
+                 ADC_model: str = 'v1724', 
+                 signal_negative_polarity: bool = True):
         self.run_number = run_number
-        self.layout = self.read_layout()
         self.main_data_path = main_data_path
         self.main_run_path = self.get_run_path()
         self.root_files = self.get_all_files_of_run()
         self.datasets = self.fetch_datasets()
         self.define_ADC_config(F_amp=F_amp, model=ADC_model)
-
+        self.signal_negative_polarity = signal_negative_polarity
+        
     def __repr__(self) -> str:
         repr = f'Run {self.run_number}'
         return repr
@@ -195,6 +196,32 @@ class run():
         """
         all_root_files = self.root_files
         datasets = []
+        if self.run_number == 9:
+            self.root_files = []
+            temps = [190, 195, 200, 205, 210]
+            for t in temps:
+                root_files = glob(
+                    f'{self.main_data_path}{str(t)}/breakdown-v/**/*.root', 
+                    recursive = True)
+                for path in root_files:
+                    f = path.split('/')[-1].split('_')
+                    if f[0] == 'test':
+                        continue
+                    v = float(f'{f[0]}.{f[1][:-1]}')
+                    datasets.append(dataset(path, 'BV', 0, t, v))
+                    
+            #LED OFF
+            for t in temps:
+                root_files = glob(
+                    f'{self.main_data_path}{str(t)}/dcr/**/*.root', 
+                    recursive = True)
+                for path in root_files:
+                    f = path.split('/')[-1].split('_')
+                    if f[0] == 'test':
+                        continue
+                    v = float(f'{f[0]}.{f[1][:-1]}')
+                    datasets.append(dataset(path, 'DCR', 0, t, v))
+
         if self.run_number >= 6:
 
             for file in all_root_files:

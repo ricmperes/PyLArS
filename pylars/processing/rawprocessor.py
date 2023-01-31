@@ -14,16 +14,20 @@ class simple_processor():
     version = '0.0.3'
     processing_method = 'simple'
 
-    def __init__(self, sigma_level: float, baseline_samples: int):
+    def __init__(self, sigma_level: float, baseline_samples: int, 
+                 signal_negative_polarity: bool = True):
+
         self.sigma_level = sigma_level
         self.baseline_samples = baseline_samples
         self.hash = get_deterministic_hash(f"{self.processing_method}" +
                                            f"{self.version}" +
                                            f"{self.sigma_level}" +
                                            f"{self.baseline_samples:.2f}")
+        self.signal_negative_polarity = signal_negative_polarity
         self.processed_data = dict()
         self.show_loadbar_channel = True
         self.show_tqdm_channel = True
+        
 
     def __hash__(self) -> str:
         return self.hash
@@ -110,7 +114,8 @@ class simple_processor():
                                  ):
             try:
                 areas, lengths, positions, amplitudes = waveform_processing.process_waveform(
-                    _waveform, self.baseline_samples, self.sigma_level)
+                    _waveform, self.baseline_samples, self.sigma_level, 
+                    negative_polarity=self.signal_negative_polarity)
 
                 assert len(areas) == len(positions) == len(
                     lengths) == len(amplitudes)
@@ -178,7 +183,9 @@ class run_processor(simple_processor):
 
         self.run = run_to_process
 
-        super().__init__(sigma_level, baseline_samples)
+        super().__init__(
+            sigma_level, baseline_samples, 
+            signal_negative_polarity = self.run.signal_negative_polarity)
 
         self.datasets_df = self.run.get_run_df()
         self.show_loadbar_run = True

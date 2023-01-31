@@ -210,7 +210,7 @@ def _get_area(waveform: np.ndarray, baseline_value: float,
         polarity = 1
 
     pulse_wf = waveform[pulse_start:pulse_end]
-    area_under = np.sum(baseline_value + polarity * pulse_wf) * dt
+    area_under = polarity * dt * np.sum(pulse_wf - baseline_value)
     return area_under
 
 

@@ -21,15 +21,24 @@ args = parser.parse_args()
 
 
 def prepare():
+    main_data_path='/disk/gfs_atp/xenoscope/SiPMs/char_campaign/raw_data/'
     if args.run == 8:
         F_amp = 20
     else:
         F_amp = 200
+
+    if args.run == 9:
+        polarity = False
+        main_data_path='/disk/gfs_atp/xenoscope/SiPMs/FebMar2022/6x6A/'
+    else:
+        polarity = True
+
     print('Starting preparations of base_run, etc.')
     base_run = pylars.utils.input.run(
         run_number=args.run,
-        main_data_path='/disk/gfs_atp/xenoscope/SiPMs/char_campaign/raw_data/',
-        F_amp=F_amp)
+        main_data_path=main_data_path,
+        F_amp=F_amp,
+        signal_negative_polarity=polarity)
     process = pylars.processing.rawprocessor.run_processor(
         run_to_process=base_run,
         processor_type='simple',
@@ -57,7 +66,9 @@ def load_data_to_ds(ds):
 if __name__ == '__main__':
     base_run, process, all_channels, DCR_run = prepare()
     DCR_run.set_plots_flag(False)
-    DCR_run.define_run_SiPM_config()
+    DCR_run.define_run_SiPM_config()    
+    if args.run == 9:
+        DCR_run.define_run_SiPM_config(6*6)
 
     print('Starting loading and computation')
     DCR_run.compute_properties_of_run(amplitude_based=False)

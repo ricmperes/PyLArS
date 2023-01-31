@@ -32,7 +32,10 @@ parser.add_argument('-a', '--amplification',
                     default=200,
                     type=float,
                     required=False)
-
+parser.add_argument('-p', '--polarity',
+                    help='Polarity of signal. 1 for negative, 0 for positive.',
+                    type = int,
+                    default=1)
 parser.add_argument('-pr', '--path_raw',
                     help='Path to the main raw files directory.',
                     default='/disk/gfs_atp/xenoscope/SiPMs/char_campaign/raw_data/',
@@ -44,15 +47,16 @@ parser.add_argument('-pp', '--path_processed',
 
 args = parser.parse_args()
 
-
 def process_dataset(run_number: int, kind: str,
                     vbias: float, temp: float,
-                    main_data_path: str, path_processed: str) -> None:
+                    main_data_path: str, path_processed: str,
+                    polarity:bool) -> None:
     # Define run
     base_run = pylars.utils.input.run(
         run_number=run_number,
         main_data_path=main_data_path,
-        F_amp=args.amplification)
+        F_amp=args.amplification,
+        signal_negative_polarity = polarity)
 
     # Define processor
     process = pylars.processing.rawprocessor.run_processor(
@@ -81,6 +85,7 @@ def process_dataset(run_number: int, kind: str,
 if __name__ == '__main__':
     t0 = datetime.datetime.now()
     print('Processing started at: ', t0)
+    polarity = bool(args.polarity)
 
     process_dataset(
         run_number=args.run,
@@ -88,7 +93,8 @@ if __name__ == '__main__':
         vbias=args.voltage,
         temp=args.temperature,
         main_data_path=args.path_raw,
-        path_processed=args.path_processed)
+        path_processed=args.path_processed,
+        polarity = polarity)
 
     tf = datetime.datetime.now()
     print('Processing finished at: ', tf)

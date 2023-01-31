@@ -27,7 +27,7 @@ class waveform_processing():
 
     @classmethod
     def process_waveform(cls, waveform: np.ndarray, baseline_samples: int,
-                         sigma_level: float = 5):
+                         sigma_level: float = 5, negative_polarity:bool = True):
         """Main process function on the waveform level. Finds pulses above
         (actually bellow) threshold and calls pulse level processing like
         area, length and position.
@@ -48,17 +48,19 @@ class waveform_processing():
 
         pulses = pulse_processing.find_pulses_simple(
             waveform, baseline_rough, std_rough, sigma_level,
-            negative_polarity=True, baseline_subtracted=False)
+            negative_polarity=negative_polarity, baseline_subtracted=False)
 
         # handle case where no pulses were found
         if len(pulses[0]) == 0:
             return [], [], [], []
 
         areas = pulse_processing.get_all_areas(
-            waveform, pulses, baseline_rough)
+            waveform, pulses, baseline_rough,
+            negative_polarity = negative_polarity)
         lengths = pulse_processing.get_all_lengths(pulses)
         positions = pulse_processing.get_all_positions(pulses)
-        amplitudes = pulse_processing.get_all_amplitudes(waveform, pulses,
-                                                         baseline_rough)
+        amplitudes = pulse_processing.get_all_amplitudes(
+            waveform, pulses, baseline_rough,
+            negative_polarity = negative_polarity)
 
         return areas, lengths, positions, amplitudes
