@@ -3,7 +3,7 @@ import pylars
 import pylars.utils.input
 import pylars.utils.output
 from matplotlib import pyplot as plt
-from pylars.utils.common import Gaussean
+from pylars.utils.common import Gaussian
 from scipy.optimize import curve_fit
 
 from .darkcount import DCR_dataset
@@ -85,13 +85,13 @@ class fingerplot_dataset(DCR_dataset):
             area_hist_x + (area_hist_x[1] - area_hist_x[0]) / 2)[:-1]
         area_hist_y = area_hist[0]
 
-        (A, mu, sigma), cov = curve_fit(Gaussean, area_hist_x, area_hist_y,
+        (A, mu, sigma), cov = curve_fit(Gaussian, area_hist_x, area_hist_y,
                                         p0=(2000, 30000, 0.05 * 30000))
 
         if plot != False:
             _x = np.linspace(mu - 5 * sigma, mu + 5 * sigma, 400)
             ax.hist(df[_cuts]['area'], bins=1000, histtype='step', color='k')
-            ax.plot(_x, Gaussean(_x, A, mu, sigma), c='r')
+            ax.plot(_x, Gaussian(_x, A, mu, sigma), c='r')
 
             ax.set_yscale('log')
             ax.set_ylabel('# Events')

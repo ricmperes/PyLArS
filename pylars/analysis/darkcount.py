@@ -22,7 +22,7 @@ import pylars.utils.input
 import pylars.utils.output
 import scipy.interpolate as itp
 from pylars.analysis.breakdown import compute_BV_df
-from pylars.utils.common import Gaussean, get_gain
+from pylars.utils.common import Gaussian, get_gain
 from scipy.optimize import curve_fit
 from scipy.signal import find_peaks
 from tqdm.autonotebook import tqdm
@@ -79,7 +79,7 @@ class DCR_analysis():
             area_hist_x + (area_hist_x[1] - area_hist_x[0]) / 2)[:-1]
         area_hist_y = area_hist[0]
 
-        (A, mu, sigma), cov = curve_fit(Gaussean, area_hist_x, area_hist_y,
+        (A, mu, sigma), cov = curve_fit(Gaussian, area_hist_x, area_hist_y,
                                         p0=(2000, min_area_x, 0.05 * min_area_x))
 
         if plot != False:
@@ -580,7 +580,7 @@ class DCR_dataset(DCR_analysis):
                                    'CTP_error': [CTP_error * 100]})
                      ), ignore_index=True
                 )
-            except BaseException:
+            except:
                 print(f'Could not compute properties of module {self.module}, '
                       f'channel {self.channel}, {self.temp} K, {_volt} V. '
                       f'Skipping dataset.')
@@ -744,6 +744,36 @@ class DCR_run():
         SiPM_config = {'sensor_area': sensor_area,
                        }
         self.SiPM_config = SiPM_config
+    
+    def set_standard_cuts_run(self,
+                          cut_area_min: float = 5,
+                          cut_area_max: float = 1e6,
+                          cut_length_min: int = 4,
+                          cut_length_max: int = 70,
+                          cut_n_pulses_min: float = 0,
+                          cut_n_pulses_max: float = 2) -> None:
+        """Sets the cuts to use in analysis as (run) object variables.
+
+        Args:
+            cut_area_min (float, optional): Area minimum value. Defaults to 5.
+            cut_area_max (float, optional): Area maximum value. Defaults
+                to 1e6.
+            cut_length_min (float, optional): Lenght minimum value.
+                Defaults to 4.
+            cut_length_max (float, optional): Lenght minimum value.
+                 Defaults to 70.
+            cut_n_pulses_min (float, optional): Minimum number of pulses in
+                the waveform. Defaults to 0.
+            cut_n_pulses_max (float, optional): Maximum number of pulses in
+                the waveform. Defaults to 2.
+        """
+
+        self.cut_area_min = cut_area_min
+        self.cut_area_max = cut_area_max
+        self.cut_length_min = cut_length_min
+        self.cut_length_max = cut_length_max
+        self.cut_n_pulses_min = cut_n_pulses_min
+        self.cut_n_pulses_max = cut_n_pulses_max
 
     def load_dataset(self, temp: float,
                      module: int,
@@ -797,6 +827,12 @@ class DCR_run():
         ds = self.load_dataset(temp, module, channel)
         ds.set_plots_flag(self.plots_flag)
         ds.SiPM_config = self.SiPM_config
+        ds.cut_area_min = self.cut_area_min
+        ds.cut_area_max = self.cut_area_max
+        ds.cut_length_min = self.cut_length_min
+        ds.cut_length_max = self.cut_length_max
+        ds.cut_n_pulses_min = self.cut_n_pulses_min
+        ds.cut_n_pulses_max = self.cut_n_pulses_max
 
         if amplitude_based:
             ds_results = ds.compute_properties_of_dataset_amplitude_based(

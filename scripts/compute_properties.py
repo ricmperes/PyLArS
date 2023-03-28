@@ -66,15 +66,22 @@ def load_data_to_ds(ds):
 if __name__ == '__main__':
     base_run, process, all_channels, DCR_run = prepare()
     DCR_run.set_plots_flag(False)
-    DCR_run.define_run_SiPM_config()    
-    if args.run == 9:
-        DCR_run.define_run_SiPM_config(6*6)
 
+    if args.run == 8:
+        DCR_run.define_run_SiPM_config(24*24)
+        DCR_run.set_standard_cuts_run(cut_n_pulses_max=8)
+    elif args.run == 9:
+        DCR_run.define_run_SiPM_config(6*6)
+        DCR_run.set_standard_cuts_run(cut_n_pulses_max=2)
+    else:
+        DCR_run.define_run_SiPM_config()
+        DCR_run.set_standard_cuts_run(cut_n_pulses_max=3)
+    
     print('Starting loading and computation')
     DCR_run.compute_properties_of_run(amplitude_based=False)
 
     print('Got results back. Saving.')
-    DCR_run.save_results('auto_09012022')
+    DCR_run.save_results('auto_13022022')
 
     print('Finished computing and saving results!\n'
           'All the best for your analysis!')

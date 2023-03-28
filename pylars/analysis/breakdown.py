@@ -81,21 +81,24 @@ class BV_dataset():
                              desc=f'Loading processed data for BV ' +
                              f'data at {self.temp}K: ',
                              total=len(self.voltages)):
-            processed_data = pylars.utils.output.processed_dataset(
-                run=self.run,
-                kind='BV',
-                vbias=_voltage,
-                temp=self.temp,
-                path_processed=('/disk/gfs_atp/xenoscope/SiPMs/char_campaign/'
-                                'processed_data/'),
-                process_hash=self.process.hash)
-            processed_data.load_data(force=force_processing)
+            try:
+                processed_data = pylars.utils.output.processed_dataset(
+                    run=self.run,
+                    kind='BV',
+                    vbias=_voltage,
+                    temp=self.temp,
+                    path_processed=('/disk/gfs_atp/xenoscope/SiPMs/char_campaign/'
+                                    'processed_data/'),
+                    process_hash=self.process.hash)
+                processed_data.load_data(force=force_processing)
 
-            _df = processed_data.data
-            mask = ((_df['module'] == self.module) &
-                    (_df['channel'] == self.channel))
+                _df = processed_data.data
+                mask = ((_df['module'] == self.module) &
+                        (_df['channel'] == self.channel))
 
-            self.data[_voltage] = copy.deepcopy(_df[mask])
+                self.data[_voltage] = copy.deepcopy(_df[mask])
+            except:
+                print(f'Failed to load dataset for V = {_voltage}. Skipping.')
 
     def compute_BV_LED_simple(self, LED_position: int,
                               plot: bool = False) -> tuple:

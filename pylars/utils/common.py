@@ -10,7 +10,7 @@ from scipy.signal import find_peaks
 import scipy.ndimage
 
 
-def Gaussean(x, A, mu, sigma):
+def Gaussian(x, A, mu, sigma):
     y = A * np.exp(-((x - mu) / sigma)**2 / 2) / np.sqrt(2 * np.pi * sigma**2)
     return y
 

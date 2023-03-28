@@ -11,7 +11,7 @@ from typing import Tuple, Union, Optional
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from pylars.utils.common import Gaussean, func_linear
+from pylars.utils.common import Gaussian, func_linear
 
 from .plotprocessed import *
 
@@ -196,7 +196,7 @@ def plot_SPE_fit(df, length_cut_min, length_cut_max, plot, area_hist_x,
             color='gray', alpha=0.8)
 
     _x = np.linspace(area_hist_x[0], area_hist_x[-1], 200)
-    ax.plot(_x, Gaussean(_x, A, mu, sigma), color='red')
+    ax.plot(_x, Gaussian(_x, A, mu, sigma), color='red')
     ax.set_xlabel('Area [integrated ADC counts]')
     ax.set_ylabel('# events')
     for i in range(1, 4):
