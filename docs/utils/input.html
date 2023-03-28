@@ -139,15 +139,16 @@ class run():
     conditions but the layout of the array stays the same.&#34;&#34;&#34;
 
     def __init__(self, run_number: int, main_data_path: str, F_amp: float,
-                 ADC_model: str = &#39;v1724&#39;):
+                 ADC_model: str = &#39;v1724&#39;, 
+                 signal_negative_polarity: bool = True):
         self.run_number = run_number
-        self.layout = self.read_layout()
         self.main_data_path = main_data_path
         self.main_run_path = self.get_run_path()
         self.root_files = self.get_all_files_of_run()
         self.datasets = self.fetch_datasets()
         self.define_ADC_config(F_amp=F_amp, model=ADC_model)
-
+        self.signal_negative_polarity = signal_negative_polarity
+        
     def __repr__(self) -&gt; str:
         repr = f&#39;Run {self.run_number}&#39;
         return repr
@@ -223,6 +224,32 @@ class run():
         &#34;&#34;&#34;
         all_root_files = self.root_files
         datasets = []
+        if self.run_number == 9:
+            self.root_files = []
+            temps = [190, 195, 200, 205, 210]
+            for t in temps:
+                root_files = glob(
+                    f&#39;{self.main_data_path}{str(t)}/breakdown-v/**/*.root&#39;, 
+                    recursive = True)
+                for path in root_files:
+                    f = path.split(&#39;/&#39;)[-1].split(&#39;_&#39;)
+                    if f[0] == &#39;test&#39;:
+                        continue
+                    v = float(f&#39;{f[0]}.{f[1][:-1]}&#39;)
+                    datasets.append(dataset(path, &#39;BV&#39;, 0, t, v))
+                    
+            #LED OFF
+            for t in temps:
+                root_files = glob(
+                    f&#39;{self.main_data_path}{str(t)}/dcr/**/*.root&#39;, 
+                    recursive = True)
+                for path in root_files:
+                    f = path.split(&#39;/&#39;)[-1].split(&#39;_&#39;)
+                    if f[0] == &#39;test&#39;:
+                        continue
+                    v = float(f&#39;{f[0]}.{f[1][:-1]}&#39;)
+                    datasets.append(dataset(path, &#39;DCR&#39;, 0, t, v))
+
         if self.run_number &gt;= 6:
 
             for file in all_root_files:
@@ -840,7 +867,7 @@ to be propagated forward. TO DO: fetch and save in a DB</p></div>
 </dd>
 <dt id="pylars.utils.input.run"><code class="flex name class">
 <span>class <span class="ident">run</span></span>
-<span>(</span><span>run_number: int, main_data_path: str, F_amp: float, ADC_model: str = 'v1724')</span>
+<span>(</span><span>run_number: int, main_data_path: str, F_amp: float, ADC_model: str = 'v1724', signal_negative_polarity: bool = True)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>A run is made of a collection of datasets taken at a given
@@ -858,15 +885,16 @@ conditions but the layout of the array stays the same.</p></div>
     conditions but the layout of the array stays the same.&#34;&#34;&#34;
 
     def __init__(self, run_number: int, main_data_path: str, F_amp: float,
-                 ADC_model: str = &#39;v1724&#39;):
+                 ADC_model: str = &#39;v1724&#39;, 
+                 signal_negative_polarity: bool = True):
         self.run_number = run_number
-        self.layout = self.read_layout()
         self.main_data_path = main_data_path
         self.main_run_path = self.get_run_path()
         self.root_files = self.get_all_files_of_run()
         self.datasets = self.fetch_datasets()
         self.define_ADC_config(F_amp=F_amp, model=ADC_model)
-
+        self.signal_negative_polarity = signal_negative_polarity
+        
     def __repr__(self) -&gt; str:
         repr = f&#39;Run {self.run_number}&#39;
         return repr
@@ -942,6 +970,32 @@ conditions but the layout of the array stays the same.</p></div>
         &#34;&#34;&#34;
         all_root_files = self.root_files
         datasets = []
+        if self.run_number == 9:
+            self.root_files = []
+            temps = [190, 195, 200, 205, 210]
+            for t in temps:
+                root_files = glob(
+                    f&#39;{self.main_data_path}{str(t)}/breakdown-v/**/*.root&#39;, 
+                    recursive = True)
+                for path in root_files:
+                    f = path.split(&#39;/&#39;)[-1].split(&#39;_&#39;)
+                    if f[0] == &#39;test&#39;:
+                        continue
+                    v = float(f&#39;{f[0]}.{f[1][:-1]}&#39;)
+                    datasets.append(dataset(path, &#39;BV&#39;, 0, t, v))
+                    
+            #LED OFF
+            for t in temps:
+                root_files = glob(
+                    f&#39;{self.main_data_path}{str(t)}/dcr/**/*.root&#39;, 
+                    recursive = True)
+                for path in root_files:
+                    f = path.split(&#39;/&#39;)[-1].split(&#39;_&#39;)
+                    if f[0] == &#39;test&#39;:
+                        continue
+                    v = float(f&#39;{f[0]}.{f[1][:-1]}&#39;)
+                    datasets.append(dataset(path, &#39;DCR&#39;, 0, t, v))
+
         if self.run_number &gt;= 6:
 
             for file in all_root_files:
@@ -1130,6 +1184,32 @@ are type dataset.</dd>
     &#34;&#34;&#34;
     all_root_files = self.root_files
     datasets = []
+    if self.run_number == 9:
+        self.root_files = []
+        temps = [190, 195, 200, 205, 210]
+        for t in temps:
+            root_files = glob(
+                f&#39;{self.main_data_path}{str(t)}/breakdown-v/**/*.root&#39;, 
+                recursive = True)
+            for path in root_files:
+                f = path.split(&#39;/&#39;)[-1].split(&#39;_&#39;)
+                if f[0] == &#39;test&#39;:
+                    continue
+                v = float(f&#39;{f[0]}.{f[1][:-1]}&#39;)
+                datasets.append(dataset(path, &#39;BV&#39;, 0, t, v))
+                
+        #LED OFF
+        for t in temps:
+            root_files = glob(
+                f&#39;{self.main_data_path}{str(t)}/dcr/**/*.root&#39;, 
+                recursive = True)
+            for path in root_files:
+                f = path.split(&#39;/&#39;)[-1].split(&#39;_&#39;)
+                if f[0] == &#39;test&#39;:
+                    continue
+                v = float(f&#39;{f[0]}.{f[1][:-1]}&#39;)
+                datasets.append(dataset(path, &#39;DCR&#39;, 0, t, v))
+
     if self.run_number &gt;= 6:
 
         for file in all_root_files:

@@ -38,7 +38,7 @@ from scipy.signal import find_peaks
 import scipy.ndimage
 
 
-def Gaussean(x, A, mu, sigma):
+def Gaussian(x, A, mu, sigma):
     y = A * np.exp(-((x - mu) / sigma)**2 / 2) / np.sqrt(2 * np.pi * sigma**2)
     return y
 
@@ -250,8 +250,8 @@ def get_peak_rough_positions(area_array: np.ndarray,
 <section>
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
-<dt id="pylars.utils.common.Gaussean"><code class="name flex">
-<span>def <span class="ident">Gaussean</span></span>(<span>x, A, mu, sigma)</span>
+<dt id="pylars.utils.common.Gaussian"><code class="name flex">
+<span>def <span class="ident">Gaussian</span></span>(<span>x, A, mu, sigma)</span>
 </code></dt>
 <dd>
 <div class="desc"></div>
@@ -259,7 +259,7 @@ def get_peak_rough_positions(area_array: np.ndarray,
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def Gaussean(x, A, mu, sigma):
+<pre><code class="python">def Gaussian(x, A, mu, sigma):
     y = A * np.exp(-((x - mu) / sigma)**2 / 2) / np.sqrt(2 * np.pi * sigma**2)
     return y</code></pre>
 </details>
@@ -655,7 +655,7 @@ implemented</dd>
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
-<li><code><a title="pylars.utils.common.Gaussean" href="#pylars.utils.common.Gaussean">Gaussean</a></code></li>
+<li><code><a title="pylars.utils.common.Gaussian" href="#pylars.utils.common.Gaussian">Gaussian</a></code></li>
 <li><code><a title="pylars.utils.common.find_minmax" href="#pylars.utils.common.find_minmax">find_minmax</a></code></li>
 <li><code><a title="pylars.utils.common.func_linear" href="#pylars.utils.common.func_linear">func_linear</a></code></li>
 <li><code><a title="pylars.utils.common.get_channel_list" href="#pylars.utils.common.get_channel_list">get_channel_list</a></code></li>
