@@ -1,7 +1,10 @@
+import pylars
+import os
+import datetime
 import argparse
 
 parser = argparse.ArgumentParser(
-    description=('Script to create ALL the batch jobs to process a run ' 
+    description=('Script to create ALL the batch jobs to process a run '
                  '(no conditions on temperature, voltage or kind).')
 )
 parser.add_argument('-r', '--run',
@@ -11,48 +14,61 @@ parser.add_argument('-r', '--run',
 
 args = parser.parse_args()
 
-import datetime
-import os
-import pylars
 
-def make_batch_script(job_name, run, kind, temp, vbias):
+def make_batch_script(job_name, run, kind, temp, vbias, 
+    polarity,main_data_path, F_amp):
     main_str = f"""#!/bin/bash
 #SBATCH --partition=express
 #SBATCH --job-name={job_name}
 #SBATCH --output=/home/atp/rperes/logs/jobs/{job_name}.out
 #SBATCH --error=/home/atp/rperes/logs/jobs/{job_name}.err
-#SBATCH --mem=32G
+#SBATCH --mem=14G
 
 source /home/atp/rperes/.bashrc
 conda activate sipms
 cd /home/atp/rperes/software/PyLArS/scripts
-python process_dataset.py -t {temp} -v {vbias} -tp {kind} -r {run}
+python process_dataset.py -t {temp} -v {vbias} -tp {kind} -r {run} -pr {main_data_path} -a {F_amp} -p {polarity}
 """
     if not os.path.exists('jobs'):
         os.mkdir('jobs')
 
     with open(f'jobs/job_{job_name}.job', 'w') as F:
-        F.write(main_str)  
+        F.write(main_str)
     print(f'Generated file with ID: {job_name}.')
+
 
 def make_launch_file(ID_list):
     string_head = '''#!/bin/bash
 '''
-    with open('launch_process.sh','w') as F:
+    with open('launch_process.sh', 'w') as F:
         F.write(string_head)
         for _ID in ID_list:
             F.write(f'sbatch jobs/job_{_ID}.job\n')
-    print('Generated launch script file with %d IDs.' %len(ID_list))
+    print('Generated launch script file with %d IDs.' % len(ID_list))
     os.system('chmod +x launch_process.sh')
+
 
 def main():
 
     ### INPUTS HERE ###
     run_number = args.run
     ### ### ###
+    main_data_path='/disk/gfs_atp/xenoscope/SiPMs/char_campaign/raw_data/'
+    if args.run == 8:
+        F_amp = 20
+    else:
+        F_amp = 200
+
+    if args.run == 9:
+        polarity = 0
+        main_data_path='/disk/gfs_atp/xenoscope/SiPMs/FebMar2022/6x6A/'
+    else:
+        polarity = 1
+    
     base_run = pylars.utils.input.run(
-        run_number=run_number,
-        main_data_path='/disk/gfs_atp/xenoscope/SiPMs/char_campaign/raw_data/')
+        run_number=args.run,
+        main_data_path=main_data_path,
+        F_amp=F_amp)
 
     datasets = base_run.get_run_df()
     ID_list = []
@@ -65,9 +81,11 @@ def main():
         job_name = f'run{run_number}_{_kind}_{_temp}_{_vbias}'
         ID_list.append(job_name)
 
-        make_batch_script(job_name, _run, _kind, _temp, _vbias)
+        make_batch_script(job_name, _run, _kind, _temp, 
+            _vbias, polarity,main_data_path, F_amp)
 
     make_launch_file(ID_list)
+
 
 if __name__ == '__main__':
     t0 = datetime.datetime.now()

@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.9.2" />
-<title>pylars API documentation</title>
-<meta name="description" content="" />
+<title>pylars.processing API documentation</title>
+<meta name="description" content="Welcome to the core-pillar of PyLArS! …" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
 <link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
@@ -19,35 +19,71 @@
 <main>
 <article id="content">
 <header>
-<h1 class="title">Package <code>pylars</code></h1>
+<h1 class="title">Module <code>pylars.processing</code></h1>
 </header>
 <section id="section-intro">
+<p>Welcome to the core-pillar of PyLArS!</p>
+<p>This is the module where every waveform comes to be processed and leaves with
+a briefcase containing the identified pulses and their following properties:</p>
+<ul>
+<li>area</li>
+<li>length</li>
+<li>position in the waveform</li>
+<li>amplitude (max of ADC counts)</li>
+</ul>
+<h4 id="planned-to-do">Planned TO DO:</h4>
+<p>The additions in the pipeline to this module are the following:</p>
+<ul>
+<li>Processing of peaks, ie, the sum of pulses throughout a set of channels;</li>
+</ul>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">from . import processing
-from . import plotting
-from . import utils
-from . import analysis</code></pre>
+<pre><code class="python">r&#39;&#39;&#39;Welcome to the core-pillar of PyLArS!
+
+This is the module where every waveform comes to be processed and leaves with
+a briefcase containing the identified pulses and their following properties:
+
+  - area
+  - length
+  - position in the waveform
+  - amplitude (max of ADC counts)
+
+#### Planned TO DO:
+The additions in the pipeline to this module are the following:
+
+  - Processing of peaks, ie, the sum of pulses throughout a set of channels;
+
+&#39;&#39;&#39;
+
+from . import pulses
+from . import rawprocessor
+from . import waveforms
+from . import peaks
+from . import peakprocessor</code></pre>
 </details>
 </section>
 <section>
 <h2 class="section-title" id="header-submodules">Sub-modules</h2>
 <dl>
-<dt><code class="name"><a title="pylars.analysis" href="analysis/index.html">pylars.analysis</a></code></dt>
+<dt><code class="name"><a title="pylars.processing.peakprocessor" href="peakprocessor.html">pylars.processing.peakprocessor</a></code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
-<dt><code class="name"><a title="pylars.plotting" href="plotting/index.html">pylars.plotting</a></code></dt>
+<dt><code class="name"><a title="pylars.processing.peaks" href="peaks.html">pylars.processing.peaks</a></code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
-<dt><code class="name"><a title="pylars.processing" href="processing/index.html">pylars.processing</a></code></dt>
+<dt><code class="name"><a title="pylars.processing.pulses" href="pulses.html">pylars.processing.pulses</a></code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
-<dt><code class="name"><a title="pylars.utils" href="utils/index.html">pylars.utils</a></code></dt>
+<dt><code class="name"><a title="pylars.processing.rawprocessor" href="rawprocessor.html">pylars.processing.rawprocessor</a></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt><code class="name"><a title="pylars.processing.waveforms" href="waveforms.html">pylars.processing.waveforms</a></code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
@@ -63,15 +99,23 @@ from . import analysis</code></pre>
 <nav id="sidebar">
 <h1>Index</h1>
 <div class="toc">
-<ul></ul>
+<ul>
+<li><a href="#planned-to-do">Planned TO DO:</a></li>
+</ul>
 </div>
 <ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="pylars" href="../index.html">pylars</a></code></li>
+</ul>
+</li>
 <li><h3><a href="#header-submodules">Sub-modules</a></h3>
 <ul>
-<li><code><a title="pylars.analysis" href="analysis/index.html">pylars.analysis</a></code></li>
-<li><code><a title="pylars.plotting" href="plotting/index.html">pylars.plotting</a></code></li>
-<li><code><a title="pylars.processing" href="processing/index.html">pylars.processing</a></code></li>
-<li><code><a title="pylars.utils" href="utils/index.html">pylars.utils</a></code></li>
+<li><code><a title="pylars.processing.peakprocessor" href="peakprocessor.html">pylars.processing.peakprocessor</a></code></li>
+<li><code><a title="pylars.processing.peaks" href="peaks.html">pylars.processing.peaks</a></code></li>
+<li><code><a title="pylars.processing.pulses" href="pulses.html">pylars.processing.pulses</a></code></li>
+<li><code><a title="pylars.processing.rawprocessor" href="rawprocessor.html">pylars.processing.rawprocessor</a></code></li>
+<li><code><a title="pylars.processing.waveforms" href="waveforms.html">pylars.processing.waveforms</a></code></li>
 </ul>
 </li>
 </ul>

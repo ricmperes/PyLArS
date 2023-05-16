@@ -26,14 +26,11 @@
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">import base64
-import hashlib
-import json
-import numpy as np
+<pre><code class="python">import numpy as np
 import pandas as pd
-from tqdm import tqdm
-
+from pylars.utils.common import get_deterministic_hash
 from pylars.utils.input import raw_data, run
+from tqdm.autonotebook import tqdm
 
 from .waveforms import waveform_processing
 
@@ -42,45 +39,28 @@ class simple_processor():
     &#34;&#34;&#34;Define the atributes and functions for a simple processor.
     &#34;&#34;&#34;
 
-    version = &#39;0.0.2&#39;
+    version = &#39;0.0.3&#39;
     processing_method = &#39;simple&#39;
 
     def __init__(self, sigma_level: float, baseline_samples: int):
         self.sigma_level = sigma_level
         self.baseline_samples = baseline_samples
-        self.hash = self.get_deterministic_hash(f&#34;{self.processing_method}&#34; +
-                                                f&#34;{self.version}&#34; +
-                                                f&#34;{self.sigma_level}&#34; +
-                                                f&#34;{self.baseline_samples:.2f}&#34;)
+        self.hash = get_deterministic_hash(f&#34;{self.processing_method}&#34; +
+                                           f&#34;{self.version}&#34; +
+                                           f&#34;{self.sigma_level}&#34; +
+                                           f&#34;{self.baseline_samples:.2f}&#34;)
         self.processed_data = dict()
         self.show_loadbar_channel = True
         self.show_tqdm_channel = True
 
-    def __hash__(self) -&gt; int:
+    def __hash__(self) -&gt; str:
         return self.hash
-
-    @staticmethod
-    def get_deterministic_hash(id: str) -&gt; str:
-        &#34;&#34;&#34;Return a base32 lowercase string of length determined from hashing
-        the configs. Based on https://github.com/AxFoundation/strax/blob/
-        156254287c2037876a7040460b3551d590bf5589/strax/utils.py#L303
-
-        Args:
-            id (str): thing to hash
-
-        Returns:
-            str: hashed version of the thing
-        &#34;&#34;&#34;
-        jsonned = json.dumps(id)
-        digest = hashlib.sha1(jsonned.encode(&#39;ascii&#39;)).digest()
-        readable_hash = base64.b32encode(digest)[:7].decode(&#39;ascii&#39;).lower()
-        return readable_hash
 
     def set_tqdm_channel(self, bar: bool, show: bool):
         &#34;&#34;&#34;Change the tqdm config
 
         Args:
-            bar (bool): shwo or not the tqdm bar.
+            bar (bool): show or not the tqdm bar.
             show (bool): use tqdm if true, disable if false
         &#34;&#34;&#34;
         self.show_loadbar_channel = bar
@@ -106,23 +86,25 @@ class simple_processor():
 
     # Processing functions
     def process_channel(self, ch: str) -&gt; dict:
-        &#34;&#34;&#34;_summary_
+        &#34;&#34;&#34;Process a channel by iterating over all its waveforms, running
+    the pulse finding algorithm and the calculating the following pulse
+    properties: areas, lengths, positions and amplitudes.
 
         Args:
             ch (str): channel name as in the ROOT file.
-        In files from DAQ_zero/XenoDAQ these will be &#39;wf#&#39; with # the
-        number of the channel [0,7]
+                In files from DAQ_zero/XenoDAQ these will be &#39;wf#&#39; with #
+                the number of the channel [0,7]
 
         Raises:
             AssertionError: if the requested channel
-        is not available on the raw file.
+                is not available on the raw file.
             AssertionError: if the there was a problem
-        in the processing of a waveform
+                in the processing of a waveform
 
         Returns:
             dict: Dictionary of keys module, channel, wf_number
-        area, length, position where the values are lists (order
-        matters) of the processed waveforms.
+                area, length, position where the values are lists (order
+                matters) of the processed waveforms.
         &#34;&#34;&#34;
         if ch not in self.raw_data.channels:
             raise AssertionError(
@@ -136,7 +118,8 @@ class simple_processor():
         results = {&#39;module&#39;: [],
                    &#39;channel&#39;: [],
                    &#39;wf_number&#39;: [],
-                   &#39;peak_number&#39;: [],
+                   &#39;pulse_number&#39;: [],
+                   &#39;n_pulses&#39;: [],
                    &#39;area&#39;: [],
                    &#39;length&#39;: [],
                    &#39;position&#39;: [],
@@ -159,20 +142,21 @@ class simple_processor():
 
                 assert len(areas) == len(positions) == len(
                     lengths) == len(amplitudes)
-
-                # check if any peaks were found
+                # check if any pulses were found
                 if len(areas) == 0:
                     continue
 
                 module_number = [module] * len(areas)
                 ch_name = [ch] * len(areas)
                 wf_number = np.ones(len(areas), dtype=int) * i
-                peak_number = np.arange(len(areas))
+                pulse_number = np.arange(len(areas))
+                n_pulses = np.ones(len(areas), dtype=int) * len(areas)
 
                 results[&#39;module&#39;] += module_number
                 results[&#39;channel&#39;] += ch_name
                 results[&#39;wf_number&#39;] += list(wf_number)
-                results[&#39;peak_number&#39;] += list(peak_number)
+                results[&#39;pulse_number&#39;] += list(pulse_number)
+                results[&#39;n_pulses&#39;] += list(n_pulses)
                 results[&#39;area&#39;] += list(areas)
                 results[&#39;length&#39;] += list(lengths)
                 results[&#39;position&#39;] += list(positions)
@@ -180,13 +164,13 @@ class simple_processor():
 
             except Exception:
                 raise AssertionError(
-                    &#39;Ups! There was a problem on iteration number: &#39;, i)
+                    f&#39;Ups! There was a problem on iteration number: {i}&#39;)
 
         return results
 
     def process_all_channels(self) -&gt; pd.DataFrame:
         &#34;&#34;&#34;Calls the process_channel method of each of
-        the availabel channels in the dataset.
+        the available channels in the dataset.
 
         Returns:
             pd.DataFrame: Results for all the channels of a dataset.
@@ -261,7 +245,7 @@ class run_processor(simple_processor):
         Returns:
             pd.DataFrame: processed data with computed area, length
         and position, retaining info on module, channel and waveform
-        of the peak.
+        of the pulse.
         &#34;&#34;&#34;
 
         selection = ((self.datasets_df[&#39;kind&#39;] == kind) &amp;
@@ -275,7 +259,7 @@ class run_processor(simple_processor):
             # #print(
             #    f&#39;No datasets found on run with kind = {kind}, &#39;
             #    f&#39;voltage = {vbias} and temperature = {temp}.&#39;)
-            return None
+            return pd.DataFrame({})
 
         print(
             f&#39;Found {len(datasets_to_process)} datasets. &#39;
@@ -394,7 +378,7 @@ conditions but with the same setup.</p>
         Returns:
             pd.DataFrame: processed data with computed area, length
         and position, retaining info on module, channel and waveform
-        of the peak.
+        of the pulse.
         &#34;&#34;&#34;
 
         selection = ((self.datasets_df[&#39;kind&#39;] == kind) &amp;
@@ -408,7 +392,7 @@ conditions but with the same setup.</p>
             # #print(
             #    f&#39;No datasets found on run with kind = {kind}, &#39;
             #    f&#39;voltage = {vbias} and temperature = {temp}.&#39;)
-            return None
+            return pd.DataFrame({})
 
         print(
             f&#39;Found {len(datasets_to_process)} datasets. &#39;
@@ -483,7 +467,7 @@ temp (float): temperature of the setup</p>
 <dd>processed data with computed area, length</dd>
 </dl>
 <p>and position, retaining info on module, channel and waveform
-of the peak.</p></div>
+of the pulse.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
@@ -503,7 +487,7 @@ of the peak.</p></div>
     Returns:
         pd.DataFrame: processed data with computed area, length
     and position, retaining info on module, channel and waveform
-    of the peak.
+    of the pulse.
     &#34;&#34;&#34;
 
     selection = ((self.datasets_df[&#39;kind&#39;] == kind) &amp;
@@ -517,7 +501,7 @@ of the peak.</p></div>
         # #print(
         #    f&#39;No datasets found on run with kind = {kind}, &#39;
         #    f&#39;voltage = {vbias} and temperature = {temp}.&#39;)
-        return None
+        return pd.DataFrame({})
 
     print(
         f&#39;Found {len(datasets_to_process)} datasets. &#39;
@@ -582,7 +566,6 @@ of the peak.</p></div>
 <ul class="hlist">
 <li><code><b><a title="pylars.processing.rawprocessor.simple_processor" href="#pylars.processing.rawprocessor.simple_processor">simple_processor</a></b></code>:
 <ul class="hlist">
-<li><code><a title="pylars.processing.rawprocessor.simple_processor.get_deterministic_hash" href="#pylars.processing.rawprocessor.simple_processor.get_deterministic_hash">get_deterministic_hash</a></code></li>
 <li><code><a title="pylars.processing.rawprocessor.simple_processor.load_raw_data" href="#pylars.processing.rawprocessor.simple_processor.load_raw_data">load_raw_data</a></code></li>
 <li><code><a title="pylars.processing.rawprocessor.simple_processor.process_all_channels" href="#pylars.processing.rawprocessor.simple_processor.process_all_channels">process_all_channels</a></code></li>
 <li><code><a title="pylars.processing.rawprocessor.simple_processor.process_channel" href="#pylars.processing.rawprocessor.simple_processor.process_channel">process_channel</a></code></li>
@@ -605,45 +588,28 @@ of the peak.</p></div>
     &#34;&#34;&#34;Define the atributes and functions for a simple processor.
     &#34;&#34;&#34;
 
-    version = &#39;0.0.2&#39;
+    version = &#39;0.0.3&#39;
     processing_method = &#39;simple&#39;
 
     def __init__(self, sigma_level: float, baseline_samples: int):
         self.sigma_level = sigma_level
         self.baseline_samples = baseline_samples
-        self.hash = self.get_deterministic_hash(f&#34;{self.processing_method}&#34; +
-                                                f&#34;{self.version}&#34; +
-                                                f&#34;{self.sigma_level}&#34; +
-                                                f&#34;{self.baseline_samples:.2f}&#34;)
+        self.hash = get_deterministic_hash(f&#34;{self.processing_method}&#34; +
+                                           f&#34;{self.version}&#34; +
+                                           f&#34;{self.sigma_level}&#34; +
+                                           f&#34;{self.baseline_samples:.2f}&#34;)
         self.processed_data = dict()
         self.show_loadbar_channel = True
         self.show_tqdm_channel = True
 
-    def __hash__(self) -&gt; int:
+    def __hash__(self) -&gt; str:
         return self.hash
-
-    @staticmethod
-    def get_deterministic_hash(id: str) -&gt; str:
-        &#34;&#34;&#34;Return a base32 lowercase string of length determined from hashing
-        the configs. Based on https://github.com/AxFoundation/strax/blob/
-        156254287c2037876a7040460b3551d590bf5589/strax/utils.py#L303
-
-        Args:
-            id (str): thing to hash
-
-        Returns:
-            str: hashed version of the thing
-        &#34;&#34;&#34;
-        jsonned = json.dumps(id)
-        digest = hashlib.sha1(jsonned.encode(&#39;ascii&#39;)).digest()
-        readable_hash = base64.b32encode(digest)[:7].decode(&#39;ascii&#39;).lower()
-        return readable_hash
 
     def set_tqdm_channel(self, bar: bool, show: bool):
         &#34;&#34;&#34;Change the tqdm config
 
         Args:
-            bar (bool): shwo or not the tqdm bar.
+            bar (bool): show or not the tqdm bar.
             show (bool): use tqdm if true, disable if false
         &#34;&#34;&#34;
         self.show_loadbar_channel = bar
@@ -669,23 +635,25 @@ of the peak.</p></div>
 
     # Processing functions
     def process_channel(self, ch: str) -&gt; dict:
-        &#34;&#34;&#34;_summary_
+        &#34;&#34;&#34;Process a channel by iterating over all its waveforms, running
+    the pulse finding algorithm and the calculating the following pulse
+    properties: areas, lengths, positions and amplitudes.
 
         Args:
             ch (str): channel name as in the ROOT file.
-        In files from DAQ_zero/XenoDAQ these will be &#39;wf#&#39; with # the
-        number of the channel [0,7]
+                In files from DAQ_zero/XenoDAQ these will be &#39;wf#&#39; with #
+                the number of the channel [0,7]
 
         Raises:
             AssertionError: if the requested channel
-        is not available on the raw file.
+                is not available on the raw file.
             AssertionError: if the there was a problem
-        in the processing of a waveform
+                in the processing of a waveform
 
         Returns:
             dict: Dictionary of keys module, channel, wf_number
-        area, length, position where the values are lists (order
-        matters) of the processed waveforms.
+                area, length, position where the values are lists (order
+                matters) of the processed waveforms.
         &#34;&#34;&#34;
         if ch not in self.raw_data.channels:
             raise AssertionError(
@@ -699,7 +667,8 @@ of the peak.</p></div>
         results = {&#39;module&#39;: [],
                    &#39;channel&#39;: [],
                    &#39;wf_number&#39;: [],
-                   &#39;peak_number&#39;: [],
+                   &#39;pulse_number&#39;: [],
+                   &#39;n_pulses&#39;: [],
                    &#39;area&#39;: [],
                    &#39;length&#39;: [],
                    &#39;position&#39;: [],
@@ -722,20 +691,21 @@ of the peak.</p></div>
 
                 assert len(areas) == len(positions) == len(
                     lengths) == len(amplitudes)
-
-                # check if any peaks were found
+                # check if any pulses were found
                 if len(areas) == 0:
                     continue
 
                 module_number = [module] * len(areas)
                 ch_name = [ch] * len(areas)
                 wf_number = np.ones(len(areas), dtype=int) * i
-                peak_number = np.arange(len(areas))
+                pulse_number = np.arange(len(areas))
+                n_pulses = np.ones(len(areas), dtype=int) * len(areas)
 
                 results[&#39;module&#39;] += module_number
                 results[&#39;channel&#39;] += ch_name
                 results[&#39;wf_number&#39;] += list(wf_number)
-                results[&#39;peak_number&#39;] += list(peak_number)
+                results[&#39;pulse_number&#39;] += list(pulse_number)
+                results[&#39;n_pulses&#39;] += list(n_pulses)
                 results[&#39;area&#39;] += list(areas)
                 results[&#39;length&#39;] += list(lengths)
                 results[&#39;position&#39;] += list(positions)
@@ -743,13 +713,13 @@ of the peak.</p></div>
 
             except Exception:
                 raise AssertionError(
-                    &#39;Ups! There was a problem on iteration number: &#39;, i)
+                    f&#39;Ups! There was a problem on iteration number: {i}&#39;)
 
         return results
 
     def process_all_channels(self) -&gt; pd.DataFrame:
         &#34;&#34;&#34;Calls the process_channel method of each of
-        the availabel channels in the dataset.
+        the available channels in the dataset.
 
         Returns:
             pd.DataFrame: Results for all the channels of a dataset.
@@ -777,48 +747,6 @@ of the peak.</p></div>
 <dt id="pylars.processing.rawprocessor.simple_processor.version"><code class="name">var <span class="ident">version</span></code></dt>
 <dd>
 <div class="desc"></div>
-</dd>
-</dl>
-<h3>Static methods</h3>
-<dl>
-<dt id="pylars.processing.rawprocessor.simple_processor.get_deterministic_hash"><code class="name flex">
-<span>def <span class="ident">get_deterministic_hash</span></span>(<span>id: str) ‑> str</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Return a base32 lowercase string of length determined from hashing
-the configs. Based on <a href="https://github.com/AxFoundation/strax/blob/">https://github.com/AxFoundation/strax/blob/</a>
-156254287c2037876a7040460b3551d590bf5589/strax/utils.py#L303</p>
-<h2 id="args">Args</h2>
-<dl>
-<dt><strong><code>id</code></strong> :&ensp;<code>str</code></dt>
-<dd>thing to hash</dd>
-</dl>
-<h2 id="returns">Returns</h2>
-<dl>
-<dt><code>str</code></dt>
-<dd>hashed version of the thing</dd>
-</dl></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">@staticmethod
-def get_deterministic_hash(id: str) -&gt; str:
-    &#34;&#34;&#34;Return a base32 lowercase string of length determined from hashing
-    the configs. Based on https://github.com/AxFoundation/strax/blob/
-    156254287c2037876a7040460b3551d590bf5589/strax/utils.py#L303
-
-    Args:
-        id (str): thing to hash
-
-    Returns:
-        str: hashed version of the thing
-    &#34;&#34;&#34;
-    jsonned = json.dumps(id)
-    digest = hashlib.sha1(jsonned.encode(&#39;ascii&#39;)).digest()
-    readable_hash = base64.b32encode(digest)[:7].decode(&#39;ascii&#39;).lower()
-    return readable_hash</code></pre>
-</details>
 </dd>
 </dl>
 <h3>Methods</h3>
@@ -869,7 +797,7 @@ def get_deterministic_hash(id: str) -&gt; str:
 </code></dt>
 <dd>
 <div class="desc"><p>Calls the process_channel method of each of
-the availabel channels in the dataset.</p>
+the available channels in the dataset.</p>
 <h2 id="returns">Returns</h2>
 <dl>
 <dt><code>pd.DataFrame</code></dt>
@@ -881,7 +809,7 @@ the availabel channels in the dataset.</p>
 </summary>
 <pre><code class="python">def process_all_channels(self) -&gt; pd.DataFrame:
     &#34;&#34;&#34;Calls the process_channel method of each of
-    the availabel channels in the dataset.
+    the available channels in the dataset.
 
     Returns:
         pd.DataFrame: Results for all the channels of a dataset.
@@ -898,51 +826,49 @@ the availabel channels in the dataset.</p>
 <span>def <span class="ident">process_channel</span></span>(<span>self, ch: str) ‑> dict</span>
 </code></dt>
 <dd>
-<div class="desc"><p><em>summary</em></p>
-<h2 id="args">Args</h2>
-<dl>
-<dt><strong><code>ch</code></strong> :&ensp;<code>str</code></dt>
-<dd>channel name as in the ROOT file.</dd>
-</dl>
-<p>In files from DAQ_zero/XenoDAQ these will be 'wf#' with # the
-number of the channel [0,7]</p>
-<h2 id="raises">Raises</h2>
-<dl>
-<dt><code>AssertionError</code></dt>
-<dd>if the requested channel</dd>
-</dl>
-<p>is not available on the raw file.
-AssertionError: if the there was a problem
-in the processing of a waveform</p>
-<h2 id="returns">Returns</h2>
-<dl>
-<dt><code>dict</code></dt>
-<dd>Dictionary of keys module, channel, wf_number</dd>
-</dl>
-<p>area, length, position where the values are lists (order
-matters) of the processed waveforms.</p></div>
+<div class="desc"><p>Process a channel by iterating over all its waveforms, running
+the pulse finding algorithm and the calculating the following pulse
+properties: areas, lengths, positions and amplitudes.</p>
+<pre><code>Args:
+    ch (str): channel name as in the ROOT file.
+        In files from DAQ_zero/XenoDAQ these will be 'wf#' with #
+        the number of the channel [0,7]
+
+Raises:
+    AssertionError: if the requested channel
+        is not available on the raw file.
+    AssertionError: if the there was a problem
+        in the processing of a waveform
+
+Returns:
+    dict: Dictionary of keys module, channel, wf_number
+        area, length, position where the values are lists (order
+        matters) of the processed waveforms.
+</code></pre></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def process_channel(self, ch: str) -&gt; dict:
-    &#34;&#34;&#34;_summary_
+    &#34;&#34;&#34;Process a channel by iterating over all its waveforms, running
+the pulse finding algorithm and the calculating the following pulse
+properties: areas, lengths, positions and amplitudes.
 
     Args:
         ch (str): channel name as in the ROOT file.
-    In files from DAQ_zero/XenoDAQ these will be &#39;wf#&#39; with # the
-    number of the channel [0,7]
+            In files from DAQ_zero/XenoDAQ these will be &#39;wf#&#39; with #
+            the number of the channel [0,7]
 
     Raises:
         AssertionError: if the requested channel
-    is not available on the raw file.
+            is not available on the raw file.
         AssertionError: if the there was a problem
-    in the processing of a waveform
+            in the processing of a waveform
 
     Returns:
         dict: Dictionary of keys module, channel, wf_number
-    area, length, position where the values are lists (order
-    matters) of the processed waveforms.
+            area, length, position where the values are lists (order
+            matters) of the processed waveforms.
     &#34;&#34;&#34;
     if ch not in self.raw_data.channels:
         raise AssertionError(
@@ -956,7 +882,8 @@ matters) of the processed waveforms.</p></div>
     results = {&#39;module&#39;: [],
                &#39;channel&#39;: [],
                &#39;wf_number&#39;: [],
-               &#39;peak_number&#39;: [],
+               &#39;pulse_number&#39;: [],
+               &#39;n_pulses&#39;: [],
                &#39;area&#39;: [],
                &#39;length&#39;: [],
                &#39;position&#39;: [],
@@ -979,20 +906,21 @@ matters) of the processed waveforms.</p></div>
 
             assert len(areas) == len(positions) == len(
                 lengths) == len(amplitudes)
-
-            # check if any peaks were found
+            # check if any pulses were found
             if len(areas) == 0:
                 continue
 
             module_number = [module] * len(areas)
             ch_name = [ch] * len(areas)
             wf_number = np.ones(len(areas), dtype=int) * i
-            peak_number = np.arange(len(areas))
+            pulse_number = np.arange(len(areas))
+            n_pulses = np.ones(len(areas), dtype=int) * len(areas)
 
             results[&#39;module&#39;] += module_number
             results[&#39;channel&#39;] += ch_name
             results[&#39;wf_number&#39;] += list(wf_number)
-            results[&#39;peak_number&#39;] += list(peak_number)
+            results[&#39;pulse_number&#39;] += list(pulse_number)
+            results[&#39;n_pulses&#39;] += list(n_pulses)
             results[&#39;area&#39;] += list(areas)
             results[&#39;length&#39;] += list(lengths)
             results[&#39;position&#39;] += list(positions)
@@ -1000,7 +928,7 @@ matters) of the processed waveforms.</p></div>
 
         except Exception:
             raise AssertionError(
-                &#39;Ups! There was a problem on iteration number: &#39;, i)
+                f&#39;Ups! There was a problem on iteration number: {i}&#39;)
 
     return results</code></pre>
 </details>
@@ -1026,7 +954,7 @@ matters) of the processed waveforms.</p></div>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>bar</code></strong> :&ensp;<code>bool</code></dt>
-<dd>shwo or not the tqdm bar.</dd>
+<dd>show or not the tqdm bar.</dd>
 <dt><strong><code>show</code></strong> :&ensp;<code>bool</code></dt>
 <dd>use tqdm if true, disable if false</dd>
 </dl></div>
@@ -1038,7 +966,7 @@ matters) of the processed waveforms.</p></div>
     &#34;&#34;&#34;Change the tqdm config
 
     Args:
-        bar (bool): shwo or not the tqdm bar.
+        bar (bool): show or not the tqdm bar.
         show (bool): use tqdm if true, disable if false
     &#34;&#34;&#34;
     self.show_loadbar_channel = bar
@@ -1074,7 +1002,6 @@ matters) of the processed waveforms.</p></div>
 <li>
 <h4><code><a title="pylars.processing.rawprocessor.simple_processor" href="#pylars.processing.rawprocessor.simple_processor">simple_processor</a></code></h4>
 <ul class="">
-<li><code><a title="pylars.processing.rawprocessor.simple_processor.get_deterministic_hash" href="#pylars.processing.rawprocessor.simple_processor.get_deterministic_hash">get_deterministic_hash</a></code></li>
 <li><code><a title="pylars.processing.rawprocessor.simple_processor.load_raw_data" href="#pylars.processing.rawprocessor.simple_processor.load_raw_data">load_raw_data</a></code></li>
 <li><code><a title="pylars.processing.rawprocessor.simple_processor.process_all_channels" href="#pylars.processing.rawprocessor.simple_processor.process_all_channels">process_all_channels</a></code></li>
 <li><code><a title="pylars.processing.rawprocessor.simple_processor.process_channel" href="#pylars.processing.rawprocessor.simple_processor.process_channel">process_channel</a></code></li>

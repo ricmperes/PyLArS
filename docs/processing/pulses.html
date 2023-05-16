@@ -1,0 +1,848 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.9.2" />
+<title>pylars.processing.pulses API documentation</title>
+<meta name="description" content="" />
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
+<link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/highlight.min.js" integrity="sha256-Uv3H6lx7dJmRfRvH8TH6kJD1TSK1aFcwgx+mdg3epi8=" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => hljs.initHighlighting())</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>pylars.processing.pulses</code></h1>
+</header>
+<section id="section-intro">
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">from typing import List
+
+import numba as nb
+import numpy as np
+
+
+class pulse_processing():
+    &#34;&#34;&#34;All the things pulses.
+    &#34;&#34;&#34;
+
+    @classmethod
+    def get_area(cls, waveform: np.ndarray, baseline_value: float,
+                 pulse_start: int, pulse_end: int, dt: int = 10,
+                 negative_polarity: bool = True,
+                 baseline_subtracted: bool = False) -&gt; float:
+        &#34;&#34;&#34;Get area of a single identified pulse in a waveform. Points to
+        the numbafied function `_get_area`.
+        &#34;&#34;&#34;
+        area_under = _get_area(
+            waveform,
+            baseline_value,
+            pulse_start,
+            pulse_end,
+            dt,
+            negative_polarity,
+            baseline_subtracted)
+        return area_under
+
+    @classmethod
+    def get_all_areas(cls, waveform: np.ndarray, pulses: list,
+                      baseline_value: float, dt: int = 10,
+                      negative_polarity: bool = True,
+                      baseline_subtracted: bool = False) -&gt; np.ndarray:
+        &#34;&#34;&#34;Compute the areas of all the pulses in a waveform.
+        TO DO: use np.apply_along_axis or similar and see if
+        there is speed improvement.
+        &#34;&#34;&#34;
+        areas = np.zeros(len(pulses))
+        for i, _pulse in enumerate(pulses):
+            areas[i] = cls.get_area(
+                waveform, baseline_value, _pulse[0], _pulse[-1],
+                dt,
+                negative_polarity,
+                baseline_subtracted)
+        return areas
+
+    @classmethod
+    def get_all_lengths(cls, pulses: list) -&gt; list:
+        &#34;&#34;&#34;Compute the lengths of all the pulses in a waveform.
+        (It&#39;s faster without @numba.njit)
+
+        Args:
+            pulses (list): list of arrays where the elements are the index
+                of samples within each pulse.
+        Returns:
+            list: list with the lenght for each pulse.
+        &#34;&#34;&#34;
+        lengths = [len(_pulse) for _pulse in pulses]
+        return lengths
+
+    @classmethod
+    def get_all_positions(cls, pulses: list) -&gt; list:
+        &#34;&#34;&#34;Calcultes the initial position of the identified pulse
+        in number of samples.
+
+        (Faster without numba...?)
+
+        Args:
+            pulses (list): array of identified pulses.
+
+        Returns:
+            list: list of positions of pulses.
+        &#34;&#34;&#34;
+        positions = [_pulse[0] for _pulse in pulses]
+        return positions
+
+    @classmethod
+    def get_amplitude(cls, waveform: np.ndarray, baseline_value: float,
+                      peak_start: int, peak_end: int,
+                      negative_polarity: bool = True,
+                      baseline_subtracted: bool = False) -&gt; float:
+        &#34;&#34;&#34;Get area of a single identified pulse in a waveform. Points to
+        the numbafied function `_get_amplitude`.
+        &#34;&#34;&#34;
+        amplitude = _get_amplitude(
+            waveform,
+            baseline_value,
+            peak_start,
+            peak_end,
+            negative_polarity,
+            baseline_subtracted)
+        return amplitude
+
+    @classmethod
+    def get_all_amplitudes(cls, waveform: np.ndarray, pulses: list,
+                           baseline_value: float,
+                           negative_polarity: bool = True,
+                           baseline_subtracted: bool = False) -&gt; List[float]:
+        &#34;&#34;&#34;Calcultes the max amplitude of the identified pulse
+        in number of samples.
+
+        (Faster without numba...?)
+
+        Args:
+            waveform (np.ndarray): 1D array of all the ADC counts where each
+                element is a sample number in the waveform. The length of the
+                array is the ammount of samples in the waveform.
+            pulses (np.ndarray): array of identified pulse.
+            baseline_value (float): value of ADC counts to use as baseline.
+
+        Returns:
+            list: list of amplitudes of pulses.
+        &#34;&#34;&#34;
+        amplitudes = np.zeros(len(pulses))
+        for i, _peak in enumerate(pulses):
+            amplitudes[i] = cls.get_amplitude(
+                waveform, baseline_value, _peak[0], _peak[-1],
+                negative_polarity,
+                baseline_subtracted)
+        return amplitudes.tolist()
+
+    @classmethod
+    def split_consecutive(cls, array: np.ndarray, stepsize: int = 1) -&gt; list:
+        &#34;&#34;&#34;Splits an array into several where values are consecutive
+        to each other. Points to numbafied function _split_consecutive().
+        &#34;&#34;&#34;
+        split_array = _split_consecutive(array, stepsize)
+        return split_array
+
+    @classmethod
+    def find_pulses_simple(cls, waveform_array: np.ndarray,
+                           baseline_value: float, std_value: float,
+                           sigma_lvl: float = 5, negative_polarity: bool = True,
+                           baseline_subtracted: bool = False) -&gt; list:
+        &#34;&#34;&#34;Pulse processing to find pulses above sigma times baseline rms.
+
+        Args:
+           waveform_array (np.ndarray): 1D array of all the ADC counts where
+                each element is a sample number in the waveform. The length of the
+                array is the ammount of samples in the waveform.
+            baseline_value (float): value of ADC counts to use as baseline.
+            std_value (float): standard deviation of the calculated baseline
+                value.
+            sigma_lvl (float, optional): number of times above baseline in
+                stds to consider as new pulse. Defaults to 5.
+            negative_polarity (bool): Polarity of the signal, True for
+                negative (as standard SiPM waveforms), False for positive.
+                Defaults to True.
+            baseline_subtracted (bool): info if the baseline is already
+                subtracted in the waveform. Defaults to False.
+
+        Returns:
+            list: list with the found pulses.
+        &#34;&#34;&#34;
+
+        if baseline_subtracted:
+            baseline_value = 0
+
+        if negative_polarity:
+            above_baseline = np.where(
+                waveform_array &lt; (
+                    baseline_value -
+                    std_value *
+                    sigma_lvl))[0]
+
+        elif not negative_polarity:
+            above_baseline = np.where(
+                waveform_array &gt; (
+                    baseline_value +
+                    std_value *
+                    sigma_lvl))[0]
+
+        pulses = cls.split_consecutive(above_baseline)  # type: ignore
+
+        return pulses
+
+
+@nb.njit
+def _get_area(waveform: np.ndarray, baseline_value: float,
+              pulse_start: int, pulse_end: int, dt: int = 10,
+              negative_polarity: bool = True,
+              baseline_subtracted: bool = False) -&gt; float:
+    &#34;&#34;&#34;Get area of a single identified pulse in a waveform. Numbafied.
+
+    Args:
+        waveform (np.ndarray): 1D array of all the ADC counts where each
+            element is a sample number in the waveform. The length of the array is the
+            ammount of samples in the waveform.
+        baseline_value (float): value of ADC counts to use as baseline.
+        peak_start (int): index of start of the pulse
+        peak_end (int): index of end of the pulse
+        dt (int, optional): duration of each sample in the waveform in
+            nanoseconds. Defaults to 10.
+        negative_polarity (bool): Polarity of the signal, True for
+                negative (as standard SiPM waveforms), False for positive.
+                Defaults to True.
+            baseline_subtracted (bool): info if the baseline is already
+                subtracted in the waveform. Defaults to False.
+
+    Returns:
+        float: return calculated integrated ADC counts.
+    &#34;&#34;&#34;
+
+    if baseline_subtracted:
+        baseline_value = 0
+
+    if negative_polarity:
+        polarity = -1
+    else:
+        polarity = 1
+
+    pulse_wf = waveform[pulse_start:pulse_end]
+    area_under = np.sum(baseline_value + polarity * pulse_wf) * dt
+    return area_under
+
+
+@nb.njit
+def _get_amplitude(waveform: np.ndarray, baseline_value: float,
+                   peak_start: int, peak_end: int,
+                   negative_polarity: bool = True,
+                   baseline_subtracted: bool = False) -&gt; float:
+    &#34;&#34;&#34;Get area of a single identified pulse in a waveform. Numbafied.
+
+    Args:
+        waveform (np.ndarray): 1D array of all the ADC counts where each
+            element is a sample number in the waveform. The length of the array is the
+            ammount of samples in the waveform.
+        baseline_value (float): value of ADC counts to use as baseline.
+        peak_start (int): index of start of the pulse
+        peak_end (int): index of end of the pulse
+        negative_polarity (bool): Polarity of the signal, True for
+                negative (as standard SiPM waveforms), False for positive.
+                Defaults to True.
+            baseline_subtracted (bool): info if the baseline is already
+                subtracted in the waveform. Defaults to False.
+
+    Returns:
+        float: return amplitude of pulse in ADC counts (minimum value of
+            ADC counts registered in pulse)
+    &#34;&#34;&#34;
+    peak_wf = waveform[peak_start:peak_end]
+
+    if baseline_subtracted:
+        baseline_value = 0
+
+    if len(peak_wf) &gt; 0:
+        if negative_polarity:
+            amplitude = min(peak_wf)
+        else:
+            amplitude = max(peak_wf)
+    else:
+        amplitude = baseline_value
+    return amplitude
+
+
+@nb.njit
+def _split_consecutive(array: np.ndarray, stepsize: int = 1) -&gt; list:
+    &#34;&#34;&#34;Splits an array into several where values are consecutive
+    to each other, in a numbafied verison.
+
+    Args:
+        array (np.ndarray): array of indexes recognised as pulses.
+        stepsize (int, optional): minimum consecutive indexes to split into
+            different pulses. Defaults to 1.
+
+    Returns:
+        np.ndarray: array with splitted pulses.
+    &#34;&#34;&#34;
+    split_index = np.where(np.diff(array) != stepsize)[0] + 1
+    split_array = np.split(array, split_index)
+
+    return split_array</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="pylars.processing.pulses.pulse_processing"><code class="flex name class">
+<span>class <span class="ident">pulse_processing</span></span>
+</code></dt>
+<dd>
+<div class="desc"><p>All the things pulses.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class pulse_processing():
+    &#34;&#34;&#34;All the things pulses.
+    &#34;&#34;&#34;
+
+    @classmethod
+    def get_area(cls, waveform: np.ndarray, baseline_value: float,
+                 pulse_start: int, pulse_end: int, dt: int = 10,
+                 negative_polarity: bool = True,
+                 baseline_subtracted: bool = False) -&gt; float:
+        &#34;&#34;&#34;Get area of a single identified pulse in a waveform. Points to
+        the numbafied function `_get_area`.
+        &#34;&#34;&#34;
+        area_under = _get_area(
+            waveform,
+            baseline_value,
+            pulse_start,
+            pulse_end,
+            dt,
+            negative_polarity,
+            baseline_subtracted)
+        return area_under
+
+    @classmethod
+    def get_all_areas(cls, waveform: np.ndarray, pulses: list,
+                      baseline_value: float, dt: int = 10,
+                      negative_polarity: bool = True,
+                      baseline_subtracted: bool = False) -&gt; np.ndarray:
+        &#34;&#34;&#34;Compute the areas of all the pulses in a waveform.
+        TO DO: use np.apply_along_axis or similar and see if
+        there is speed improvement.
+        &#34;&#34;&#34;
+        areas = np.zeros(len(pulses))
+        for i, _pulse in enumerate(pulses):
+            areas[i] = cls.get_area(
+                waveform, baseline_value, _pulse[0], _pulse[-1],
+                dt,
+                negative_polarity,
+                baseline_subtracted)
+        return areas
+
+    @classmethod
+    def get_all_lengths(cls, pulses: list) -&gt; list:
+        &#34;&#34;&#34;Compute the lengths of all the pulses in a waveform.
+        (It&#39;s faster without @numba.njit)
+
+        Args:
+            pulses (list): list of arrays where the elements are the index
+                of samples within each pulse.
+        Returns:
+            list: list with the lenght for each pulse.
+        &#34;&#34;&#34;
+        lengths = [len(_pulse) for _pulse in pulses]
+        return lengths
+
+    @classmethod
+    def get_all_positions(cls, pulses: list) -&gt; list:
+        &#34;&#34;&#34;Calcultes the initial position of the identified pulse
+        in number of samples.
+
+        (Faster without numba...?)
+
+        Args:
+            pulses (list): array of identified pulses.
+
+        Returns:
+            list: list of positions of pulses.
+        &#34;&#34;&#34;
+        positions = [_pulse[0] for _pulse in pulses]
+        return positions
+
+    @classmethod
+    def get_amplitude(cls, waveform: np.ndarray, baseline_value: float,
+                      peak_start: int, peak_end: int,
+                      negative_polarity: bool = True,
+                      baseline_subtracted: bool = False) -&gt; float:
+        &#34;&#34;&#34;Get area of a single identified pulse in a waveform. Points to
+        the numbafied function `_get_amplitude`.
+        &#34;&#34;&#34;
+        amplitude = _get_amplitude(
+            waveform,
+            baseline_value,
+            peak_start,
+            peak_end,
+            negative_polarity,
+            baseline_subtracted)
+        return amplitude
+
+    @classmethod
+    def get_all_amplitudes(cls, waveform: np.ndarray, pulses: list,
+                           baseline_value: float,
+                           negative_polarity: bool = True,
+                           baseline_subtracted: bool = False) -&gt; List[float]:
+        &#34;&#34;&#34;Calcultes the max amplitude of the identified pulse
+        in number of samples.
+
+        (Faster without numba...?)
+
+        Args:
+            waveform (np.ndarray): 1D array of all the ADC counts where each
+                element is a sample number in the waveform. The length of the
+                array is the ammount of samples in the waveform.
+            pulses (np.ndarray): array of identified pulse.
+            baseline_value (float): value of ADC counts to use as baseline.
+
+        Returns:
+            list: list of amplitudes of pulses.
+        &#34;&#34;&#34;
+        amplitudes = np.zeros(len(pulses))
+        for i, _peak in enumerate(pulses):
+            amplitudes[i] = cls.get_amplitude(
+                waveform, baseline_value, _peak[0], _peak[-1],
+                negative_polarity,
+                baseline_subtracted)
+        return amplitudes.tolist()
+
+    @classmethod
+    def split_consecutive(cls, array: np.ndarray, stepsize: int = 1) -&gt; list:
+        &#34;&#34;&#34;Splits an array into several where values are consecutive
+        to each other. Points to numbafied function _split_consecutive().
+        &#34;&#34;&#34;
+        split_array = _split_consecutive(array, stepsize)
+        return split_array
+
+    @classmethod
+    def find_pulses_simple(cls, waveform_array: np.ndarray,
+                           baseline_value: float, std_value: float,
+                           sigma_lvl: float = 5, negative_polarity: bool = True,
+                           baseline_subtracted: bool = False) -&gt; list:
+        &#34;&#34;&#34;Pulse processing to find pulses above sigma times baseline rms.
+
+        Args:
+           waveform_array (np.ndarray): 1D array of all the ADC counts where
+                each element is a sample number in the waveform. The length of the
+                array is the ammount of samples in the waveform.
+            baseline_value (float): value of ADC counts to use as baseline.
+            std_value (float): standard deviation of the calculated baseline
+                value.
+            sigma_lvl (float, optional): number of times above baseline in
+                stds to consider as new pulse. Defaults to 5.
+            negative_polarity (bool): Polarity of the signal, True for
+                negative (as standard SiPM waveforms), False for positive.
+                Defaults to True.
+            baseline_subtracted (bool): info if the baseline is already
+                subtracted in the waveform. Defaults to False.
+
+        Returns:
+            list: list with the found pulses.
+        &#34;&#34;&#34;
+
+        if baseline_subtracted:
+            baseline_value = 0
+
+        if negative_polarity:
+            above_baseline = np.where(
+                waveform_array &lt; (
+                    baseline_value -
+                    std_value *
+                    sigma_lvl))[0]
+
+        elif not negative_polarity:
+            above_baseline = np.where(
+                waveform_array &gt; (
+                    baseline_value +
+                    std_value *
+                    sigma_lvl))[0]
+
+        pulses = cls.split_consecutive(above_baseline)  # type: ignore
+
+        return pulses</code></pre>
+</details>
+<h3>Static methods</h3>
+<dl>
+<dt id="pylars.processing.pulses.pulse_processing.find_pulses_simple"><code class="name flex">
+<span>def <span class="ident">find_pulses_simple</span></span>(<span>waveform_array: numpy.ndarray, baseline_value: float, std_value: float, sigma_lvl: float = 5, negative_polarity: bool = True, baseline_subtracted: bool = False) ‑> list</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Pulse processing to find pulses above sigma times baseline rms.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>waveform_array</code></strong> :&ensp;<code>np.ndarray</code></dt>
+<dd>1D array of all the ADC counts where
+each element is a sample number in the waveform. The length of the
+array is the ammount of samples in the waveform.</dd>
+</dl>
+<p>baseline_value (float): value of ADC counts to use as baseline.
+std_value (float): standard deviation of the calculated baseline
+value.
+sigma_lvl (float, optional): number of times above baseline in
+stds to consider as new pulse. Defaults to 5.
+negative_polarity (bool): Polarity of the signal, True for
+negative (as standard SiPM waveforms), False for positive.
+Defaults to True.
+baseline_subtracted (bool): info if the baseline is already
+subtracted in the waveform. Defaults to False.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>list</code></dt>
+<dd>list with the found pulses.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@classmethod
+def find_pulses_simple(cls, waveform_array: np.ndarray,
+                       baseline_value: float, std_value: float,
+                       sigma_lvl: float = 5, negative_polarity: bool = True,
+                       baseline_subtracted: bool = False) -&gt; list:
+    &#34;&#34;&#34;Pulse processing to find pulses above sigma times baseline rms.
+
+    Args:
+       waveform_array (np.ndarray): 1D array of all the ADC counts where
+            each element is a sample number in the waveform. The length of the
+            array is the ammount of samples in the waveform.
+        baseline_value (float): value of ADC counts to use as baseline.
+        std_value (float): standard deviation of the calculated baseline
+            value.
+        sigma_lvl (float, optional): number of times above baseline in
+            stds to consider as new pulse. Defaults to 5.
+        negative_polarity (bool): Polarity of the signal, True for
+            negative (as standard SiPM waveforms), False for positive.
+            Defaults to True.
+        baseline_subtracted (bool): info if the baseline is already
+            subtracted in the waveform. Defaults to False.
+
+    Returns:
+        list: list with the found pulses.
+    &#34;&#34;&#34;
+
+    if baseline_subtracted:
+        baseline_value = 0
+
+    if negative_polarity:
+        above_baseline = np.where(
+            waveform_array &lt; (
+                baseline_value -
+                std_value *
+                sigma_lvl))[0]
+
+    elif not negative_polarity:
+        above_baseline = np.where(
+            waveform_array &gt; (
+                baseline_value +
+                std_value *
+                sigma_lvl))[0]
+
+    pulses = cls.split_consecutive(above_baseline)  # type: ignore
+
+    return pulses</code></pre>
+</details>
+</dd>
+<dt id="pylars.processing.pulses.pulse_processing.get_all_amplitudes"><code class="name flex">
+<span>def <span class="ident">get_all_amplitudes</span></span>(<span>waveform: numpy.ndarray, pulses: list, baseline_value: float, negative_polarity: bool = True, baseline_subtracted: bool = False) ‑> List[float]</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Calcultes the max amplitude of the identified pulse
+in number of samples.</p>
+<p>(Faster without numba&hellip;?)</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>waveform</code></strong> :&ensp;<code>np.ndarray</code></dt>
+<dd>1D array of all the ADC counts where each
+element is a sample number in the waveform. The length of the
+array is the ammount of samples in the waveform.</dd>
+<dt><strong><code>pulses</code></strong> :&ensp;<code>np.ndarray</code></dt>
+<dd>array of identified pulse.</dd>
+<dt><strong><code>baseline_value</code></strong> :&ensp;<code>float</code></dt>
+<dd>value of ADC counts to use as baseline.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>list</code></dt>
+<dd>list of amplitudes of pulses.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@classmethod
+def get_all_amplitudes(cls, waveform: np.ndarray, pulses: list,
+                       baseline_value: float,
+                       negative_polarity: bool = True,
+                       baseline_subtracted: bool = False) -&gt; List[float]:
+    &#34;&#34;&#34;Calcultes the max amplitude of the identified pulse
+    in number of samples.
+
+    (Faster without numba...?)
+
+    Args:
+        waveform (np.ndarray): 1D array of all the ADC counts where each
+            element is a sample number in the waveform. The length of the
+            array is the ammount of samples in the waveform.
+        pulses (np.ndarray): array of identified pulse.
+        baseline_value (float): value of ADC counts to use as baseline.
+
+    Returns:
+        list: list of amplitudes of pulses.
+    &#34;&#34;&#34;
+    amplitudes = np.zeros(len(pulses))
+    for i, _peak in enumerate(pulses):
+        amplitudes[i] = cls.get_amplitude(
+            waveform, baseline_value, _peak[0], _peak[-1],
+            negative_polarity,
+            baseline_subtracted)
+    return amplitudes.tolist()</code></pre>
+</details>
+</dd>
+<dt id="pylars.processing.pulses.pulse_processing.get_all_areas"><code class="name flex">
+<span>def <span class="ident">get_all_areas</span></span>(<span>waveform: numpy.ndarray, pulses: list, baseline_value: float, dt: int = 10, negative_polarity: bool = True, baseline_subtracted: bool = False) ‑> numpy.ndarray</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Compute the areas of all the pulses in a waveform.
+TO DO: use np.apply_along_axis or similar and see if
+there is speed improvement.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@classmethod
+def get_all_areas(cls, waveform: np.ndarray, pulses: list,
+                  baseline_value: float, dt: int = 10,
+                  negative_polarity: bool = True,
+                  baseline_subtracted: bool = False) -&gt; np.ndarray:
+    &#34;&#34;&#34;Compute the areas of all the pulses in a waveform.
+    TO DO: use np.apply_along_axis or similar and see if
+    there is speed improvement.
+    &#34;&#34;&#34;
+    areas = np.zeros(len(pulses))
+    for i, _pulse in enumerate(pulses):
+        areas[i] = cls.get_area(
+            waveform, baseline_value, _pulse[0], _pulse[-1],
+            dt,
+            negative_polarity,
+            baseline_subtracted)
+    return areas</code></pre>
+</details>
+</dd>
+<dt id="pylars.processing.pulses.pulse_processing.get_all_lengths"><code class="name flex">
+<span>def <span class="ident">get_all_lengths</span></span>(<span>pulses: list) ‑> list</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Compute the lengths of all the pulses in a waveform.
+(It's faster without @numba.njit)</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>pulses</code></strong> :&ensp;<code>list</code></dt>
+<dd>list of arrays where the elements are the index
+of samples within each pulse.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>list</code></dt>
+<dd>list with the lenght for each pulse.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@classmethod
+def get_all_lengths(cls, pulses: list) -&gt; list:
+    &#34;&#34;&#34;Compute the lengths of all the pulses in a waveform.
+    (It&#39;s faster without @numba.njit)
+
+    Args:
+        pulses (list): list of arrays where the elements are the index
+            of samples within each pulse.
+    Returns:
+        list: list with the lenght for each pulse.
+    &#34;&#34;&#34;
+    lengths = [len(_pulse) for _pulse in pulses]
+    return lengths</code></pre>
+</details>
+</dd>
+<dt id="pylars.processing.pulses.pulse_processing.get_all_positions"><code class="name flex">
+<span>def <span class="ident">get_all_positions</span></span>(<span>pulses: list) ‑> list</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Calcultes the initial position of the identified pulse
+in number of samples.</p>
+<p>(Faster without numba&hellip;?)</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>pulses</code></strong> :&ensp;<code>list</code></dt>
+<dd>array of identified pulses.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>list</code></dt>
+<dd>list of positions of pulses.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@classmethod
+def get_all_positions(cls, pulses: list) -&gt; list:
+    &#34;&#34;&#34;Calcultes the initial position of the identified pulse
+    in number of samples.
+
+    (Faster without numba...?)
+
+    Args:
+        pulses (list): array of identified pulses.
+
+    Returns:
+        list: list of positions of pulses.
+    &#34;&#34;&#34;
+    positions = [_pulse[0] for _pulse in pulses]
+    return positions</code></pre>
+</details>
+</dd>
+<dt id="pylars.processing.pulses.pulse_processing.get_amplitude"><code class="name flex">
+<span>def <span class="ident">get_amplitude</span></span>(<span>waveform: numpy.ndarray, baseline_value: float, peak_start: int, peak_end: int, negative_polarity: bool = True, baseline_subtracted: bool = False) ‑> float</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Get area of a single identified pulse in a waveform. Points to
+the numbafied function <code>_get_amplitude</code>.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@classmethod
+def get_amplitude(cls, waveform: np.ndarray, baseline_value: float,
+                  peak_start: int, peak_end: int,
+                  negative_polarity: bool = True,
+                  baseline_subtracted: bool = False) -&gt; float:
+    &#34;&#34;&#34;Get area of a single identified pulse in a waveform. Points to
+    the numbafied function `_get_amplitude`.
+    &#34;&#34;&#34;
+    amplitude = _get_amplitude(
+        waveform,
+        baseline_value,
+        peak_start,
+        peak_end,
+        negative_polarity,
+        baseline_subtracted)
+    return amplitude</code></pre>
+</details>
+</dd>
+<dt id="pylars.processing.pulses.pulse_processing.get_area"><code class="name flex">
+<span>def <span class="ident">get_area</span></span>(<span>waveform: numpy.ndarray, baseline_value: float, pulse_start: int, pulse_end: int, dt: int = 10, negative_polarity: bool = True, baseline_subtracted: bool = False) ‑> float</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Get area of a single identified pulse in a waveform. Points to
+the numbafied function <code>_get_area</code>.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@classmethod
+def get_area(cls, waveform: np.ndarray, baseline_value: float,
+             pulse_start: int, pulse_end: int, dt: int = 10,
+             negative_polarity: bool = True,
+             baseline_subtracted: bool = False) -&gt; float:
+    &#34;&#34;&#34;Get area of a single identified pulse in a waveform. Points to
+    the numbafied function `_get_area`.
+    &#34;&#34;&#34;
+    area_under = _get_area(
+        waveform,
+        baseline_value,
+        pulse_start,
+        pulse_end,
+        dt,
+        negative_polarity,
+        baseline_subtracted)
+    return area_under</code></pre>
+</details>
+</dd>
+<dt id="pylars.processing.pulses.pulse_processing.split_consecutive"><code class="name flex">
+<span>def <span class="ident">split_consecutive</span></span>(<span>array: numpy.ndarray, stepsize: int = 1) ‑> list</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Splits an array into several where values are consecutive
+to each other. Points to numbafied function _split_consecutive().</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@classmethod
+def split_consecutive(cls, array: np.ndarray, stepsize: int = 1) -&gt; list:
+    &#34;&#34;&#34;Splits an array into several where values are consecutive
+    to each other. Points to numbafied function _split_consecutive().
+    &#34;&#34;&#34;
+    split_array = _split_consecutive(array, stepsize)
+    return split_array</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="pylars.processing" href="index.html">pylars.processing</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="pylars.processing.pulses.pulse_processing" href="#pylars.processing.pulses.pulse_processing">pulse_processing</a></code></h4>
+<ul class="two-column">
+<li><code><a title="pylars.processing.pulses.pulse_processing.find_pulses_simple" href="#pylars.processing.pulses.pulse_processing.find_pulses_simple">find_pulses_simple</a></code></li>
+<li><code><a title="pylars.processing.pulses.pulse_processing.get_all_amplitudes" href="#pylars.processing.pulses.pulse_processing.get_all_amplitudes">get_all_amplitudes</a></code></li>
+<li><code><a title="pylars.processing.pulses.pulse_processing.get_all_areas" href="#pylars.processing.pulses.pulse_processing.get_all_areas">get_all_areas</a></code></li>
+<li><code><a title="pylars.processing.pulses.pulse_processing.get_all_lengths" href="#pylars.processing.pulses.pulse_processing.get_all_lengths">get_all_lengths</a></code></li>
+<li><code><a title="pylars.processing.pulses.pulse_processing.get_all_positions" href="#pylars.processing.pulses.pulse_processing.get_all_positions">get_all_positions</a></code></li>
+<li><code><a title="pylars.processing.pulses.pulse_processing.get_amplitude" href="#pylars.processing.pulses.pulse_processing.get_amplitude">get_amplitude</a></code></li>
+<li><code><a title="pylars.processing.pulses.pulse_processing.get_area" href="#pylars.processing.pulses.pulse_processing.get_area">get_area</a></code></li>
+<li><code><a title="pylars.processing.pulses.pulse_processing.split_consecutive" href="#pylars.processing.pulses.pulse_processing.split_consecutive">split_consecutive</a></code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.9.2</a>.</p>
+</footer>
+</body>
+</html>

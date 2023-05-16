@@ -4,8 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.9.2" />
-<title>pylars.plotting.plotprocessed API documentation</title>
-<meta name="description" content="" />
+<title>pylars.plotting API documentation</title>
+<meta name="description" content="This module contains the one-liner plots that everyone always desires.
+It is subdivided into: …" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
 <link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
@@ -19,149 +20,76 @@
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>pylars.plotting.plotprocessed</code></h1>
+<h1 class="title">Module <code>pylars.plotting</code></h1>
 </header>
 <section id="section-intro">
+<p>This module contains the one-liner plots that everyone always desires.
+It is subdivided into:</p>
+<ul>
+<li><code><a title="pylars.plotting.plotwaveforms" href="plotwaveforms.html">pylars.plotting.plotwaveforms</a></code>: waveforn plot function (with and without identified
+pulses);</li>
+<li><code><a title="pylars.plotting.plotprocessed" href="plotprocessed.html">pylars.plotting.plotprocessed</a></code>: standard plots of a processed dataset, mainly histograms;</li>
+<li><code><a title="pylars.plotting.plotanalysis" href="plotanalysis.html">pylars.plotting.plotanalysis</a></code>: high level analysis plots (BV fits, SPE fits, DCR curves);</li>
+</ul>
+<h4 id="planned-to-do">Planned TO DO:</h4>
+<p>The additions in the pipeline to this module are the following:</p>
+<ul>
+<li>"All the channels" plots (mppc number or channel on x-axis, quantity on
+the y-axis);</li>
+<li>Fingerplot (specific area plot with pe charge axis).</li>
+</ul>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">import numpy as np
-import matplotlib.pyplot as plt
+<pre><code class="python">r&#39;&#39;&#39;This module contains the one-liner plots that everyone always desires.
+It is subdivided into:
 
+  - `plotwaveforms`: waveforn plot function (with and without identified
+pulses);
+  - `plotprocessed`: standard plots of a processed dataset, mainly histograms;
+  - `plotanalysis`: high level analysis plots (BV fits, SPE fits, DCR curves);
 
-def plot_hist_area(df_results, ax=None, color=None):
-    if ax is None:
-        fig, ax = plt.subplots(1, 1)
+#### Planned TO DO:
+The additions in the pipeline to this module are the following:
 
-    ax.hist(df_results[&#39;area&#39;], bins=800, histtype=&#39;step&#39;, color=color)
-    ax.set_xlabel(&#39;Area [integrated ADC counts]&#39;)
-    ax.set_ylabel(&#39;# events&#39;)
+  - &#34;All the channels&#34; plots (mppc number or channel on x-axis, quantity on
+the y-axis);
+  - Fingerplot (specific area plot with pe charge axis).
 
-    return ax
+&#39;&#39;&#39;
 
-
-def plot_hist_length(df_results, ax=None, color=None):
-    if ax is None:
-        fig, ax = plt.subplots(1, 1)
-
-    ax.hist(df_results[&#39;length&#39;], bins=50, color=color)
-    ax.set_xlabel(&#39;Length [# samples]&#39;)
-    ax.set_ylabel(&#39;# events&#39;)
-
-    return ax
-
-
-def plot_hist_position(df_results, ax=None, color=None):
-    if ax is None:
-        fig, ax = plt.subplots(1, 1)
-
-    ax.hist(df_results[&#39;position&#39;], bins=200, color=color)
-    ax.set_xlabel(&#39;Position [sample #]&#39;)
-    ax.set_ylabel(&#39;# events&#39;)
-
-    return ax
-
-
-def plot_3hists(df_results, axs=None, color=None):
-    if axs is None:
-        fig, axs = plt.subplots(1, 3, figsize=(15, 4))
-
-    axs[0] = plot_hist_area(df_results, ax=axs[0], color=color)
-    axs[1] = plot_hist_length(df_results, ax=axs[1], color=color)
-    axs[2] = plot_hist_position(df_results, ax=axs[2], color=color)
-
-    return axs</code></pre>
+from .plotprocessed import *
+from .plotwaveforms import *
+from .plotanalysis import *
+from .plotpeaks import *</code></pre>
 </details>
 </section>
 <section>
-</section>
-<section>
-</section>
-<section>
-<h2 class="section-title" id="header-functions">Functions</h2>
+<h2 class="section-title" id="header-submodules">Sub-modules</h2>
 <dl>
-<dt id="pylars.plotting.plotprocessed.plot_3hists"><code class="name flex">
-<span>def <span class="ident">plot_3hists</span></span>(<span>df_results, axs=None, color=None)</span>
-</code></dt>
+<dt><code class="name"><a title="pylars.plotting.plotanalysis" href="plotanalysis.html">pylars.plotting.plotanalysis</a></code></dt>
 <dd>
-<div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def plot_3hists(df_results, axs=None, color=None):
-    if axs is None:
-        fig, axs = plt.subplots(1, 3, figsize=(15, 4))
-
-    axs[0] = plot_hist_area(df_results, ax=axs[0], color=color)
-    axs[1] = plot_hist_length(df_results, ax=axs[1], color=color)
-    axs[2] = plot_hist_position(df_results, ax=axs[2], color=color)
-
-    return axs</code></pre>
-</details>
+<div class="desc"><p>Collection of usefull functions to plot results and analysis intermediate
+steps …</p></div>
 </dd>
-<dt id="pylars.plotting.plotprocessed.plot_hist_area"><code class="name flex">
-<span>def <span class="ident">plot_hist_area</span></span>(<span>df_results, ax=None, color=None)</span>
-</code></dt>
+<dt><code class="name"><a title="pylars.plotting.plotpeaks" href="plotpeaks.html">pylars.plotting.plotpeaks</a></code></dt>
 <dd>
 <div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def plot_hist_area(df_results, ax=None, color=None):
-    if ax is None:
-        fig, ax = plt.subplots(1, 1)
-
-    ax.hist(df_results[&#39;area&#39;], bins=800, histtype=&#39;step&#39;, color=color)
-    ax.set_xlabel(&#39;Area [integrated ADC counts]&#39;)
-    ax.set_ylabel(&#39;# events&#39;)
-
-    return ax</code></pre>
-</details>
 </dd>
-<dt id="pylars.plotting.plotprocessed.plot_hist_length"><code class="name flex">
-<span>def <span class="ident">plot_hist_length</span></span>(<span>df_results, ax=None, color=None)</span>
-</code></dt>
+<dt><code class="name"><a title="pylars.plotting.plotprocessed" href="plotprocessed.html">pylars.plotting.plotprocessed</a></code></dt>
 <dd>
 <div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def plot_hist_length(df_results, ax=None, color=None):
-    if ax is None:
-        fig, ax = plt.subplots(1, 1)
-
-    ax.hist(df_results[&#39;length&#39;], bins=50, color=color)
-    ax.set_xlabel(&#39;Length [# samples]&#39;)
-    ax.set_ylabel(&#39;# events&#39;)
-
-    return ax</code></pre>
-</details>
 </dd>
-<dt id="pylars.plotting.plotprocessed.plot_hist_position"><code class="name flex">
-<span>def <span class="ident">plot_hist_position</span></span>(<span>df_results, ax=None, color=None)</span>
-</code></dt>
+<dt><code class="name"><a title="pylars.plotting.plotwaveforms" href="plotwaveforms.html">pylars.plotting.plotwaveforms</a></code></dt>
 <dd>
 <div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def plot_hist_position(df_results, ax=None, color=None):
-    if ax is None:
-        fig, ax = plt.subplots(1, 1)
-
-    ax.hist(df_results[&#39;position&#39;], bins=200, color=color)
-    ax.set_xlabel(&#39;Position [sample #]&#39;)
-    ax.set_ylabel(&#39;# events&#39;)
-
-    return ax</code></pre>
-</details>
 </dd>
 </dl>
+</section>
+<section>
+</section>
+<section>
 </section>
 <section>
 </section>
@@ -169,20 +97,22 @@ def plot_3hists(df_results, axs=None, color=None):
 <nav id="sidebar">
 <h1>Index</h1>
 <div class="toc">
-<ul></ul>
+<ul>
+<li><a href="#planned-to-do">Planned TO DO:</a></li>
+</ul>
 </div>
 <ul id="index">
 <li><h3>Super-module</h3>
 <ul>
-<li><code><a title="pylars.plotting" href="index.html">pylars.plotting</a></code></li>
+<li><code><a title="pylars" href="../index.html">pylars</a></code></li>
 </ul>
 </li>
-<li><h3><a href="#header-functions">Functions</a></h3>
-<ul class="">
-<li><code><a title="pylars.plotting.plotprocessed.plot_3hists" href="#pylars.plotting.plotprocessed.plot_3hists">plot_3hists</a></code></li>
-<li><code><a title="pylars.plotting.plotprocessed.plot_hist_area" href="#pylars.plotting.plotprocessed.plot_hist_area">plot_hist_area</a></code></li>
-<li><code><a title="pylars.plotting.plotprocessed.plot_hist_length" href="#pylars.plotting.plotprocessed.plot_hist_length">plot_hist_length</a></code></li>
-<li><code><a title="pylars.plotting.plotprocessed.plot_hist_position" href="#pylars.plotting.plotprocessed.plot_hist_position">plot_hist_position</a></code></li>
+<li><h3><a href="#header-submodules">Sub-modules</a></h3>
+<ul>
+<li><code><a title="pylars.plotting.plotanalysis" href="plotanalysis.html">pylars.plotting.plotanalysis</a></code></li>
+<li><code><a title="pylars.plotting.plotpeaks" href="plotpeaks.html">pylars.plotting.plotpeaks</a></code></li>
+<li><code><a title="pylars.plotting.plotprocessed" href="plotprocessed.html">pylars.plotting.plotprocessed</a></code></li>
+<li><code><a title="pylars.plotting.plotwaveforms" href="plotwaveforms.html">pylars.plotting.plotwaveforms</a></code></li>
 </ul>
 </li>
 </ul>

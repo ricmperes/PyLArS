@@ -1,11 +1,8 @@
-import base64
-import hashlib
-import json
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
-
+from pylars.utils.common import get_deterministic_hash
 from pylars.utils.input import raw_data, run
+from tqdm.autonotebook import tqdm
 
 from .waveforms import waveform_processing
 
@@ -14,45 +11,32 @@ class simple_processor():
     """Define the atributes and functions for a simple processor.
     """
 
-    version = '0.0.2'
+    version = '0.0.3'
     processing_method = 'simple'
 
-    def __init__(self, sigma_level: float, baseline_samples: int):
+    def __init__(self, sigma_level: float, baseline_samples: int, 
+                 signal_negative_polarity: bool = True):
+
         self.sigma_level = sigma_level
         self.baseline_samples = baseline_samples
-        self.hash = self.get_deterministic_hash(f"{self.processing_method}" +
-                                                f"{self.version}" +
-                                                f"{self.sigma_level}" +
-                                                f"{self.baseline_samples:.2f}")
+        self.hash = get_deterministic_hash(f"{self.processing_method}" +
+                                           f"{self.version}" +
+                                           f"{self.sigma_level}" +
+                                           f"{self.baseline_samples:.2f}")
+        self.signal_negative_polarity = signal_negative_polarity
         self.processed_data = dict()
         self.show_loadbar_channel = True
         self.show_tqdm_channel = True
+        
 
-    def __hash__(self) -> int:
+    def __hash__(self) -> str:
         return self.hash
-
-    @staticmethod
-    def get_deterministic_hash(id: str) -> str:
-        """Return a base32 lowercase string of length determined from hashing
-        the configs. Based on https://github.com/AxFoundation/strax/blob/
-        156254287c2037876a7040460b3551d590bf5589/strax/utils.py#L303
-
-        Args:
-            id (str): thing to hash
-
-        Returns:
-            str: hashed version of the thing
-        """
-        jsonned = json.dumps(id)
-        digest = hashlib.sha1(jsonned.encode('ascii')).digest()
-        readable_hash = base64.b32encode(digest)[:7].decode('ascii').lower()
-        return readable_hash
 
     def set_tqdm_channel(self, bar: bool, show: bool):
         """Change the tqdm config
 
         Args:
-            bar (bool): shwo or not the tqdm bar.
+            bar (bool): show or not the tqdm bar.
             show (bool): use tqdm if true, disable if false
         """
         self.show_loadbar_channel = bar
@@ -78,23 +62,25 @@ class simple_processor():
 
     # Processing functions
     def process_channel(self, ch: str) -> dict:
-        """_summary_
+        """Process a channel by iterating over all its waveforms, running
+    the pulse finding algorithm and the calculating the following pulse
+    properties: areas, lengths, positions and amplitudes.
 
         Args:
             ch (str): channel name as in the ROOT file.
-        In files from DAQ_zero/XenoDAQ these will be 'wf#' with # the
-        number of the channel [0,7]
+                In files from DAQ_zero/XenoDAQ these will be 'wf#' with #
+                the number of the channel [0,7]
 
         Raises:
             AssertionError: if the requested channel
-        is not available on the raw file.
+                is not available on the raw file.
             AssertionError: if the there was a problem
-        in the processing of a waveform
+                in the processing of a waveform
 
         Returns:
             dict: Dictionary of keys module, channel, wf_number
-        area, length, position where the values are lists (order
-        matters) of the processed waveforms.
+                area, length, position where the values are lists (order
+                matters) of the processed waveforms.
         """
         if ch not in self.raw_data.channels:
             raise AssertionError(
@@ -108,7 +94,8 @@ class simple_processor():
         results = {'module': [],
                    'channel': [],
                    'wf_number': [],
-                   'peak_number': [],
+                   'pulse_number': [],
+                   'n_pulses': [],
                    'area': [],
                    'length': [],
                    'position': [],
@@ -127,24 +114,26 @@ class simple_processor():
                                  ):
             try:
                 areas, lengths, positions, amplitudes = waveform_processing.process_waveform(
-                    _waveform, self.baseline_samples, self.sigma_level)
+                    _waveform, self.baseline_samples, self.sigma_level, 
+                    negative_polarity=self.signal_negative_polarity)
 
                 assert len(areas) == len(positions) == len(
                     lengths) == len(amplitudes)
-
-                # check if any peaks were found
+                # check if any pulses were found
                 if len(areas) == 0:
                     continue
 
                 module_number = [module] * len(areas)
                 ch_name = [ch] * len(areas)
                 wf_number = np.ones(len(areas), dtype=int) * i
-                peak_number = np.arange(len(areas))
+                pulse_number = np.arange(len(areas))
+                n_pulses = np.ones(len(areas), dtype=int) * len(areas)
 
                 results['module'] += module_number
                 results['channel'] += ch_name
                 results['wf_number'] += list(wf_number)
-                results['peak_number'] += list(peak_number)
+                results['pulse_number'] += list(pulse_number)
+                results['n_pulses'] += list(n_pulses)
                 results['area'] += list(areas)
                 results['length'] += list(lengths)
                 results['position'] += list(positions)
@@ -152,13 +141,13 @@ class simple_processor():
 
             except Exception:
                 raise AssertionError(
-                    'Ups! There was a problem on iteration number: ', i)
+                    f'Ups! There was a problem on iteration number: {i}')
 
         return results
 
     def process_all_channels(self) -> pd.DataFrame:
         """Calls the process_channel method of each of
-        the availabel channels in the dataset.
+        the available channels in the dataset.
 
         Returns:
             pd.DataFrame: Results for all the channels of a dataset.
@@ -194,7 +183,9 @@ class run_processor(simple_processor):
 
         self.run = run_to_process
 
-        super().__init__(sigma_level, baseline_samples)
+        super().__init__(
+            sigma_level, baseline_samples, 
+            signal_negative_polarity = self.run.signal_negative_polarity)
 
         self.datasets_df = self.run.get_run_df()
         self.show_loadbar_run = True
@@ -233,7 +224,7 @@ class run_processor(simple_processor):
         Returns:
             pd.DataFrame: processed data with computed area, length
         and position, retaining info on module, channel and waveform
-        of the peak.
+        of the pulse.
         """
 
         selection = ((self.datasets_df['kind'] == kind) &
@@ -247,7 +238,7 @@ class run_processor(simple_processor):
             # #print(
             #    f'No datasets found on run with kind = {kind}, '
             #    f'voltage = {vbias} and temperature = {temp}.')
-            return None
+            return pd.DataFrame({})
 
         print(
             f'Found {len(datasets_to_process)} datasets. '

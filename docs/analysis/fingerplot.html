@@ -28,8 +28,10 @@
 </summary>
 <pre><code class="python">import numpy as np
 import pylars
+import pylars.utils.input
+import pylars.utils.output
 from matplotlib import pyplot as plt
-from pylars.analysis.common import Gaussean
+from pylars.utils.common import Gaussean
 from scipy.optimize import curve_fit
 
 from .darkcount import DCR_dataset
@@ -55,12 +57,12 @@ class fingerplot_dataset(DCR_dataset):
         self.process = processor
         self.voltages = self.get_voltages_available()
 
-    def get_voltages_available(self) -&gt; np.array:
+    def get_voltages_available(self) -&gt; np.ndarray:
         &#34;&#34;&#34;Checks the loaded run for which voltages are available for the
         defined temperature.
 
         Returns:
-            np.array: array of the available voltages
+            np.ndarray: array of the available voltages
         &#34;&#34;&#34;
 
         voltages = []
@@ -71,7 +73,7 @@ class fingerplot_dataset(DCR_dataset):
 
         return voltages
 
-    def load_processed_data(self, force_processing: bool = False) -&gt; dict:
+    def load_processed_data(self, force_processing: bool = False) -&gt; None:
         self.data = {}
         for _voltage in self.voltages:
             processed_data = pylars.utils.output.processed_dataset(
@@ -90,6 +92,7 @@ class fingerplot_dataset(DCR_dataset):
 
             self.data[_voltage] = _df[mask].copy()
 
+    @staticmethod
     def make_finger_plot(df, length_cut_min,
                          length_cut_max, plot=False,
                          ax=None):
@@ -118,12 +121,12 @@ class fingerplot_dataset(DCR_dataset):
             ax.hist(df[_cuts][&#39;area&#39;], bins=1000, histtype=&#39;step&#39;, color=&#39;k&#39;)
             ax.plot(_x, Gaussean(_x, A, mu, sigma), c=&#39;r&#39;)
 
-            ax.yscale(&#39;log&#39;)
-            ax.ylabel(&#39;# Events&#39;)
-            ax.title(&#39;Module 0 | Channel 0&#39;)
-            ax.xlabel(&#39;Peak Area [integrated ADC counts]&#39;)
+            ax.set_yscale(&#39;log&#39;)
+            ax.set_ylabel(&#39;# Events&#39;)
+            ax.set_title(&#39;Module 0 | Channel 0&#39;)
+            ax.set_xlabel(&#39;Peak Area [integrated ADC counts]&#39;)
             if isinstance(plot, str):
-                fig.savefig(f&#39;figures/fingerplot_{plot}.png&#39;)
+                fig.savefig(f&#39;figures/fingerplot_{plot}.png&#39;)  # type: ignore
             else:
                 plt.show()
         return mu, sigma</code></pre>
@@ -171,12 +174,12 @@ a certain temperature.</p></div>
         self.process = processor
         self.voltages = self.get_voltages_available()
 
-    def get_voltages_available(self) -&gt; np.array:
+    def get_voltages_available(self) -&gt; np.ndarray:
         &#34;&#34;&#34;Checks the loaded run for which voltages are available for the
         defined temperature.
 
         Returns:
-            np.array: array of the available voltages
+            np.ndarray: array of the available voltages
         &#34;&#34;&#34;
 
         voltages = []
@@ -187,7 +190,7 @@ a certain temperature.</p></div>
 
         return voltages
 
-    def load_processed_data(self, force_processing: bool = False) -&gt; dict:
+    def load_processed_data(self, force_processing: bool = False) -&gt; None:
         self.data = {}
         for _voltage in self.voltages:
             processed_data = pylars.utils.output.processed_dataset(
@@ -206,6 +209,7 @@ a certain temperature.</p></div>
 
             self.data[_voltage] = _df[mask].copy()
 
+    @staticmethod
     def make_finger_plot(df, length_cut_min,
                          length_cut_max, plot=False,
                          ax=None):
@@ -234,12 +238,12 @@ a certain temperature.</p></div>
             ax.hist(df[_cuts][&#39;area&#39;], bins=1000, histtype=&#39;step&#39;, color=&#39;k&#39;)
             ax.plot(_x, Gaussean(_x, A, mu, sigma), c=&#39;r&#39;)
 
-            ax.yscale(&#39;log&#39;)
-            ax.ylabel(&#39;# Events&#39;)
-            ax.title(&#39;Module 0 | Channel 0&#39;)
-            ax.xlabel(&#39;Peak Area [integrated ADC counts]&#39;)
+            ax.set_yscale(&#39;log&#39;)
+            ax.set_ylabel(&#39;# Events&#39;)
+            ax.set_title(&#39;Module 0 | Channel 0&#39;)
+            ax.set_xlabel(&#39;Peak Area [integrated ADC counts]&#39;)
             if isinstance(plot, str):
-                fig.savefig(f&#39;figures/fingerplot_{plot}.png&#39;)
+                fig.savefig(f&#39;figures/fingerplot_{plot}.png&#39;)  # type: ignore
             else:
                 plt.show()
         return mu, sigma</code></pre>
@@ -247,8 +251,9 @@ a certain temperature.</p></div>
 <h3>Ancestors</h3>
 <ul class="hlist">
 <li><a title="pylars.analysis.darkcount.DCR_dataset" href="darkcount.html#pylars.analysis.darkcount.DCR_dataset">DCR_dataset</a></li>
+<li><a title="pylars.analysis.darkcount.DCR_analysis" href="darkcount.html#pylars.analysis.darkcount.DCR_analysis">DCR_analysis</a></li>
 </ul>
-<h3>Methods</h3>
+<h3>Static methods</h3>
 <dl>
 <dt id="pylars.analysis.fingerplot.fingerplot_dataset.make_finger_plot"><code class="name flex">
 <span>def <span class="ident">make_finger_plot</span></span>(<span>df, length_cut_min, length_cut_max, plot=False, ax=None)</span>
@@ -259,7 +264,8 @@ a certain temperature.</p></div>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def make_finger_plot(df, length_cut_min,
+<pre><code class="python">@staticmethod
+def make_finger_plot(df, length_cut_min,
                      length_cut_max, plot=False,
                      ax=None):
     _cuts = ((df[&#39;length&#39;] &gt; length_cut_min) &amp;
@@ -287,12 +293,12 @@ a certain temperature.</p></div>
         ax.hist(df[_cuts][&#39;area&#39;], bins=1000, histtype=&#39;step&#39;, color=&#39;k&#39;)
         ax.plot(_x, Gaussean(_x, A, mu, sigma), c=&#39;r&#39;)
 
-        ax.yscale(&#39;log&#39;)
-        ax.ylabel(&#39;# Events&#39;)
-        ax.title(&#39;Module 0 | Channel 0&#39;)
-        ax.xlabel(&#39;Peak Area [integrated ADC counts]&#39;)
+        ax.set_yscale(&#39;log&#39;)
+        ax.set_ylabel(&#39;# Events&#39;)
+        ax.set_title(&#39;Module 0 | Channel 0&#39;)
+        ax.set_xlabel(&#39;Peak Area [integrated ADC counts]&#39;)
         if isinstance(plot, str):
-            fig.savefig(f&#39;figures/fingerplot_{plot}.png&#39;)
+            fig.savefig(f&#39;figures/fingerplot_{plot}.png&#39;)  # type: ignore
         else:
             plt.show()
     return mu, sigma</code></pre>
@@ -304,19 +310,21 @@ a certain temperature.</p></div>
 <li><code><b><a title="pylars.analysis.darkcount.DCR_dataset" href="darkcount.html#pylars.analysis.darkcount.DCR_dataset">DCR_dataset</a></b></code>:
 <ul class="hlist">
 <li><code><a title="pylars.analysis.darkcount.DCR_dataset.compute_properties_of_dataset" href="darkcount.html#pylars.analysis.darkcount.DCR_dataset.compute_properties_of_dataset">compute_properties_of_dataset</a></code></li>
-<li><code><a title="pylars.analysis.darkcount.DCR_dataset.define_ADC_config" href="darkcount.html#pylars.analysis.darkcount.DCR_dataset.define_ADC_config">define_ADC_config</a></code></li>
+<li><code><a title="pylars.analysis.darkcount.DCR_dataset.compute_properties_of_dataset_amplitude_based" href="darkcount.html#pylars.analysis.darkcount.DCR_dataset.compute_properties_of_dataset_amplitude_based">compute_properties_of_dataset_amplitude_based</a></code></li>
 <li><code><a title="pylars.analysis.darkcount.DCR_dataset.define_SiPM_config" href="darkcount.html#pylars.analysis.darkcount.DCR_dataset.define_SiPM_config">define_SiPM_config</a></code></li>
-<li><code><a title="pylars.analysis.darkcount.DCR_dataset.get_1pe_rough" href="darkcount.html#pylars.analysis.darkcount.DCR_dataset.get_1pe_rough">get_1pe_rough</a></code></li>
-<li><code><a title="pylars.analysis.darkcount.DCR_dataset.get_1pe_value_fit" href="darkcount.html#pylars.analysis.darkcount.DCR_dataset.get_1pe_value_fit">get_1pe_value_fit</a></code></li>
-<li><code><a title="pylars.analysis.darkcount.DCR_dataset.get_DCR" href="darkcount.html#pylars.analysis.darkcount.DCR_dataset.get_DCR">get_DCR</a></code></li>
-<li><code><a title="pylars.analysis.darkcount.DCR_dataset.get_DCR_above_threshold_interp1d" href="darkcount.html#pylars.analysis.darkcount.DCR_dataset.get_DCR_above_threshold_interp1d">get_DCR_above_threshold_interp1d</a></code></li>
-<li><code><a title="pylars.analysis.darkcount.DCR_dataset.get_DCR_above_threshold_spline" href="darkcount.html#pylars.analysis.darkcount.DCR_dataset.get_DCR_above_threshold_spline">get_DCR_above_threshold_spline</a></code></li>
-<li><code><a title="pylars.analysis.darkcount.DCR_dataset.get_DCR_above_threshold_values" href="darkcount.html#pylars.analysis.darkcount.DCR_dataset.get_DCR_above_threshold_values">get_DCR_above_threshold_values</a></code></li>
-<li><code><a title="pylars.analysis.darkcount.DCR_dataset.get_gain" href="darkcount.html#pylars.analysis.darkcount.DCR_dataset.get_gain">get_gain</a></code></li>
+<li><code><a title="pylars.analysis.darkcount.DCR_dataset.get_1pe_rough" href="darkcount.html#pylars.analysis.darkcount.DCR_analysis.get_1pe_rough">get_1pe_rough</a></code></li>
+<li><code><a title="pylars.analysis.darkcount.DCR_dataset.get_1pe_value_fit" href="darkcount.html#pylars.analysis.darkcount.DCR_analysis.get_1pe_value_fit">get_1pe_value_fit</a></code></li>
+<li><code><a title="pylars.analysis.darkcount.DCR_dataset.get_DCR" href="darkcount.html#pylars.analysis.darkcount.DCR_analysis.get_DCR">get_DCR</a></code></li>
+<li><code><a title="pylars.analysis.darkcount.DCR_dataset.get_DCR_above_threshold_values" href="darkcount.html#pylars.analysis.darkcount.DCR_analysis.get_DCR_above_threshold_values">get_DCR_above_threshold_values</a></code></li>
+<li><code><a title="pylars.analysis.darkcount.DCR_dataset.get_DCR_amplitude" href="darkcount.html#pylars.analysis.darkcount.DCR_analysis.get_DCR_amplitude">get_DCR_amplitude</a></code></li>
+<li><code><a title="pylars.analysis.darkcount.DCR_dataset.get_how_many_peaks_per_waveform" href="darkcount.html#pylars.analysis.darkcount.DCR_dataset.get_how_many_peaks_per_waveform">get_how_many_peaks_per_waveform</a></code></li>
+<li><code><a title="pylars.analysis.darkcount.DCR_dataset.get_livetimes" href="darkcount.html#pylars.analysis.darkcount.DCR_dataset.get_livetimes">get_livetimes</a></code></li>
+<li><code><a title="pylars.analysis.darkcount.DCR_dataset.get_med_amplitude" href="darkcount.html#pylars.analysis.darkcount.DCR_dataset.get_med_amplitude">get_med_amplitude</a></code></li>
 <li><code><a title="pylars.analysis.darkcount.DCR_dataset.get_voltages_available" href="darkcount.html#pylars.analysis.darkcount.DCR_dataset.get_voltages_available">get_voltages_available</a></code></li>
 <li><code><a title="pylars.analysis.darkcount.DCR_dataset.load_processed_data" href="darkcount.html#pylars.analysis.darkcount.DCR_dataset.load_processed_data">load_processed_data</a></code></li>
-<li><code><a title="pylars.analysis.darkcount.DCR_dataset.print_DCR_CTP" href="darkcount.html#pylars.analysis.darkcount.DCR_dataset.print_DCR_CTP">print_DCR_CTP</a></code></li>
+<li><code><a title="pylars.analysis.darkcount.DCR_dataset.print_DCR_CTP" href="darkcount.html#pylars.analysis.darkcount.DCR_analysis.print_DCR_CTP">print_DCR_CTP</a></code></li>
 <li><code><a title="pylars.analysis.darkcount.DCR_dataset.set_plots_flag" href="darkcount.html#pylars.analysis.darkcount.DCR_dataset.set_plots_flag">set_plots_flag</a></code></li>
+<li><code><a title="pylars.analysis.darkcount.DCR_dataset.set_standard_cuts" href="darkcount.html#pylars.analysis.darkcount.DCR_dataset.set_standard_cuts">set_standard_cuts</a></code></li>
 </ul>
 </li>
 </ul>
