@@ -1,0 +1,176 @@
+#!/usr/bin/env python3
+
+import argparse
+import datetime
+import os
+from typing import Union
+
+import pandas as pd
+import pylars
+
+parser = argparse.ArgumentParser(
+    description=('Script to quickly process a dataset.'))
+
+parser.add_argument('-t', '--rms',
+                    help='Define the RMS threshold.',
+                    default= 5,
+                    type = int,
+                    required=False)
+parser.add_argument('-b', '--baseline',
+                    help='Number of samples to compute baseline in waveforms.',
+                    default= 50,
+                    type = int,
+                    required=False)
+parser.add_argument('-r', '--raw',
+                    help='Path to raw data.',
+                    default = None,
+                    required=False)
+parser.add_argument('-o', '--output',
+                    help='Path to processed data.',
+                    default = None,
+                    required=False)
+parser.add_argument('-p', '--polarity',
+                    help='Polarity of signal (1 for negative, 0 positive).',
+                    default = int,
+                    required=False)
+
+
+
+def find_root_files(directory='.') -> list:
+    """Find any ROOT files in the current or subsequent directories.
+    (Thanks, ChatGPT)
+
+    Args:
+        directory (str, optional): directory to look for ROOT files. 
+            Defaults to '.'.
+
+    Returns:
+        list: List of ROOT files found.
+    """
+    root_files = []
+    for root, dirs, files in os.walk(directory):
+        for file in files:
+            if file.endswith('.root'):
+                root_files.append(os.path.join(root, file))
+
+    return root_files
+
+
+def get_files(path: Union[str, None]) -> list:
+    """Get list of ROOT files in directory of raw input. If no directory 
+    given, searches for ROOT files in current directory.
+
+    Args:
+        path (Union[str, None]): path given in raw argument. Can be None.
+
+    Raises:
+        FileExistsError: No ROOT file found
+
+    Returns:
+        list: List of ROOT files found
+    """
+    if path is None:
+        root_files = find_root_files()
+        return root_files
+    else:
+        path = str(path)
+        if path[-4:] == 'root':
+            return [path]
+        else:
+            root_files = find_root_files(path)
+    if len(root_files) == 0:
+        raise FileExistsError(('No ROOT file found on directory given '
+                                'or current directory'))
+    return root_files
+
+def define_processed_file(args, root_files: list) -> str:
+    """Get the complete path of the output dataframe savepoint using either 
+    the parsed argument or the current directory if no argument is parsed.
+    If file with the same name already exists, adds the timestamp to the end 
+    of the name.
+
+    Args:
+        args: input parsed arguments
+        root_files (list): list of the ROOT files
+
+    Returns:
+        str: path to put the processed dataset
+    """
+    processed_file_name = f"{root_files[0].strip('/').split('/')[-1][:-16]}_processed.h5"
+    if args.output is None:
+        processed_file_path = os.path.join('.', processed_file_name)
+    else:
+        processed_file_path = os.path.join(str(args.output), processed_file_name)
+    if os.path.isfile(processed_file_path): 
+        now = str(int(datetime.datetime.timestamp(datetime.datetime.now())))
+        print('Output file already exists, appending current timestamp: ',now)
+        processed_file_path = f'{processed_file_path[:-3]}_{now}.h5'
+    return processed_file_path
+
+def process_file(path: str, sigma: int, 
+                 baseline: int, negative_polarity: bool,
+                 module: int) -> pd.DataFrame:
+    """Process file by creating a processor, loading data and running 
+    processing on all the available channels.
+
+    Args:
+        path (str): file to process
+        sigma (int): multiple of rms to consider as threshold
+        baseline (int): number of samples to use in baseline calculation
+        negative_polarity (bool): polarity of the signal (True for negative)
+        module (int): number of ADC module used
+
+    Returns:
+        pd.DataFrame: processed dataset
+    """
+    process = pylars.processing.rawprocessor.simple_processor(
+        sigma_level = sigma, 
+        baseline_samples = baseline,
+        signal_negative_polarity = negative_polarity)
+    process.load_raw_data(path, 0, 0, module = module)
+    processed_dataset = process.process_all_channels()
+
+    return processed_dataset
+
+def get_results(args, polarity: bool, root_files: list) -> str:
+    """Get the concatenated result dataframe of all the modules.
+
+    Args:
+        args: passed-arguments
+        polarity (bool): polarity (True for negative)
+        root_files (list): list of ROOT files
+    """
+    processed_file_path = define_processed_file(args, root_files)
+    dfs = []
+    for file in root_files:
+        module = file[-8]
+        _df = process_file(path = file, 
+                           sigma = args.rms, 
+                           baseline = args.baseline, 
+                           negative_polarity = polarity,
+                           module=module)
+        dfs.append(_df)
+    results = pd.concat(dfs)    
+    results.to_hdf(processed_file_path, key = 'df')
+    return processed_file_path
+
+
+
+if __name__ == '__main__':
+    'Ramping up processing.'
+    args = parser.parse_args()
+    polarity = bool(args.polarity)
+    
+    root_files = get_files(args.raw)
+    print(f"Number of identified files: {len(root_files)}")
+    assert len(root_files)>0, 'No files in list but no error.'
+
+    output_path = get_results(args, polarity, root_files)
+    print('Processing successful! Results saved to: ', output_path)
+    
+
+    
+
+
+
+
