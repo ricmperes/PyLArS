@@ -24,10 +24,10 @@ class test_raw_data():
             T = ,
             module = )
         channels = sample_data_raw_data.channels
-        sample_channel_data = sample_data_raw_data.get_channel_data('wf3')
-
+        sample_data_channels = sample_data_raw_data.get_channel_data('wf3')
+        sample_channel_data.load_root()
         assert channels == ['wf0','wf2','wf3','wf4','wf5','wf6']
-        assert isinstance(sample_channel_data, np.ndarray)
+        assert isinstance(sample_data_channels, np.ndarray)
         assert sample_channel_data[0] == 12345
 
 
