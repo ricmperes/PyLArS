@@ -240,7 +240,7 @@ class peak_processing():
                 list of y.
         """
 
-        if algo is not 'CoG':
+        if algo != 'CoG':
             raise NotImplementedError(f'''The requested reconstruction
             algorithm ({algo}) is not yet implemented,
             try: {cls.available_posrec_algos}''')
