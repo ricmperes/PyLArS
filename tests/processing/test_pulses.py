@@ -1,39 +1,43 @@
-import pytest
 import numpy as np
+import pytest
+from pylars.processing.pulses import pulse_processing
 
-class test_pulse_processing():
-    def test_get_area(self):
-        from pylars.processing.pulses import pulse_processing
-        waveform = np.arange(100)
-        baseline_value = 10
-        pulse_start = 10
-        pulse_end = 20
-        dt = 10
-        negative_polarity = True
-        baseline_subtracted = False
+class Test_Pulse_Processing():
+
+    def test_get_area(self, flat_waveform):
+
         area = pulse_processing.get_area(
-            waveform,
-            baseline_value,
-            pulse_start,
-            pulse_end,
-            dt,
-            negative_polarity,
-            baseline_subtracted)
-        assert area == 1000
+            flat_waveform.waveform,
+            flat_waveform.baseline_value,
+            flat_waveform.pulse_start,
+            flat_waveform.pulse_end,
+            flat_waveform.dt,
+            flat_waveform.negative_polarity,
+            flat_waveform.baseline_subtracted)
+        
+        area_test = np.sum(np.arange(10,20)*10)
+        assert area == area_test
 
-    def test_get_amplitude(self):
-        from pylars.processing.pulses import pulse_processing
-        waveform = np.arange(100)
-        baseline_value = 10
-        pulse_start = 10
-        pulse_end = 20
-        negative_polarity = True
-        baseline_subtracted = False
+    def test_get_amplitude(self, flat_waveform):
+
         amplitude = pulse_processing.get_amplitude(
-            waveform,
-            baseline_value,
-            pulse_start,
-            pulse_end,
-            negative_polarity,
-            baseline_subtracted)
-        assert amplitude == -10
+            flat_waveform.waveform,
+            flat_waveform.baseline_value,
+            flat_waveform.pulse_start,
+            flat_waveform.pulse_end,
+            flat_waveform.negative_polarity,
+            flat_waveform.baseline_subtracted)
+        assert amplitude == -19.
+
+    def test_split_consecutive(self):
+
+        consecutive = np.array([1,2,3,8,9,10,15,16,17,18,19,20])
+        split = pulse_processing.split_consecutive(consecutive)
+        split_test = [np.array([1,2,3]), np.array([8,9,10]), 
+                      np.array([15,16,17,18,19,20])]
+        
+        for p in range(len(split)):
+            assert np.unique(split[p] == split_test[p]) == True
+        
+    def test_find_pulses_simple(self):
+        pass

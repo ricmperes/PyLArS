@@ -29,8 +29,8 @@ class waveform_processing():
     def process_waveform(cls, waveform: np.ndarray, baseline_samples: int,
                          sigma_level: float = 5, negative_polarity:bool = True):
         """Main process function on the waveform level. Finds pulses above
-        (actually bellow) threshold and calls pulse level processing like
-        area, length and position.
+        (beelow if negative polarity) threshold and calls pulse level 
+        processing like area, length and position.
 
         Args:
             waveform (np.ndarray): ADC counts of the waveform;
