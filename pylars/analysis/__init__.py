@@ -23,3 +23,4 @@ The additions in the pipeline to this module are the following:
 
 from .breakdown import *
 from .darkcount import *
+from .ledwindow import *
