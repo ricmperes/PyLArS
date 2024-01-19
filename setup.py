@@ -10,7 +10,7 @@ def open_requirements(path):
 requires = open_requirements('requirements.txt')
 setup(
     name='pylars',
-    version='0.0.2',
+    version='0.1.0',
     packages=find_packages(exclude=['tests*']),
     license='none',
     description='A python-based simple processor for data acquired with XenoDAQ',
