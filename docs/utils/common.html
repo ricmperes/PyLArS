@@ -1,0 +1,676 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.9.2" />
+<title>pylars.utils.common API documentation</title>
+<meta name="description" content="" />
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
+<link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/highlight.min.js" integrity="sha256-Uv3H6lx7dJmRfRvH8TH6kJD1TSK1aFcwgx+mdg3epi8=" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => hljs.initHighlighting())</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>pylars.utils.common</code></h1>
+</header>
+<section id="section-intro">
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">import base64
+import hashlib
+import itertools
+import json
+from typing import Dict, List, Union, Tuple
+
+import numpy as np
+import pylars.utils.input
+from scipy.signal import find_peaks
+import scipy.ndimage
+
+
+def Gaussean(x, A, mu, sigma):
+    y = A * np.exp(-((x - mu) / sigma)**2 / 2) / np.sqrt(2 * np.pi * sigma**2)
+    return y
+
+
+def func_linear(x, a, b):
+    return a * x + b
+
+
+def get_deterministic_hash(id: str) -&gt; str:
+    &#34;&#34;&#34;Return an hash with 7 characters from a string.
+
+    In detail, returns a base32 lowercase string of length determined
+    from hashing the configs. Based on
+    https://github.com/AxFoundation/strax/blob/
+    156254287c2037876a7040460b3551d590bf5589/strax/utils.py#L303
+
+    Args:
+        id (str): thing to hash
+
+    Returns:
+        str: hashed version of the thing
+    &#34;&#34;&#34;
+    jsonned = json.dumps(id)
+    digest = hashlib.sha1(jsonned.encode(&#39;ascii&#39;)).digest()
+    readable_hash = base64.b32encode(digest)[:7].decode(&#39;ascii&#39;).lower()
+    return readable_hash
+
+
+def load_ADC_config(model: str, F_amp: float) -&gt; Dict[str, Union[int, float]]:
+    &#34;&#34;&#34;Load the ADC related quantities depending on the model.
+
+    Args:
+        model (str): model of the digitizer
+        F_amp (float): signal amplification from the sensor (pre-amp *
+            external amplification on the rack).
+
+    Raises:
+        NotImplementedError: Raised if the requested model is not yet
+            implemented
+
+    Returns:
+        dict: Python dictionary with the digitizer-related configs.
+    &#34;&#34;&#34;
+
+    available_model_configs = [&#39;v1724&#39;, &#39;v1730&#39;]
+
+    if model == &#39;v1724&#39;:
+        &#34;&#34;&#34; More info at https://www.caen.it/products/v1724/&#34;&#34;&#34;
+
+        ADC_config = {&#39;ADC_range&#39;: 2.25,  # V
+                      &#39;ADC_impedance&#39;: 50,  # ohm
+                      &#39;F_amp&#39;: F_amp,  # external amplification
+                      &#39;ADC_res&#39;: 2**14,  # bit-wise resolution
+                      &#39;q_e&#39;: 1.602176634e-19,  # electron charge
+                      &#39;dt&#39;: 10e-9}  # sampling time length
+
+    elif model == &#39;v1730&#39;:
+        &#34;&#34;&#34;More info at https://www.caen.it/products/v1730/&#34;&#34;&#34;
+
+        ADC_config = {&#39;ADC_range&#39;: 2.00,  # V
+                      &#39;ADC_impedance&#39;: 50,  # ohm
+                      &#39;F_amp&#39;: F_amp,  # external amplification
+                      &#39;ADC_res&#39;: 2**14,  # bit-wise resolution
+                      &#39;q_e&#39;: 1.602176634e-19,  # electron charge
+                      &#39;dt&#39;: 2e-9}  # sampling time length
+    else:
+        raise NotImplementedError(f&#39;&#39;&#39;The requested model ({model}) is not
+            implemented. Choose from {available_model_configs}.&#39;&#39;&#39;)
+
+    return ADC_config
+
+
+def get_gain(F_amp: float,
+             spe_area: float,
+             ADC_range: float = 2.25,
+             ADC_impedance: float = 50,
+             ADC_res: float = 2**16,
+             q_e: float = 1.602176634e-19,
+             ) -&gt; float:
+    &#34;&#34;&#34;Compute the gain given the value of the SPE area and the ADC
+        paramenters.
+
+    Args:
+        F_amp (float): Total signal amplification factor.
+        spe_area (float): mean area of spe (in ADC bins x ns).
+        ADC_range (float, optional): Dynamic range of the ADC. Defaults
+            to 2.25.
+        ADC_impedance (float, optional): Impedance of the ADC. Defaults to 50.
+        ADC_res (float, optional): bit.wise resolution of the ADC. Defaults
+            to 2**16.
+        q_e (float, optional): electron charge [C]. Defaults to 1.602176634e-19.
+
+    Returns:
+        float: the calculated gain.
+    &#34;&#34;&#34;
+
+    gain = (ADC_range * spe_area * 1e-9 / ADC_impedance / F_amp /
+            ADC_res / q_e)
+
+    return gain
+
+
+def find_minmax(array: np.ndarray) -&gt; List[np.ndarray]:
+    &#34;&#34;&#34;Return local peaks and valeys of an 1d array.
+
+    Args:
+        array (np.ndarray): 1d array to compute peaks and valeys
+
+    Returns:
+        List[np.ndarray]: res[0] is an array with the indexes of where peaks
+            were identified, valeys at res[1].
+    &#34;&#34;&#34;
+    peaks = np.where(
+        (array[1:-1] &gt; array[0:-2]) * (array[1:-1] &gt; array[2:]))[0] + 1
+    valeys = np.where(
+        (array[1:-1] &lt; array[0:-2]) * (array[1:-1] &lt; array[2:]))[0] + 1
+    return [peaks, valeys]
+
+
+def get_channel_list(process) -&gt; List[Tuple[int, str]]:
+    &#34;&#34;&#34;Fetch the channels available for a dataset by reading the original
+    ROOT file.
+
+    Args:
+        process (run_processor): initiated `run_processor` object.
+
+    Returns:
+        List[Tuple[int,str]]: list with the available channels of a given
+            dataset in the format [(mod, ch)_i]
+    &#34;&#34;&#34;
+    _datasets = process.datasets_df
+    modules = np.unique(_datasets[&#39;module&#39;])
+    ch_list = []
+    for mod in modules:
+        raw = pylars.utils.input.raw_data(
+            _datasets[_datasets[&#39;module&#39;] == mod].sample(1)[&#39;path&#39;].values[0],
+            V=123,
+            T=123,
+            module=mod)
+
+        raw.load_root()
+        raw.get_available_channels()
+        channels = raw.channels
+        ch_list += list(itertools.product([mod], channels))
+    return ch_list
+
+
+def wstd(array: np.ndarray, waverage: float, weights: np.ndarray) -&gt; float:
+    &#34;&#34;&#34;Compute weighted standard deviation.
+
+    Args:
+        array (np.ndarray): 1D array to compute wstd of
+        waverage (float): weighted average value
+        weights (np.ndarray): weights to consider
+
+    Returns:
+        float: value of the weighted standard deviation
+    &#34;&#34;&#34;
+
+    N = np.count_nonzero(weights)
+
+    wvar = N * np.sum(weights * (array - waverage)**2) / \
+        (N - 1) / np.sum(weights)
+    wstd = np.sqrt(wvar)
+
+    return wstd
+
+
+def get_peak_rough_positions(area_array: np.ndarray,
+                             cut_mask,
+                             bins: Union[int, np.ndarray, list] = 1000,
+                             filt=scipy.ndimage.gaussian_filter1d,
+                             filter_options=3,
+                             plot: Union[bool, str] = False) -&gt; tuple:
+    &#39;&#39;&#39;Takes the area histogram (fingerplot) and looks for peaks
+    and valeys. SPE should be the 2nd peak on most cases. Higher
+    PE values might be properly unrecognized
+    Returns two lists: list of the x value of the peaks, list of
+    the x value of the valeys.
+    Optional plot feature:
+    - False: no plot
+    - True: displays plot in notebook
+    - string - sufix on the name of the file&#39;&#39;&#39;
+
+    area_hist = np.histogram(
+        area_array[cut_mask], bins=bins)
+
+    area_x = area_hist[1]
+    area_x = (area_x + (area_x[1] - area_x[0]) / 2)[:-1]
+    area_y = area_hist[0]
+
+    area_filt = filt(area_y, filter_options)
+    area_peaks_x, peak_properties = find_peaks(area_filt,
+                                               prominence=20,
+                                               distance=50)
+
+    if plot != False:
+        from pylars.plotting.plotanalysis import plot_found_area_peaks
+        plot_found_area_peaks(
+            area_x, area_y, area_filt, area_peaks_x)
+
+    return area_x[area_peaks_x], peak_properties</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="pylars.utils.common.Gaussean"><code class="name flex">
+<span>def <span class="ident">Gaussean</span></span>(<span>x, A, mu, sigma)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def Gaussean(x, A, mu, sigma):
+    y = A * np.exp(-((x - mu) / sigma)**2 / 2) / np.sqrt(2 * np.pi * sigma**2)
+    return y</code></pre>
+</details>
+</dd>
+<dt id="pylars.utils.common.find_minmax"><code class="name flex">
+<span>def <span class="ident">find_minmax</span></span>(<span>array: numpy.ndarray) ‑> List[numpy.ndarray]</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Return local peaks and valeys of an 1d array.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>array</code></strong> :&ensp;<code>np.ndarray</code></dt>
+<dd>1d array to compute peaks and valeys</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>List[np.ndarray]</code></dt>
+<dd>res[0] is an array with the indexes of where peaks
+were identified, valeys at res[1].</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def find_minmax(array: np.ndarray) -&gt; List[np.ndarray]:
+    &#34;&#34;&#34;Return local peaks and valeys of an 1d array.
+
+    Args:
+        array (np.ndarray): 1d array to compute peaks and valeys
+
+    Returns:
+        List[np.ndarray]: res[0] is an array with the indexes of where peaks
+            were identified, valeys at res[1].
+    &#34;&#34;&#34;
+    peaks = np.where(
+        (array[1:-1] &gt; array[0:-2]) * (array[1:-1] &gt; array[2:]))[0] + 1
+    valeys = np.where(
+        (array[1:-1] &lt; array[0:-2]) * (array[1:-1] &lt; array[2:]))[0] + 1
+    return [peaks, valeys]</code></pre>
+</details>
+</dd>
+<dt id="pylars.utils.common.func_linear"><code class="name flex">
+<span>def <span class="ident">func_linear</span></span>(<span>x, a, b)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def func_linear(x, a, b):
+    return a * x + b</code></pre>
+</details>
+</dd>
+<dt id="pylars.utils.common.get_channel_list"><code class="name flex">
+<span>def <span class="ident">get_channel_list</span></span>(<span>process) ‑> List[Tuple[int, str]]</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Fetch the channels available for a dataset by reading the original
+ROOT file.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>process</code></strong> :&ensp;<code>run_processor</code></dt>
+<dd>initiated <code>run_processor</code> object.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>List[Tuple[int,str]]</code></dt>
+<dd>list with the available channels of a given
+dataset in the format [(mod, ch)_i]</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_channel_list(process) -&gt; List[Tuple[int, str]]:
+    &#34;&#34;&#34;Fetch the channels available for a dataset by reading the original
+    ROOT file.
+
+    Args:
+        process (run_processor): initiated `run_processor` object.
+
+    Returns:
+        List[Tuple[int,str]]: list with the available channels of a given
+            dataset in the format [(mod, ch)_i]
+    &#34;&#34;&#34;
+    _datasets = process.datasets_df
+    modules = np.unique(_datasets[&#39;module&#39;])
+    ch_list = []
+    for mod in modules:
+        raw = pylars.utils.input.raw_data(
+            _datasets[_datasets[&#39;module&#39;] == mod].sample(1)[&#39;path&#39;].values[0],
+            V=123,
+            T=123,
+            module=mod)
+
+        raw.load_root()
+        raw.get_available_channels()
+        channels = raw.channels
+        ch_list += list(itertools.product([mod], channels))
+    return ch_list</code></pre>
+</details>
+</dd>
+<dt id="pylars.utils.common.get_deterministic_hash"><code class="name flex">
+<span>def <span class="ident">get_deterministic_hash</span></span>(<span>id: str) ‑> str</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Return an hash with 7 characters from a string.</p>
+<p>In detail, returns a base32 lowercase string of length determined
+from hashing the configs. Based on
+<a href="https://github.com/AxFoundation/strax/blob/">https://github.com/AxFoundation/strax/blob/</a>
+156254287c2037876a7040460b3551d590bf5589/strax/utils.py#L303</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>id</code></strong> :&ensp;<code>str</code></dt>
+<dd>thing to hash</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>str</code></dt>
+<dd>hashed version of the thing</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_deterministic_hash(id: str) -&gt; str:
+    &#34;&#34;&#34;Return an hash with 7 characters from a string.
+
+    In detail, returns a base32 lowercase string of length determined
+    from hashing the configs. Based on
+    https://github.com/AxFoundation/strax/blob/
+    156254287c2037876a7040460b3551d590bf5589/strax/utils.py#L303
+
+    Args:
+        id (str): thing to hash
+
+    Returns:
+        str: hashed version of the thing
+    &#34;&#34;&#34;
+    jsonned = json.dumps(id)
+    digest = hashlib.sha1(jsonned.encode(&#39;ascii&#39;)).digest()
+    readable_hash = base64.b32encode(digest)[:7].decode(&#39;ascii&#39;).lower()
+    return readable_hash</code></pre>
+</details>
+</dd>
+<dt id="pylars.utils.common.get_gain"><code class="name flex">
+<span>def <span class="ident">get_gain</span></span>(<span>F_amp: float, spe_area: float, ADC_range: float = 2.25, ADC_impedance: float = 50, ADC_res: float = 65536, q_e: float = 1.602176634e-19) ‑> float</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Compute the gain given the value of the SPE area and the ADC
+paramenters.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>F_amp</code></strong> :&ensp;<code>float</code></dt>
+<dd>Total signal amplification factor.</dd>
+<dt><strong><code>spe_area</code></strong> :&ensp;<code>float</code></dt>
+<dd>mean area of spe (in ADC bins x ns).</dd>
+<dt><strong><code>ADC_range</code></strong> :&ensp;<code>float</code>, optional</dt>
+<dd>Dynamic range of the ADC. Defaults
+to 2.25.</dd>
+<dt><strong><code>ADC_impedance</code></strong> :&ensp;<code>float</code>, optional</dt>
+<dd>Impedance of the ADC. Defaults to 50.</dd>
+<dt><strong><code>ADC_res</code></strong> :&ensp;<code>float</code>, optional</dt>
+<dd>bit.wise resolution of the ADC. Defaults
+to 2**16.</dd>
+<dt><strong><code>q_e</code></strong> :&ensp;<code>float</code>, optional</dt>
+<dd>electron charge [C]. Defaults to 1.602176634e-19.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>float</code></dt>
+<dd>the calculated gain.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_gain(F_amp: float,
+             spe_area: float,
+             ADC_range: float = 2.25,
+             ADC_impedance: float = 50,
+             ADC_res: float = 2**16,
+             q_e: float = 1.602176634e-19,
+             ) -&gt; float:
+    &#34;&#34;&#34;Compute the gain given the value of the SPE area and the ADC
+        paramenters.
+
+    Args:
+        F_amp (float): Total signal amplification factor.
+        spe_area (float): mean area of spe (in ADC bins x ns).
+        ADC_range (float, optional): Dynamic range of the ADC. Defaults
+            to 2.25.
+        ADC_impedance (float, optional): Impedance of the ADC. Defaults to 50.
+        ADC_res (float, optional): bit.wise resolution of the ADC. Defaults
+            to 2**16.
+        q_e (float, optional): electron charge [C]. Defaults to 1.602176634e-19.
+
+    Returns:
+        float: the calculated gain.
+    &#34;&#34;&#34;
+
+    gain = (ADC_range * spe_area * 1e-9 / ADC_impedance / F_amp /
+            ADC_res / q_e)
+
+    return gain</code></pre>
+</details>
+</dd>
+<dt id="pylars.utils.common.get_peak_rough_positions"><code class="name flex">
+<span>def <span class="ident">get_peak_rough_positions</span></span>(<span>area_array: numpy.ndarray, cut_mask, bins: Union[int, numpy.ndarray, list] = 1000, filt=&lt;function gaussian_filter1d&gt;, filter_options=3, plot: Union[bool, str] = False) ‑> tuple</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Takes the area histogram (fingerplot) and looks for peaks
+and valeys. SPE should be the 2nd peak on most cases. Higher
+PE values might be properly unrecognized
+Returns two lists: list of the x value of the peaks, list of
+the x value of the valeys.
+Optional plot feature:
+- False: no plot
+- True: displays plot in notebook
+- string - sufix on the name of the file</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_peak_rough_positions(area_array: np.ndarray,
+                             cut_mask,
+                             bins: Union[int, np.ndarray, list] = 1000,
+                             filt=scipy.ndimage.gaussian_filter1d,
+                             filter_options=3,
+                             plot: Union[bool, str] = False) -&gt; tuple:
+    &#39;&#39;&#39;Takes the area histogram (fingerplot) and looks for peaks
+    and valeys. SPE should be the 2nd peak on most cases. Higher
+    PE values might be properly unrecognized
+    Returns two lists: list of the x value of the peaks, list of
+    the x value of the valeys.
+    Optional plot feature:
+    - False: no plot
+    - True: displays plot in notebook
+    - string - sufix on the name of the file&#39;&#39;&#39;
+
+    area_hist = np.histogram(
+        area_array[cut_mask], bins=bins)
+
+    area_x = area_hist[1]
+    area_x = (area_x + (area_x[1] - area_x[0]) / 2)[:-1]
+    area_y = area_hist[0]
+
+    area_filt = filt(area_y, filter_options)
+    area_peaks_x, peak_properties = find_peaks(area_filt,
+                                               prominence=20,
+                                               distance=50)
+
+    if plot != False:
+        from pylars.plotting.plotanalysis import plot_found_area_peaks
+        plot_found_area_peaks(
+            area_x, area_y, area_filt, area_peaks_x)
+
+    return area_x[area_peaks_x], peak_properties</code></pre>
+</details>
+</dd>
+<dt id="pylars.utils.common.load_ADC_config"><code class="name flex">
+<span>def <span class="ident">load_ADC_config</span></span>(<span>model: str, F_amp: float) ‑> Dict[str, Union[int, float]]</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Load the ADC related quantities depending on the model.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>model</code></strong> :&ensp;<code>str</code></dt>
+<dd>model of the digitizer</dd>
+<dt><strong><code>F_amp</code></strong> :&ensp;<code>float</code></dt>
+<dd>signal amplification from the sensor (pre-amp *
+external amplification on the rack).</dd>
+</dl>
+<h2 id="raises">Raises</h2>
+<dl>
+<dt><code>NotImplementedError</code></dt>
+<dd>Raised if the requested model is not yet
+implemented</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>dict</code></dt>
+<dd>Python dictionary with the digitizer-related configs.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def load_ADC_config(model: str, F_amp: float) -&gt; Dict[str, Union[int, float]]:
+    &#34;&#34;&#34;Load the ADC related quantities depending on the model.
+
+    Args:
+        model (str): model of the digitizer
+        F_amp (float): signal amplification from the sensor (pre-amp *
+            external amplification on the rack).
+
+    Raises:
+        NotImplementedError: Raised if the requested model is not yet
+            implemented
+
+    Returns:
+        dict: Python dictionary with the digitizer-related configs.
+    &#34;&#34;&#34;
+
+    available_model_configs = [&#39;v1724&#39;, &#39;v1730&#39;]
+
+    if model == &#39;v1724&#39;:
+        &#34;&#34;&#34; More info at https://www.caen.it/products/v1724/&#34;&#34;&#34;
+
+        ADC_config = {&#39;ADC_range&#39;: 2.25,  # V
+                      &#39;ADC_impedance&#39;: 50,  # ohm
+                      &#39;F_amp&#39;: F_amp,  # external amplification
+                      &#39;ADC_res&#39;: 2**14,  # bit-wise resolution
+                      &#39;q_e&#39;: 1.602176634e-19,  # electron charge
+                      &#39;dt&#39;: 10e-9}  # sampling time length
+
+    elif model == &#39;v1730&#39;:
+        &#34;&#34;&#34;More info at https://www.caen.it/products/v1730/&#34;&#34;&#34;
+
+        ADC_config = {&#39;ADC_range&#39;: 2.00,  # V
+                      &#39;ADC_impedance&#39;: 50,  # ohm
+                      &#39;F_amp&#39;: F_amp,  # external amplification
+                      &#39;ADC_res&#39;: 2**14,  # bit-wise resolution
+                      &#39;q_e&#39;: 1.602176634e-19,  # electron charge
+                      &#39;dt&#39;: 2e-9}  # sampling time length
+    else:
+        raise NotImplementedError(f&#39;&#39;&#39;The requested model ({model}) is not
+            implemented. Choose from {available_model_configs}.&#39;&#39;&#39;)
+
+    return ADC_config</code></pre>
+</details>
+</dd>
+<dt id="pylars.utils.common.wstd"><code class="name flex">
+<span>def <span class="ident">wstd</span></span>(<span>array: numpy.ndarray, waverage: float, weights: numpy.ndarray) ‑> float</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Compute weighted standard deviation.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>array</code></strong> :&ensp;<code>np.ndarray</code></dt>
+<dd>1D array to compute wstd of</dd>
+<dt><strong><code>waverage</code></strong> :&ensp;<code>float</code></dt>
+<dd>weighted average value</dd>
+<dt><strong><code>weights</code></strong> :&ensp;<code>np.ndarray</code></dt>
+<dd>weights to consider</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>float</code></dt>
+<dd>value of the weighted standard deviation</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def wstd(array: np.ndarray, waverage: float, weights: np.ndarray) -&gt; float:
+    &#34;&#34;&#34;Compute weighted standard deviation.
+
+    Args:
+        array (np.ndarray): 1D array to compute wstd of
+        waverage (float): weighted average value
+        weights (np.ndarray): weights to consider
+
+    Returns:
+        float: value of the weighted standard deviation
+    &#34;&#34;&#34;
+
+    N = np.count_nonzero(weights)
+
+    wvar = N * np.sum(weights * (array - waverage)**2) / \
+        (N - 1) / np.sum(weights)
+    wstd = np.sqrt(wvar)
+
+    return wstd</code></pre>
+</details>
+</dd>
+</dl>
+</section>
+<section>
+</section>
+</article>
+<nav id="sidebar">
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="pylars.utils" href="index.html">pylars.utils</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="pylars.utils.common.Gaussean" href="#pylars.utils.common.Gaussean">Gaussean</a></code></li>
+<li><code><a title="pylars.utils.common.find_minmax" href="#pylars.utils.common.find_minmax">find_minmax</a></code></li>
+<li><code><a title="pylars.utils.common.func_linear" href="#pylars.utils.common.func_linear">func_linear</a></code></li>
+<li><code><a title="pylars.utils.common.get_channel_list" href="#pylars.utils.common.get_channel_list">get_channel_list</a></code></li>
+<li><code><a title="pylars.utils.common.get_deterministic_hash" href="#pylars.utils.common.get_deterministic_hash">get_deterministic_hash</a></code></li>
+<li><code><a title="pylars.utils.common.get_gain" href="#pylars.utils.common.get_gain">get_gain</a></code></li>
+<li><code><a title="pylars.utils.common.get_peak_rough_positions" href="#pylars.utils.common.get_peak_rough_positions">get_peak_rough_positions</a></code></li>
+<li><code><a title="pylars.utils.common.load_ADC_config" href="#pylars.utils.common.load_ADC_config">load_ADC_config</a></code></li>
+<li><code><a title="pylars.utils.common.wstd" href="#pylars.utils.common.wstd">wstd</a></code></li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.9.2</a>.</p>
+</footer>
+</body>
+</html>

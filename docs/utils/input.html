@@ -1,0 +1,1448 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.9.2" />
+<title>pylars.utils.input API documentation</title>
+<meta name="description" content="" />
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
+<link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/highlight.min.js" integrity="sha256-Uv3H6lx7dJmRfRvH8TH6kJD1TSK1aFcwgx+mdg3epi8=" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => hljs.initHighlighting())</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>pylars.utils.input</code></h1>
+</header>
+<section id="section-intro">
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">from glob import glob
+from typing import Tuple
+
+import numpy as np
+import pandas as pd
+import uproot
+from pylars.utils.common import load_ADC_config
+
+
+class raw_data():
+    &#39;&#39;&#39;
+    General raw data class to define paths to raw and processed data,
+    acquisition conditions, ...
+    &#39;&#39;&#39;
+
+    def __init__(self, raw_path: str, V: float, T: float, module: int):
+
+        self.raw_path = raw_path
+        self.tree = &#39;t1&#39;
+
+        self.load_root()
+        self.get_available_channels()
+
+        self.get_n_samples()
+        self.get_n_waveforms()
+
+        self.set_general_conditions()
+        self.set_specific_conditions(V, T, module)
+
+    def set_general_conditions(self):
+        &#39;&#39;&#39;
+        Define the conditions of the data taking and of the setup
+        to be propagated forward. TO DO: fetch and save in a DB
+        &#39;&#39;&#39;
+        self.ADC_range = 2.25
+        self.ADC_impedance = 50
+        self.F_amp = 20 * 10
+        self.ADC_res = 2**14
+        self.q_e = 1.602176634e-19
+        self.dt = 10e-9
+        self.charge_factor = self.ADC_range / self.ADC_impedance / \
+            self.F_amp / self.ADC_res * self.dt / self.q_e
+
+    def set_specific_conditions(self, V: float, T: float, module: int):
+        &#34;&#34;&#34;Sets the run specific conditions the data was taken
+
+        Args:
+            V (float): Bias voltage applied
+            T (float): Temperature
+        &#34;&#34;&#34;
+        self.bias_voltage = V
+        self.temperature = T
+        self.module = module
+
+    def load_root(self):
+        &#34;&#34;&#34;Open the ROOT file and put in memory.
+        &#34;&#34;&#34;
+        try:
+            raw_file = uproot.open(self.raw_path)
+            self.raw_file = raw_file
+        except BaseException:
+            print(f&#39;No root file found for {self.raw_path}&#39;)
+
+    def get_available_channels(self):
+        &#39;&#39;&#39;
+        Scans the loaded raw file for branches in tree the tree &#39;&#39;&#39;
+        keys = self.raw_file[self.tree].keys()
+        if keys[-1] == &#39;Time&#39;:
+            keys.pop(-1)
+        self.channels = keys
+
+    def get_channel_data(self, ch: str) -&gt; np.ndarray:
+        &#39;&#39;&#39;
+        Return the raw data array of a given channel.
+        &#39;&#39;&#39;
+        data = self.raw_file[self.tree][ch].array()  # type: ignore
+        return np.array(data)
+
+    def get_n_waveforms(self) -&gt; int:
+        &#34;&#34;&#34;Get the number of waveforms in the root file without reading
+        the whole array.
+
+        Returns:
+            int: The number of wfs in the file
+        &#34;&#34;&#34;
+        first_channel = self.channels[0]
+
+        
+        n_waveforms = self.raw_file[self.tree][first_channel].num_entries # type: ignore
+        self.n_waveforms = n_waveforms
+        return n_waveforms
+
+    def get_n_samples(self) -&gt; int:
+        &#34;&#34;&#34;Get the number of samples in wach waveform in the root file
+        without reading the whole array.
+
+        Returns:
+            int: The number of samples of the wfs in the file
+        &#34;&#34;&#34;
+        first_channel = self.channels[0]
+        
+        n_samples = self.raw_file[self.tree][first_channel].interpretation.inner_shape[0] # type: ignore
+        self.n_samples = n_samples
+        return n_samples
+
+
+class run():
+    &#34;&#34;&#34;A run is made of a collection of datasets taken at a given
+    setup. Usually, opening and closing the setup defines a run.
+    The datasets can be at different tmeperature and bias voltage
+    conditions but the layout of the array stays the same.&#34;&#34;&#34;
+
+    def __init__(self, run_number: int, main_data_path: str, F_amp: float,
+                 ADC_model: str = &#39;v1724&#39;):
+        self.run_number = run_number
+        self.layout = self.read_layout()
+        self.main_data_path = main_data_path
+        self.main_run_path = self.get_run_path()
+        self.root_files = self.get_all_files_of_run()
+        self.datasets = self.fetch_datasets()
+        self.define_ADC_config(F_amp=F_amp, model=ADC_model)
+
+    def __repr__(self) -&gt; str:
+        repr = f&#39;Run {self.run_number}&#39;
+        return repr
+
+    def get_run_path(self) -&gt; str:
+        &#34;&#34;&#34;Creates string with the run raw data directory.
+
+        Returns:
+            str: path to run raw data.
+        &#34;&#34;&#34;
+        if self.run_number &lt; 6:
+            main_run_path = self.main_data_path + \
+                f&#39;run{self.run_number}/&#39;
+        else:
+            main_run_path = self.main_data_path + \
+                f&#39;run{self.run_number}/data/&#39;
+        return main_run_path
+
+    def read_layout(self):
+        &#34;&#34;&#34;Fetch the SiPM layout from a file.
+        layout: dict(mod0 = dict(ch# = dict(&#39;tile&#39;: str
+                                            &#39;mppc:[###,###,...]
+                                            )
+                                 ch# = dict(&#39;tile&#39;: str
+                                            &#39;mppc:[###,###,...]
+                                            )
+                                ),
+                     mod1 = dict(ch# = dict(&#39;tile&#39;: str
+                                            &#39;mppc:[###,###,...]
+                                            )
+                                 ch# = dict(&#39;tile&#39;: str
+                                            &#39;mppc:[###,###,...]
+                                            )
+                                ),
+                    )
+
+        fetch info in the form:
+            which tile: layout[&lt;module&gt;][&lt;channel&gt;][&#39;tile&#39;] -&gt; str
+            which mppc(s): layout[&lt;module&gt;][&lt;channel&gt;][&#39;mppc&#39;] -&gt; list of ints
+        &#34;&#34;&#34;
+        raise NotImplementedError
+
+    def define_ADC_config(self, F_amp: float, model: str = &#39;v1724&#39;) -&gt; None:
+        &#34;&#34;&#34;Load the ADC related quantities for the run.
+
+        Args:
+        model (str): model of the digitizer
+        F_amp (float): signal amplification from the sensor (pre-amp *
+            external amplification on rack).
+        &#34;&#34;&#34;
+
+        self.ADC_config = load_ADC_config(model, F_amp)
+
+    def get_all_files_of_run(self) -&gt; list:
+        &#34;&#34;&#34;Look for all the raw files stored for a given run.
+
+        Returns:
+            list: list of all ROOT files in the run.
+        &#34;&#34;&#34;
+
+        all_root_files = glob(
+            self.main_run_path + &#39;**/*.root&#39;, recursive=True)
+        return all_root_files
+
+    def fetch_datasets(self) -&gt; list:
+        &#34;&#34;&#34;Get all the datasets of a given run.
+
+        This method needs to be adapted to the specific data storage system.
+
+        Returns:
+            list: list of all the datasets of a given run. Elements
+                are type dataset.
+        &#34;&#34;&#34;
+        all_root_files = self.root_files
+        datasets = []
+        if self.run_number &gt;= 6:
+
+            for file in all_root_files:
+                try:
+                    split_file_path = file.split(&#39;/&#39;)
+                    _module = int(split_file_path[-1][-8])
+                    _temp = float(split_file_path[-1][-27:-24])
+                    _vbias = float(
+                        split_file_path[-1][-22:-17].replace(&#39;_&#39;, &#39;.&#39;))
+                    if split_file_path[-1][0] == &#39;B&#39;:
+                        _kind = &#39;BV&#39;
+                    elif split_file_path[-1][0] == &#39;D&#39;:
+                        _kind = &#39;DCR&#39;
+                    elif split_file_path[-1][0] == &#39;f&#39;:
+                        _kind = &#39;fplt&#39;
+                    else:
+                        print(&#39;Ignoring file: &#39;, file)
+                        continue
+                    datasets.append(
+                        dataset(file, _kind, _module, _temp, _vbias))
+                except BaseException:
+                    print(&#39;Ignoring file: &#39;, file)
+
+        elif self.run_number == 1:
+            for file in all_root_files:
+                file_split = file.split(&#39;/&#39;)
+                f_split = file_split[-1].split(&#39;_&#39;)
+                if f_split[0] == &#39;test&#39;:
+                    print(&#39;Ignoring test dataset: &#39;, file)
+                    continue
+                if file_split[8] == &#39;breakdown-v&#39;:
+                    _kind = &#39;BV&#39;
+                    _vbias = float(f_split[1] + &#39;.&#39; + f_split[2][:-1])
+                elif file_split[8] == &#39;dcr&#39;:
+                    _kind = &#39;DCR&#39;
+                    if len(f_split) == 5:
+                        _vbias = float(f_split[1][:-1])
+                    else:
+                        _vbias = float(
+                            f_split[1] + &#39;.&#39; + f_split[2][:-1])
+                else:
+                    print(&#39;Ignoring file due to unknown kind: &#39;, file)
+                    continue
+
+                _temp = float(f_split[0][:-1])
+
+                _module = int(f_split[-2])
+
+                datasets.append(dataset(file, _kind, _module, _temp, _vbias))
+
+        elif self.run_number in (2, 3):
+            for file in all_root_files:
+                file_split = file.split(&#39;/&#39;)
+                f_split = file_split[-1].split(&#39;_&#39;)
+                if f_split[0] == &#39;test&#39;:
+                    print(&#39;Ignoring test dataset: &#39;, file)
+                    continue
+                if file_split[8] == &#39;breakdown-v&#39;:
+                    _kind = &#39;BV&#39;
+                    _vbias = float(f_split[1] + &#39;.&#39; + f_split[2][:-1])
+                elif file_split[8] == &#39;dcr&#39;:
+                    _kind = &#39;DCR&#39;
+                    _vbias = float(f_split[1][:-1])
+                else:
+                    print(&#39;Ignoring file due to unknown kind: &#39;, file)
+                    continue
+
+                _temp = float(f_split[0][:-1])
+
+                _module = int(f_split[-2])
+
+                datasets.append(dataset(file, _kind, _module, _temp, _vbias))
+
+        elif self.run_number == 4:
+            for file in all_root_files:
+                file_split = file.split(&#39;/&#39;)
+                f_split = file_split[-1].split(&#39;_&#39;)
+                if f_split[0] == &#39;test&#39;:
+                    print(&#39;Ignoring test dataset: &#39;, file)
+                    continue
+                if file_split[8] == &#39;breakdown-v&#39;:
+                    _kind = &#39;BV&#39;
+                elif file_split[8] == &#39;dcr&#39;:
+                    _kind = &#39;DCR&#39;
+                else:
+                    print(&#39;Ignoring file due to unknown kind: &#39;, file)
+                    continue
+
+                _vbias = float(f_split[1][:-1])
+                _temp = float(f_split[0][:-1])
+
+                _module = int(f_split[-2])
+
+                datasets.append(dataset(file, _kind, _module, _temp, _vbias))
+
+        elif self.run_number == 5:
+            for file in all_root_files:
+                file_split = file.split(&#39;/&#39;)
+                f_split = file_split[-1].split(&#39;_&#39;)
+                if f_split[0] == &#39;test&#39;:
+                    print(&#39;Ignoring test dataset: &#39;, file)
+                    continue
+                if file_split[8] == &#39;breakdown-v&#39;:
+                    _kind = &#39;BV&#39;
+                elif file_split[8] == &#39;dcr&#39;:
+                    _kind = &#39;DCR&#39;
+                else:
+                    print(&#39;Ignoring file due to unknown kind: &#39;, file)
+                    continue
+
+                _temp = float(f_split[0][:-1])
+                _vbias = float(f_split[1] + &#39;.&#39; + f_split[2][:-1])
+                _module = int(f_split[-2])
+
+                datasets.append(dataset(file, _kind, _module, _temp, _vbias))
+        else:
+            raise NotImplementedError(&#34;Run not implemented yet.&#34;)
+        return datasets
+
+    def get_run_df(self) -&gt; pd.DataFrame:
+        &#34;&#34;&#34;Get a frienly pandas dataframe with all the datasets available,
+        their kind, V, T, module and path.
+
+        Returns:
+            pd.DataFrame: all the available datasets in the run.
+        &#34;&#34;&#34;
+        dataset_list = self.datasets
+        dicts_list = [ds.dict for ds in dataset_list]
+        dataset_df = pd.DataFrame(dicts_list)
+        dataset_df = dataset_df.sort_values(
+            [&#39;kind&#39;, &#39;temp&#39;, &#39;vbias&#39;, &#39;module&#39;],
+            ignore_index=True)
+        return dataset_df
+
+
+class dataset():
+    &#34;&#34;&#34;A dataset is an object with the individual setup of each
+    data taking process, ie, each time the DAQ starts acquiring
+    at a certain (T,V).
+    &#34;&#34;&#34;
+
+    def __init__(self, path: str, kind: str,
+                 module: int, temp: float, vbias: float):
+        self.path = path
+        self.kind = kind
+        self.module = module
+        self.temp = temp
+        self.vbias = vbias
+        # self.read_sizes()
+
+        self.dict = dict(kind=self.kind,
+                         module=self.module,
+                         temp=self.temp,
+                         vbias=self.vbias,
+                         path=self.path,
+                         )
+
+    def __repr__(self) -&gt; str:
+        repr = f&#39;{self.kind}_{self.temp}_{self.vbias}&#39;
+        return repr
+
+    def read_sizes(self) -&gt; Tuple[int, int]:
+        &#34;&#34;&#34;Gets the number of waveforms and number of samples per waveform
+        of a given dataset.
+
+        Brieafly creates a raw_data object of the dataset to access the ROOT
+        file and read the number of entries as number of waveforms and size of
+        entries as number of samples in each waveform.
+
+        Returns:
+            Tuple[int, int]: (number of waveforms, number of samples)
+        &#34;&#34;&#34;
+        raw = raw_data(raw_path=self.path,
+                       V=self.vbias,
+                       T=self.temp,
+                       module=self.module)
+        raw.load_root()
+        n_samples = raw.get_n_samples()
+        n_waveforms = raw.get_n_waveforms()
+        return n_waveforms, n_samples
+
+    def print_config(self):
+        config_print = f&#39;&#39;&#39;
+        ---Dataset info---
+        path: {self.path}
+        kind: {self.kind}
+        module: {self.module}
+        temperature: {self.temp}
+        bias voltage: {self.vbias}
+        --- ---
+        &#39;&#39;&#39;
+        return config_print</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="pylars.utils.input.dataset"><code class="flex name class">
+<span>class <span class="ident">dataset</span></span>
+<span>(</span><span>path: str, kind: str, module: int, temp: float, vbias: float)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>A dataset is an object with the individual setup of each
+data taking process, ie, each time the DAQ starts acquiring
+at a certain (T,V).</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class dataset():
+    &#34;&#34;&#34;A dataset is an object with the individual setup of each
+    data taking process, ie, each time the DAQ starts acquiring
+    at a certain (T,V).
+    &#34;&#34;&#34;
+
+    def __init__(self, path: str, kind: str,
+                 module: int, temp: float, vbias: float):
+        self.path = path
+        self.kind = kind
+        self.module = module
+        self.temp = temp
+        self.vbias = vbias
+        # self.read_sizes()
+
+        self.dict = dict(kind=self.kind,
+                         module=self.module,
+                         temp=self.temp,
+                         vbias=self.vbias,
+                         path=self.path,
+                         )
+
+    def __repr__(self) -&gt; str:
+        repr = f&#39;{self.kind}_{self.temp}_{self.vbias}&#39;
+        return repr
+
+    def read_sizes(self) -&gt; Tuple[int, int]:
+        &#34;&#34;&#34;Gets the number of waveforms and number of samples per waveform
+        of a given dataset.
+
+        Brieafly creates a raw_data object of the dataset to access the ROOT
+        file and read the number of entries as number of waveforms and size of
+        entries as number of samples in each waveform.
+
+        Returns:
+            Tuple[int, int]: (number of waveforms, number of samples)
+        &#34;&#34;&#34;
+        raw = raw_data(raw_path=self.path,
+                       V=self.vbias,
+                       T=self.temp,
+                       module=self.module)
+        raw.load_root()
+        n_samples = raw.get_n_samples()
+        n_waveforms = raw.get_n_waveforms()
+        return n_waveforms, n_samples
+
+    def print_config(self):
+        config_print = f&#39;&#39;&#39;
+        ---Dataset info---
+        path: {self.path}
+        kind: {self.kind}
+        module: {self.module}
+        temperature: {self.temp}
+        bias voltage: {self.vbias}
+        --- ---
+        &#39;&#39;&#39;
+        return config_print</code></pre>
+</details>
+<h3>Methods</h3>
+<dl>
+<dt id="pylars.utils.input.dataset.print_config"><code class="name flex">
+<span>def <span class="ident">print_config</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def print_config(self):
+    config_print = f&#39;&#39;&#39;
+    ---Dataset info---
+    path: {self.path}
+    kind: {self.kind}
+    module: {self.module}
+    temperature: {self.temp}
+    bias voltage: {self.vbias}
+    --- ---
+    &#39;&#39;&#39;
+    return config_print</code></pre>
+</details>
+</dd>
+<dt id="pylars.utils.input.dataset.read_sizes"><code class="name flex">
+<span>def <span class="ident">read_sizes</span></span>(<span>self) ‑> Tuple[int, int]</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Gets the number of waveforms and number of samples per waveform
+of a given dataset.</p>
+<p>Brieafly creates a raw_data object of the dataset to access the ROOT
+file and read the number of entries as number of waveforms and size of
+entries as number of samples in each waveform.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Tuple[int, int]</code></dt>
+<dd>(number of waveforms, number of samples)</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def read_sizes(self) -&gt; Tuple[int, int]:
+    &#34;&#34;&#34;Gets the number of waveforms and number of samples per waveform
+    of a given dataset.
+
+    Brieafly creates a raw_data object of the dataset to access the ROOT
+    file and read the number of entries as number of waveforms and size of
+    entries as number of samples in each waveform.
+
+    Returns:
+        Tuple[int, int]: (number of waveforms, number of samples)
+    &#34;&#34;&#34;
+    raw = raw_data(raw_path=self.path,
+                   V=self.vbias,
+                   T=self.temp,
+                   module=self.module)
+    raw.load_root()
+    n_samples = raw.get_n_samples()
+    n_waveforms = raw.get_n_waveforms()
+    return n_waveforms, n_samples</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="pylars.utils.input.raw_data"><code class="flex name class">
+<span>class <span class="ident">raw_data</span></span>
+<span>(</span><span>raw_path: str, V: float, T: float, module: int)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>General raw data class to define paths to raw and processed data,
+acquisition conditions, &hellip;</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class raw_data():
+    &#39;&#39;&#39;
+    General raw data class to define paths to raw and processed data,
+    acquisition conditions, ...
+    &#39;&#39;&#39;
+
+    def __init__(self, raw_path: str, V: float, T: float, module: int):
+
+        self.raw_path = raw_path
+        self.tree = &#39;t1&#39;
+
+        self.load_root()
+        self.get_available_channels()
+
+        self.get_n_samples()
+        self.get_n_waveforms()
+
+        self.set_general_conditions()
+        self.set_specific_conditions(V, T, module)
+
+    def set_general_conditions(self):
+        &#39;&#39;&#39;
+        Define the conditions of the data taking and of the setup
+        to be propagated forward. TO DO: fetch and save in a DB
+        &#39;&#39;&#39;
+        self.ADC_range = 2.25
+        self.ADC_impedance = 50
+        self.F_amp = 20 * 10
+        self.ADC_res = 2**14
+        self.q_e = 1.602176634e-19
+        self.dt = 10e-9
+        self.charge_factor = self.ADC_range / self.ADC_impedance / \
+            self.F_amp / self.ADC_res * self.dt / self.q_e
+
+    def set_specific_conditions(self, V: float, T: float, module: int):
+        &#34;&#34;&#34;Sets the run specific conditions the data was taken
+
+        Args:
+            V (float): Bias voltage applied
+            T (float): Temperature
+        &#34;&#34;&#34;
+        self.bias_voltage = V
+        self.temperature = T
+        self.module = module
+
+    def load_root(self):
+        &#34;&#34;&#34;Open the ROOT file and put in memory.
+        &#34;&#34;&#34;
+        try:
+            raw_file = uproot.open(self.raw_path)
+            self.raw_file = raw_file
+        except BaseException:
+            print(f&#39;No root file found for {self.raw_path}&#39;)
+
+    def get_available_channels(self):
+        &#39;&#39;&#39;
+        Scans the loaded raw file for branches in tree the tree &#39;&#39;&#39;
+        keys = self.raw_file[self.tree].keys()
+        if keys[-1] == &#39;Time&#39;:
+            keys.pop(-1)
+        self.channels = keys
+
+    def get_channel_data(self, ch: str) -&gt; np.ndarray:
+        &#39;&#39;&#39;
+        Return the raw data array of a given channel.
+        &#39;&#39;&#39;
+        data = self.raw_file[self.tree][ch].array()  # type: ignore
+        return np.array(data)
+
+    def get_n_waveforms(self) -&gt; int:
+        &#34;&#34;&#34;Get the number of waveforms in the root file without reading
+        the whole array.
+
+        Returns:
+            int: The number of wfs in the file
+        &#34;&#34;&#34;
+        first_channel = self.channels[0]
+
+        
+        n_waveforms = self.raw_file[self.tree][first_channel].num_entries # type: ignore
+        self.n_waveforms = n_waveforms
+        return n_waveforms
+
+    def get_n_samples(self) -&gt; int:
+        &#34;&#34;&#34;Get the number of samples in wach waveform in the root file
+        without reading the whole array.
+
+        Returns:
+            int: The number of samples of the wfs in the file
+        &#34;&#34;&#34;
+        first_channel = self.channels[0]
+        
+        n_samples = self.raw_file[self.tree][first_channel].interpretation.inner_shape[0] # type: ignore
+        self.n_samples = n_samples
+        return n_samples</code></pre>
+</details>
+<h3>Methods</h3>
+<dl>
+<dt id="pylars.utils.input.raw_data.get_available_channels"><code class="name flex">
+<span>def <span class="ident">get_available_channels</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Scans the loaded raw file for branches in tree the tree</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_available_channels(self):
+    &#39;&#39;&#39;
+    Scans the loaded raw file for branches in tree the tree &#39;&#39;&#39;
+    keys = self.raw_file[self.tree].keys()
+    if keys[-1] == &#39;Time&#39;:
+        keys.pop(-1)
+    self.channels = keys</code></pre>
+</details>
+</dd>
+<dt id="pylars.utils.input.raw_data.get_channel_data"><code class="name flex">
+<span>def <span class="ident">get_channel_data</span></span>(<span>self, ch: str) ‑> numpy.ndarray</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Return the raw data array of a given channel.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_channel_data(self, ch: str) -&gt; np.ndarray:
+    &#39;&#39;&#39;
+    Return the raw data array of a given channel.
+    &#39;&#39;&#39;
+    data = self.raw_file[self.tree][ch].array()  # type: ignore
+    return np.array(data)</code></pre>
+</details>
+</dd>
+<dt id="pylars.utils.input.raw_data.get_n_samples"><code class="name flex">
+<span>def <span class="ident">get_n_samples</span></span>(<span>self) ‑> int</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Get the number of samples in wach waveform in the root file
+without reading the whole array.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>int</code></dt>
+<dd>The number of samples of the wfs in the file</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_n_samples(self) -&gt; int:
+    &#34;&#34;&#34;Get the number of samples in wach waveform in the root file
+    without reading the whole array.
+
+    Returns:
+        int: The number of samples of the wfs in the file
+    &#34;&#34;&#34;
+    first_channel = self.channels[0]
+    
+    n_samples = self.raw_file[self.tree][first_channel].interpretation.inner_shape[0] # type: ignore
+    self.n_samples = n_samples
+    return n_samples</code></pre>
+</details>
+</dd>
+<dt id="pylars.utils.input.raw_data.get_n_waveforms"><code class="name flex">
+<span>def <span class="ident">get_n_waveforms</span></span>(<span>self) ‑> int</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Get the number of waveforms in the root file without reading
+the whole array.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>int</code></dt>
+<dd>The number of wfs in the file</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_n_waveforms(self) -&gt; int:
+    &#34;&#34;&#34;Get the number of waveforms in the root file without reading
+    the whole array.
+
+    Returns:
+        int: The number of wfs in the file
+    &#34;&#34;&#34;
+    first_channel = self.channels[0]
+
+    
+    n_waveforms = self.raw_file[self.tree][first_channel].num_entries # type: ignore
+    self.n_waveforms = n_waveforms
+    return n_waveforms</code></pre>
+</details>
+</dd>
+<dt id="pylars.utils.input.raw_data.load_root"><code class="name flex">
+<span>def <span class="ident">load_root</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Open the ROOT file and put in memory.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def load_root(self):
+    &#34;&#34;&#34;Open the ROOT file and put in memory.
+    &#34;&#34;&#34;
+    try:
+        raw_file = uproot.open(self.raw_path)
+        self.raw_file = raw_file
+    except BaseException:
+        print(f&#39;No root file found for {self.raw_path}&#39;)</code></pre>
+</details>
+</dd>
+<dt id="pylars.utils.input.raw_data.set_general_conditions"><code class="name flex">
+<span>def <span class="ident">set_general_conditions</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Define the conditions of the data taking and of the setup
+to be propagated forward. TO DO: fetch and save in a DB</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def set_general_conditions(self):
+    &#39;&#39;&#39;
+    Define the conditions of the data taking and of the setup
+    to be propagated forward. TO DO: fetch and save in a DB
+    &#39;&#39;&#39;
+    self.ADC_range = 2.25
+    self.ADC_impedance = 50
+    self.F_amp = 20 * 10
+    self.ADC_res = 2**14
+    self.q_e = 1.602176634e-19
+    self.dt = 10e-9
+    self.charge_factor = self.ADC_range / self.ADC_impedance / \
+        self.F_amp / self.ADC_res * self.dt / self.q_e</code></pre>
+</details>
+</dd>
+<dt id="pylars.utils.input.raw_data.set_specific_conditions"><code class="name flex">
+<span>def <span class="ident">set_specific_conditions</span></span>(<span>self, V: float, T: float, module: int)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Sets the run specific conditions the data was taken</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>V</code></strong> :&ensp;<code>float</code></dt>
+<dd>Bias voltage applied</dd>
+<dt><strong><code>T</code></strong> :&ensp;<code>float</code></dt>
+<dd>Temperature</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def set_specific_conditions(self, V: float, T: float, module: int):
+    &#34;&#34;&#34;Sets the run specific conditions the data was taken
+
+    Args:
+        V (float): Bias voltage applied
+        T (float): Temperature
+    &#34;&#34;&#34;
+    self.bias_voltage = V
+    self.temperature = T
+    self.module = module</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="pylars.utils.input.run"><code class="flex name class">
+<span>class <span class="ident">run</span></span>
+<span>(</span><span>run_number: int, main_data_path: str, F_amp: float, ADC_model: str = 'v1724')</span>
+</code></dt>
+<dd>
+<div class="desc"><p>A run is made of a collection of datasets taken at a given
+setup. Usually, opening and closing the setup defines a run.
+The datasets can be at different tmeperature and bias voltage
+conditions but the layout of the array stays the same.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class run():
+    &#34;&#34;&#34;A run is made of a collection of datasets taken at a given
+    setup. Usually, opening and closing the setup defines a run.
+    The datasets can be at different tmeperature and bias voltage
+    conditions but the layout of the array stays the same.&#34;&#34;&#34;
+
+    def __init__(self, run_number: int, main_data_path: str, F_amp: float,
+                 ADC_model: str = &#39;v1724&#39;):
+        self.run_number = run_number
+        self.layout = self.read_layout()
+        self.main_data_path = main_data_path
+        self.main_run_path = self.get_run_path()
+        self.root_files = self.get_all_files_of_run()
+        self.datasets = self.fetch_datasets()
+        self.define_ADC_config(F_amp=F_amp, model=ADC_model)
+
+    def __repr__(self) -&gt; str:
+        repr = f&#39;Run {self.run_number}&#39;
+        return repr
+
+    def get_run_path(self) -&gt; str:
+        &#34;&#34;&#34;Creates string with the run raw data directory.
+
+        Returns:
+            str: path to run raw data.
+        &#34;&#34;&#34;
+        if self.run_number &lt; 6:
+            main_run_path = self.main_data_path + \
+                f&#39;run{self.run_number}/&#39;
+        else:
+            main_run_path = self.main_data_path + \
+                f&#39;run{self.run_number}/data/&#39;
+        return main_run_path
+
+    def read_layout(self):
+        &#34;&#34;&#34;Fetch the SiPM layout from a file.
+        layout: dict(mod0 = dict(ch# = dict(&#39;tile&#39;: str
+                                            &#39;mppc:[###,###,...]
+                                            )
+                                 ch# = dict(&#39;tile&#39;: str
+                                            &#39;mppc:[###,###,...]
+                                            )
+                                ),
+                     mod1 = dict(ch# = dict(&#39;tile&#39;: str
+                                            &#39;mppc:[###,###,...]
+                                            )
+                                 ch# = dict(&#39;tile&#39;: str
+                                            &#39;mppc:[###,###,...]
+                                            )
+                                ),
+                    )
+
+        fetch info in the form:
+            which tile: layout[&lt;module&gt;][&lt;channel&gt;][&#39;tile&#39;] -&gt; str
+            which mppc(s): layout[&lt;module&gt;][&lt;channel&gt;][&#39;mppc&#39;] -&gt; list of ints
+        &#34;&#34;&#34;
+        raise NotImplementedError
+
+    def define_ADC_config(self, F_amp: float, model: str = &#39;v1724&#39;) -&gt; None:
+        &#34;&#34;&#34;Load the ADC related quantities for the run.
+
+        Args:
+        model (str): model of the digitizer
+        F_amp (float): signal amplification from the sensor (pre-amp *
+            external amplification on rack).
+        &#34;&#34;&#34;
+
+        self.ADC_config = load_ADC_config(model, F_amp)
+
+    def get_all_files_of_run(self) -&gt; list:
+        &#34;&#34;&#34;Look for all the raw files stored for a given run.
+
+        Returns:
+            list: list of all ROOT files in the run.
+        &#34;&#34;&#34;
+
+        all_root_files = glob(
+            self.main_run_path + &#39;**/*.root&#39;, recursive=True)
+        return all_root_files
+
+    def fetch_datasets(self) -&gt; list:
+        &#34;&#34;&#34;Get all the datasets of a given run.
+
+        This method needs to be adapted to the specific data storage system.
+
+        Returns:
+            list: list of all the datasets of a given run. Elements
+                are type dataset.
+        &#34;&#34;&#34;
+        all_root_files = self.root_files
+        datasets = []
+        if self.run_number &gt;= 6:
+
+            for file in all_root_files:
+                try:
+                    split_file_path = file.split(&#39;/&#39;)
+                    _module = int(split_file_path[-1][-8])
+                    _temp = float(split_file_path[-1][-27:-24])
+                    _vbias = float(
+                        split_file_path[-1][-22:-17].replace(&#39;_&#39;, &#39;.&#39;))
+                    if split_file_path[-1][0] == &#39;B&#39;:
+                        _kind = &#39;BV&#39;
+                    elif split_file_path[-1][0] == &#39;D&#39;:
+                        _kind = &#39;DCR&#39;
+                    elif split_file_path[-1][0] == &#39;f&#39;:
+                        _kind = &#39;fplt&#39;
+                    else:
+                        print(&#39;Ignoring file: &#39;, file)
+                        continue
+                    datasets.append(
+                        dataset(file, _kind, _module, _temp, _vbias))
+                except BaseException:
+                    print(&#39;Ignoring file: &#39;, file)
+
+        elif self.run_number == 1:
+            for file in all_root_files:
+                file_split = file.split(&#39;/&#39;)
+                f_split = file_split[-1].split(&#39;_&#39;)
+                if f_split[0] == &#39;test&#39;:
+                    print(&#39;Ignoring test dataset: &#39;, file)
+                    continue
+                if file_split[8] == &#39;breakdown-v&#39;:
+                    _kind = &#39;BV&#39;
+                    _vbias = float(f_split[1] + &#39;.&#39; + f_split[2][:-1])
+                elif file_split[8] == &#39;dcr&#39;:
+                    _kind = &#39;DCR&#39;
+                    if len(f_split) == 5:
+                        _vbias = float(f_split[1][:-1])
+                    else:
+                        _vbias = float(
+                            f_split[1] + &#39;.&#39; + f_split[2][:-1])
+                else:
+                    print(&#39;Ignoring file due to unknown kind: &#39;, file)
+                    continue
+
+                _temp = float(f_split[0][:-1])
+
+                _module = int(f_split[-2])
+
+                datasets.append(dataset(file, _kind, _module, _temp, _vbias))
+
+        elif self.run_number in (2, 3):
+            for file in all_root_files:
+                file_split = file.split(&#39;/&#39;)
+                f_split = file_split[-1].split(&#39;_&#39;)
+                if f_split[0] == &#39;test&#39;:
+                    print(&#39;Ignoring test dataset: &#39;, file)
+                    continue
+                if file_split[8] == &#39;breakdown-v&#39;:
+                    _kind = &#39;BV&#39;
+                    _vbias = float(f_split[1] + &#39;.&#39; + f_split[2][:-1])
+                elif file_split[8] == &#39;dcr&#39;:
+                    _kind = &#39;DCR&#39;
+                    _vbias = float(f_split[1][:-1])
+                else:
+                    print(&#39;Ignoring file due to unknown kind: &#39;, file)
+                    continue
+
+                _temp = float(f_split[0][:-1])
+
+                _module = int(f_split[-2])
+
+                datasets.append(dataset(file, _kind, _module, _temp, _vbias))
+
+        elif self.run_number == 4:
+            for file in all_root_files:
+                file_split = file.split(&#39;/&#39;)
+                f_split = file_split[-1].split(&#39;_&#39;)
+                if f_split[0] == &#39;test&#39;:
+                    print(&#39;Ignoring test dataset: &#39;, file)
+                    continue
+                if file_split[8] == &#39;breakdown-v&#39;:
+                    _kind = &#39;BV&#39;
+                elif file_split[8] == &#39;dcr&#39;:
+                    _kind = &#39;DCR&#39;
+                else:
+                    print(&#39;Ignoring file due to unknown kind: &#39;, file)
+                    continue
+
+                _vbias = float(f_split[1][:-1])
+                _temp = float(f_split[0][:-1])
+
+                _module = int(f_split[-2])
+
+                datasets.append(dataset(file, _kind, _module, _temp, _vbias))
+
+        elif self.run_number == 5:
+            for file in all_root_files:
+                file_split = file.split(&#39;/&#39;)
+                f_split = file_split[-1].split(&#39;_&#39;)
+                if f_split[0] == &#39;test&#39;:
+                    print(&#39;Ignoring test dataset: &#39;, file)
+                    continue
+                if file_split[8] == &#39;breakdown-v&#39;:
+                    _kind = &#39;BV&#39;
+                elif file_split[8] == &#39;dcr&#39;:
+                    _kind = &#39;DCR&#39;
+                else:
+                    print(&#39;Ignoring file due to unknown kind: &#39;, file)
+                    continue
+
+                _temp = float(f_split[0][:-1])
+                _vbias = float(f_split[1] + &#39;.&#39; + f_split[2][:-1])
+                _module = int(f_split[-2])
+
+                datasets.append(dataset(file, _kind, _module, _temp, _vbias))
+        else:
+            raise NotImplementedError(&#34;Run not implemented yet.&#34;)
+        return datasets
+
+    def get_run_df(self) -&gt; pd.DataFrame:
+        &#34;&#34;&#34;Get a frienly pandas dataframe with all the datasets available,
+        their kind, V, T, module and path.
+
+        Returns:
+            pd.DataFrame: all the available datasets in the run.
+        &#34;&#34;&#34;
+        dataset_list = self.datasets
+        dicts_list = [ds.dict for ds in dataset_list]
+        dataset_df = pd.DataFrame(dicts_list)
+        dataset_df = dataset_df.sort_values(
+            [&#39;kind&#39;, &#39;temp&#39;, &#39;vbias&#39;, &#39;module&#39;],
+            ignore_index=True)
+        return dataset_df</code></pre>
+</details>
+<h3>Methods</h3>
+<dl>
+<dt id="pylars.utils.input.run.define_ADC_config"><code class="name flex">
+<span>def <span class="ident">define_ADC_config</span></span>(<span>self, F_amp: float, model: str = 'v1724') ‑> NoneType</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Load the ADC related quantities for the run.</p>
+<p>Args:
+model (str): model of the digitizer
+F_amp (float): signal amplification from the sensor (pre-amp *
+external amplification on rack).</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def define_ADC_config(self, F_amp: float, model: str = &#39;v1724&#39;) -&gt; None:
+    &#34;&#34;&#34;Load the ADC related quantities for the run.
+
+    Args:
+    model (str): model of the digitizer
+    F_amp (float): signal amplification from the sensor (pre-amp *
+        external amplification on rack).
+    &#34;&#34;&#34;
+
+    self.ADC_config = load_ADC_config(model, F_amp)</code></pre>
+</details>
+</dd>
+<dt id="pylars.utils.input.run.fetch_datasets"><code class="name flex">
+<span>def <span class="ident">fetch_datasets</span></span>(<span>self) ‑> list</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Get all the datasets of a given run.</p>
+<p>This method needs to be adapted to the specific data storage system.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>list</code></dt>
+<dd>list of all the datasets of a given run. Elements
+are type dataset.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def fetch_datasets(self) -&gt; list:
+    &#34;&#34;&#34;Get all the datasets of a given run.
+
+    This method needs to be adapted to the specific data storage system.
+
+    Returns:
+        list: list of all the datasets of a given run. Elements
+            are type dataset.
+    &#34;&#34;&#34;
+    all_root_files = self.root_files
+    datasets = []
+    if self.run_number &gt;= 6:
+
+        for file in all_root_files:
+            try:
+                split_file_path = file.split(&#39;/&#39;)
+                _module = int(split_file_path[-1][-8])
+                _temp = float(split_file_path[-1][-27:-24])
+                _vbias = float(
+                    split_file_path[-1][-22:-17].replace(&#39;_&#39;, &#39;.&#39;))
+                if split_file_path[-1][0] == &#39;B&#39;:
+                    _kind = &#39;BV&#39;
+                elif split_file_path[-1][0] == &#39;D&#39;:
+                    _kind = &#39;DCR&#39;
+                elif split_file_path[-1][0] == &#39;f&#39;:
+                    _kind = &#39;fplt&#39;
+                else:
+                    print(&#39;Ignoring file: &#39;, file)
+                    continue
+                datasets.append(
+                    dataset(file, _kind, _module, _temp, _vbias))
+            except BaseException:
+                print(&#39;Ignoring file: &#39;, file)
+
+    elif self.run_number == 1:
+        for file in all_root_files:
+            file_split = file.split(&#39;/&#39;)
+            f_split = file_split[-1].split(&#39;_&#39;)
+            if f_split[0] == &#39;test&#39;:
+                print(&#39;Ignoring test dataset: &#39;, file)
+                continue
+            if file_split[8] == &#39;breakdown-v&#39;:
+                _kind = &#39;BV&#39;
+                _vbias = float(f_split[1] + &#39;.&#39; + f_split[2][:-1])
+            elif file_split[8] == &#39;dcr&#39;:
+                _kind = &#39;DCR&#39;
+                if len(f_split) == 5:
+                    _vbias = float(f_split[1][:-1])
+                else:
+                    _vbias = float(
+                        f_split[1] + &#39;.&#39; + f_split[2][:-1])
+            else:
+                print(&#39;Ignoring file due to unknown kind: &#39;, file)
+                continue
+
+            _temp = float(f_split[0][:-1])
+
+            _module = int(f_split[-2])
+
+            datasets.append(dataset(file, _kind, _module, _temp, _vbias))
+
+    elif self.run_number in (2, 3):
+        for file in all_root_files:
+            file_split = file.split(&#39;/&#39;)
+            f_split = file_split[-1].split(&#39;_&#39;)
+            if f_split[0] == &#39;test&#39;:
+                print(&#39;Ignoring test dataset: &#39;, file)
+                continue
+            if file_split[8] == &#39;breakdown-v&#39;:
+                _kind = &#39;BV&#39;
+                _vbias = float(f_split[1] + &#39;.&#39; + f_split[2][:-1])
+            elif file_split[8] == &#39;dcr&#39;:
+                _kind = &#39;DCR&#39;
+                _vbias = float(f_split[1][:-1])
+            else:
+                print(&#39;Ignoring file due to unknown kind: &#39;, file)
+                continue
+
+            _temp = float(f_split[0][:-1])
+
+            _module = int(f_split[-2])
+
+            datasets.append(dataset(file, _kind, _module, _temp, _vbias))
+
+    elif self.run_number == 4:
+        for file in all_root_files:
+            file_split = file.split(&#39;/&#39;)
+            f_split = file_split[-1].split(&#39;_&#39;)
+            if f_split[0] == &#39;test&#39;:
+                print(&#39;Ignoring test dataset: &#39;, file)
+                continue
+            if file_split[8] == &#39;breakdown-v&#39;:
+                _kind = &#39;BV&#39;
+            elif file_split[8] == &#39;dcr&#39;:
+                _kind = &#39;DCR&#39;
+            else:
+                print(&#39;Ignoring file due to unknown kind: &#39;, file)
+                continue
+
+            _vbias = float(f_split[1][:-1])
+            _temp = float(f_split[0][:-1])
+
+            _module = int(f_split[-2])
+
+            datasets.append(dataset(file, _kind, _module, _temp, _vbias))
+
+    elif self.run_number == 5:
+        for file in all_root_files:
+            file_split = file.split(&#39;/&#39;)
+            f_split = file_split[-1].split(&#39;_&#39;)
+            if f_split[0] == &#39;test&#39;:
+                print(&#39;Ignoring test dataset: &#39;, file)
+                continue
+            if file_split[8] == &#39;breakdown-v&#39;:
+                _kind = &#39;BV&#39;
+            elif file_split[8] == &#39;dcr&#39;:
+                _kind = &#39;DCR&#39;
+            else:
+                print(&#39;Ignoring file due to unknown kind: &#39;, file)
+                continue
+
+            _temp = float(f_split[0][:-1])
+            _vbias = float(f_split[1] + &#39;.&#39; + f_split[2][:-1])
+            _module = int(f_split[-2])
+
+            datasets.append(dataset(file, _kind, _module, _temp, _vbias))
+    else:
+        raise NotImplementedError(&#34;Run not implemented yet.&#34;)
+    return datasets</code></pre>
+</details>
+</dd>
+<dt id="pylars.utils.input.run.get_all_files_of_run"><code class="name flex">
+<span>def <span class="ident">get_all_files_of_run</span></span>(<span>self) ‑> list</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Look for all the raw files stored for a given run.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>list</code></dt>
+<dd>list of all ROOT files in the run.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_all_files_of_run(self) -&gt; list:
+    &#34;&#34;&#34;Look for all the raw files stored for a given run.
+
+    Returns:
+        list: list of all ROOT files in the run.
+    &#34;&#34;&#34;
+
+    all_root_files = glob(
+        self.main_run_path + &#39;**/*.root&#39;, recursive=True)
+    return all_root_files</code></pre>
+</details>
+</dd>
+<dt id="pylars.utils.input.run.get_run_df"><code class="name flex">
+<span>def <span class="ident">get_run_df</span></span>(<span>self) ‑> pandas.core.frame.DataFrame</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Get a frienly pandas dataframe with all the datasets available,
+their kind, V, T, module and path.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>pd.DataFrame</code></dt>
+<dd>all the available datasets in the run.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_run_df(self) -&gt; pd.DataFrame:
+    &#34;&#34;&#34;Get a frienly pandas dataframe with all the datasets available,
+    their kind, V, T, module and path.
+
+    Returns:
+        pd.DataFrame: all the available datasets in the run.
+    &#34;&#34;&#34;
+    dataset_list = self.datasets
+    dicts_list = [ds.dict for ds in dataset_list]
+    dataset_df = pd.DataFrame(dicts_list)
+    dataset_df = dataset_df.sort_values(
+        [&#39;kind&#39;, &#39;temp&#39;, &#39;vbias&#39;, &#39;module&#39;],
+        ignore_index=True)
+    return dataset_df</code></pre>
+</details>
+</dd>
+<dt id="pylars.utils.input.run.get_run_path"><code class="name flex">
+<span>def <span class="ident">get_run_path</span></span>(<span>self) ‑> str</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Creates string with the run raw data directory.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>str</code></dt>
+<dd>path to run raw data.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_run_path(self) -&gt; str:
+    &#34;&#34;&#34;Creates string with the run raw data directory.
+
+    Returns:
+        str: path to run raw data.
+    &#34;&#34;&#34;
+    if self.run_number &lt; 6:
+        main_run_path = self.main_data_path + \
+            f&#39;run{self.run_number}/&#39;
+    else:
+        main_run_path = self.main_data_path + \
+            f&#39;run{self.run_number}/data/&#39;
+    return main_run_path</code></pre>
+</details>
+</dd>
+<dt id="pylars.utils.input.run.read_layout"><code class="name flex">
+<span>def <span class="ident">read_layout</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Fetch the SiPM layout from a file.
+layout: dict(mod0 = dict(ch# = dict('tile': str
+'mppc:[###,###,&hellip;]
+)
+ch# = dict('tile': str
+'mppc:[###,###,&hellip;]
+)
+),
+mod1 = dict(ch# = dict('tile': str
+'mppc:[###,###,&hellip;]
+)
+ch# = dict('tile': str
+'mppc:[###,###,&hellip;]
+)
+),
+)</p>
+<p>fetch info in the form:
+which tile: layout[<module>][<channel>]['tile'] -&gt; str
+which mppc(s): layout[<module>][<channel>]['mppc'] -&gt; list of ints</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def read_layout(self):
+    &#34;&#34;&#34;Fetch the SiPM layout from a file.
+    layout: dict(mod0 = dict(ch# = dict(&#39;tile&#39;: str
+                                        &#39;mppc:[###,###,...]
+                                        )
+                             ch# = dict(&#39;tile&#39;: str
+                                        &#39;mppc:[###,###,...]
+                                        )
+                            ),
+                 mod1 = dict(ch# = dict(&#39;tile&#39;: str
+                                        &#39;mppc:[###,###,...]
+                                        )
+                             ch# = dict(&#39;tile&#39;: str
+                                        &#39;mppc:[###,###,...]
+                                        )
+                            ),
+                )
+
+    fetch info in the form:
+        which tile: layout[&lt;module&gt;][&lt;channel&gt;][&#39;tile&#39;] -&gt; str
+        which mppc(s): layout[&lt;module&gt;][&lt;channel&gt;][&#39;mppc&#39;] -&gt; list of ints
+    &#34;&#34;&#34;
+    raise NotImplementedError</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="pylars.utils" href="index.html">pylars.utils</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="pylars.utils.input.dataset" href="#pylars.utils.input.dataset">dataset</a></code></h4>
+<ul class="">
+<li><code><a title="pylars.utils.input.dataset.print_config" href="#pylars.utils.input.dataset.print_config">print_config</a></code></li>
+<li><code><a title="pylars.utils.input.dataset.read_sizes" href="#pylars.utils.input.dataset.read_sizes">read_sizes</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="pylars.utils.input.raw_data" href="#pylars.utils.input.raw_data">raw_data</a></code></h4>
+<ul class="">
+<li><code><a title="pylars.utils.input.raw_data.get_available_channels" href="#pylars.utils.input.raw_data.get_available_channels">get_available_channels</a></code></li>
+<li><code><a title="pylars.utils.input.raw_data.get_channel_data" href="#pylars.utils.input.raw_data.get_channel_data">get_channel_data</a></code></li>
+<li><code><a title="pylars.utils.input.raw_data.get_n_samples" href="#pylars.utils.input.raw_data.get_n_samples">get_n_samples</a></code></li>
+<li><code><a title="pylars.utils.input.raw_data.get_n_waveforms" href="#pylars.utils.input.raw_data.get_n_waveforms">get_n_waveforms</a></code></li>
+<li><code><a title="pylars.utils.input.raw_data.load_root" href="#pylars.utils.input.raw_data.load_root">load_root</a></code></li>
+<li><code><a title="pylars.utils.input.raw_data.set_general_conditions" href="#pylars.utils.input.raw_data.set_general_conditions">set_general_conditions</a></code></li>
+<li><code><a title="pylars.utils.input.raw_data.set_specific_conditions" href="#pylars.utils.input.raw_data.set_specific_conditions">set_specific_conditions</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="pylars.utils.input.run" href="#pylars.utils.input.run">run</a></code></h4>
+<ul class="">
+<li><code><a title="pylars.utils.input.run.define_ADC_config" href="#pylars.utils.input.run.define_ADC_config">define_ADC_config</a></code></li>
+<li><code><a title="pylars.utils.input.run.fetch_datasets" href="#pylars.utils.input.run.fetch_datasets">fetch_datasets</a></code></li>
+<li><code><a title="pylars.utils.input.run.get_all_files_of_run" href="#pylars.utils.input.run.get_all_files_of_run">get_all_files_of_run</a></code></li>
+<li><code><a title="pylars.utils.input.run.get_run_df" href="#pylars.utils.input.run.get_run_df">get_run_df</a></code></li>
+<li><code><a title="pylars.utils.input.run.get_run_path" href="#pylars.utils.input.run.get_run_path">get_run_path</a></code></li>
+<li><code><a title="pylars.utils.input.run.read_layout" href="#pylars.utils.input.run.read_layout">read_layout</a></code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.9.2</a>.</p>
+</footer>
+</body>
+</html>
