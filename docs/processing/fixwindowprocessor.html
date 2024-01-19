@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.9.2" />
+<title>pylars.processing.fixwindowprocessor API documentation</title>
+<meta name="description" content="" />
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
+<link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/highlight.min.js" integrity="sha256-Uv3H6lx7dJmRfRvH8TH6kJD1TSK1aFcwgx+mdg3epi8=" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => hljs.initHighlighting())</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>pylars.processing.fixwindowprocessor</code></h1>
+</header>
+<section id="section-intro">
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">import numpy as np
+import pandas as pd
+from pylars.utils.common import get_deterministic_hash
+from pylars.utils.input import raw_data, run
+from tqdm.autonotebook import tqdm
+from typing import Tuple, Union
+
+from .fixwindow import fixed_window_processing
+
+
+class window_processor():
+    &#34;&#34;&#34;Define the processor for LED window analysis.
+    &#34;&#34;&#34;
+
+    version = &#39;0.0.1&#39;
+    
+    def __init__(self, 
+                 led_window: Tuple[int, int], 
+                 baseline_samples: int) -&gt; None:
+        self.baseline_samples = baseline_samples
+        self.led_window = led_window
+        self.hash = get_deterministic_hash(f&#34;{self.version}&#34; +
+                                           f&#34;{self.led_window}&#34; +
+                                           f&#34;{self.baseline_samples:.2f}&#34;)
+        self.processed_data = dict()
+        self.show_loadbar_channel = True
+        self.show_tqdm_channel = True
+
+    def __hash__(self) -&gt; str:
+        return self.hash
+    
+    def set_tqdm_config(self, bar: bool, show: bool):
+        &#34;&#34;&#34;Change the tqdm config
+
+        Args:
+            bar (bool): show or not the tqdm bar.
+            show (bool): use tqdm if true, disable if false
+        &#34;&#34;&#34;
+        self.show_loadbar_channel = bar
+        self.show_tqdm_channel = show
+
+    # General functions for I/O
+    def load_raw_data(self, path_to_raw: str, module: int):
+        &#34;&#34;&#34;Raw data loader to pass to the processing scripts.
+
+        Args:
+            path_to_raw (str): _description_
+
+        Returns:
+            raw_data: the raw data object
+        &#34;&#34;&#34;
+        raw = raw_data(raw_path = path_to_raw, V = -1, 
+                       T = -1, module = module)
+        raw.load_root()
+        raw.get_available_channels()
+
+        self.raw_data = raw
+
+    # Processing functions
+    def process_channel(self, ch: str) -&gt; dict:
+        &#34;&#34;&#34;Process a channel by iterating over all its waveforms and 
+        calculating the following:
+            - baseline
+            - integral in the LED window
+            - max amplitude in the LED window
+
+        Args:
+            ch (str): channel name as in the ROOT file.
+                In files from DAQ_zero/XenoDAQ these will be &#39;wf#&#39; with #
+                the number of the channel [0,7]
+
+        Returns:
+            dict: Dictionary of keys module, channel, wf_number, led_amplitude, 
+            led_area, led_ADCcounts in led window of the processed waveforms.
+        &#34;&#34;&#34;
+        if ch not in self.raw_data.channels:
+            raise AssertionError(
+                f&#39;The requested channel is not available. &#39;
+                f&#39;Loaded channels:{self.raw_data.channels}&#39;)
+
+        module = self.raw_data.module
+        channel_data = self.raw_data.get_channel_data(ch)
+
+        amplitudes, areas, ADCcounts = fixed_window_processing.process_all_waveforms(
+            channel_data, self.baseline_samples, self.led_window)
+        
+        module_number = [module] * len(areas)
+        ch_name = [ch] * len(areas)
+        wf_number = np.arange(len(areas))
+            
+        results = {&#39;module&#39;: module_number,
+                   &#39;channel&#39;: ch_name,
+                   &#39;wf_number&#39;:wf_number,
+                   &#39;led_amplitude&#39;: amplitudes,
+                   &#39;led_area&#39;: areas,
+                   &#39;led_ADCcounts&#39;: ADCcounts,
+                   }
+
+        return results
+    
+    def process_all_channels(self) -&gt; pd.DataFrame:
+        &#34;&#34;&#34;Calls the process_channel method of each of
+        the available channels in the dataset.
+
+        Returns:
+            pd.DataFrame: Results for all the channels of a dataset.
+        &#34;&#34;&#34;
+        channels_to_process = self.raw_data.channels
+        results_list = [pd.DataFrame(self.process_channel(
+            _channel)) for _channel in channels_to_process]
+        results_df = pd.concat(results_list, ignore_index=True)
+
+        return results_df
+    </code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="pylars.processing.fixwindowprocessor.window_processor"><code class="flex name class">
+<span>class <span class="ident">window_processor</span></span>
+<span>(</span><span>led_window: Tuple[int, int], baseline_samples: int)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Define the processor for LED window analysis.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class window_processor():
+    &#34;&#34;&#34;Define the processor for LED window analysis.
+    &#34;&#34;&#34;
+
+    version = &#39;0.0.1&#39;
+    
+    def __init__(self, 
+                 led_window: Tuple[int, int], 
+                 baseline_samples: int) -&gt; None:
+        self.baseline_samples = baseline_samples
+        self.led_window = led_window
+        self.hash = get_deterministic_hash(f&#34;{self.version}&#34; +
+                                           f&#34;{self.led_window}&#34; +
+                                           f&#34;{self.baseline_samples:.2f}&#34;)
+        self.processed_data = dict()
+        self.show_loadbar_channel = True
+        self.show_tqdm_channel = True
+
+    def __hash__(self) -&gt; str:
+        return self.hash
+    
+    def set_tqdm_config(self, bar: bool, show: bool):
+        &#34;&#34;&#34;Change the tqdm config
+
+        Args:
+            bar (bool): show or not the tqdm bar.
+            show (bool): use tqdm if true, disable if false
+        &#34;&#34;&#34;
+        self.show_loadbar_channel = bar
+        self.show_tqdm_channel = show
+
+    # General functions for I/O
+    def load_raw_data(self, path_to_raw: str, module: int):
+        &#34;&#34;&#34;Raw data loader to pass to the processing scripts.
+
+        Args:
+            path_to_raw (str): _description_
+
+        Returns:
+            raw_data: the raw data object
+        &#34;&#34;&#34;
+        raw = raw_data(raw_path = path_to_raw, V = -1, 
+                       T = -1, module = module)
+        raw.load_root()
+        raw.get_available_channels()
+
+        self.raw_data = raw
+
+    # Processing functions
+    def process_channel(self, ch: str) -&gt; dict:
+        &#34;&#34;&#34;Process a channel by iterating over all its waveforms and 
+        calculating the following:
+            - baseline
+            - integral in the LED window
+            - max amplitude in the LED window
+
+        Args:
+            ch (str): channel name as in the ROOT file.
+                In files from DAQ_zero/XenoDAQ these will be &#39;wf#&#39; with #
+                the number of the channel [0,7]
+
+        Returns:
+            dict: Dictionary of keys module, channel, wf_number, led_amplitude, 
+            led_area, led_ADCcounts in led window of the processed waveforms.
+        &#34;&#34;&#34;
+        if ch not in self.raw_data.channels:
+            raise AssertionError(
+                f&#39;The requested channel is not available. &#39;
+                f&#39;Loaded channels:{self.raw_data.channels}&#39;)
+
+        module = self.raw_data.module
+        channel_data = self.raw_data.get_channel_data(ch)
+
+        amplitudes, areas, ADCcounts = fixed_window_processing.process_all_waveforms(
+            channel_data, self.baseline_samples, self.led_window)
+        
+        module_number = [module] * len(areas)
+        ch_name = [ch] * len(areas)
+        wf_number = np.arange(len(areas))
+            
+        results = {&#39;module&#39;: module_number,
+                   &#39;channel&#39;: ch_name,
+                   &#39;wf_number&#39;:wf_number,
+                   &#39;led_amplitude&#39;: amplitudes,
+                   &#39;led_area&#39;: areas,
+                   &#39;led_ADCcounts&#39;: ADCcounts,
+                   }
+
+        return results
+    
+    def process_all_channels(self) -&gt; pd.DataFrame:
+        &#34;&#34;&#34;Calls the process_channel method of each of
+        the available channels in the dataset.
+
+        Returns:
+            pd.DataFrame: Results for all the channels of a dataset.
+        &#34;&#34;&#34;
+        channels_to_process = self.raw_data.channels
+        results_list = [pd.DataFrame(self.process_channel(
+            _channel)) for _channel in channels_to_process]
+        results_df = pd.concat(results_list, ignore_index=True)
+
+        return results_df</code></pre>
+</details>
+<h3>Class variables</h3>
+<dl>
+<dt id="pylars.processing.fixwindowprocessor.window_processor.version"><code class="name">var <span class="ident">version</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="pylars.processing.fixwindowprocessor.window_processor.load_raw_data"><code class="name flex">
+<span>def <span class="ident">load_raw_data</span></span>(<span>self, path_to_raw: str, module: int)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Raw data loader to pass to the processing scripts.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>path_to_raw</code></strong> :&ensp;<code>str</code></dt>
+<dd><em>description</em></dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>raw_data</code></dt>
+<dd>the raw data object</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def load_raw_data(self, path_to_raw: str, module: int):
+    &#34;&#34;&#34;Raw data loader to pass to the processing scripts.
+
+    Args:
+        path_to_raw (str): _description_
+
+    Returns:
+        raw_data: the raw data object
+    &#34;&#34;&#34;
+    raw = raw_data(raw_path = path_to_raw, V = -1, 
+                   T = -1, module = module)
+    raw.load_root()
+    raw.get_available_channels()
+
+    self.raw_data = raw</code></pre>
+</details>
+</dd>
+<dt id="pylars.processing.fixwindowprocessor.window_processor.process_all_channels"><code class="name flex">
+<span>def <span class="ident">process_all_channels</span></span>(<span>self) ‑> pandas.core.frame.DataFrame</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Calls the process_channel method of each of
+the available channels in the dataset.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>pd.DataFrame</code></dt>
+<dd>Results for all the channels of a dataset.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def process_all_channels(self) -&gt; pd.DataFrame:
+    &#34;&#34;&#34;Calls the process_channel method of each of
+    the available channels in the dataset.
+
+    Returns:
+        pd.DataFrame: Results for all the channels of a dataset.
+    &#34;&#34;&#34;
+    channels_to_process = self.raw_data.channels
+    results_list = [pd.DataFrame(self.process_channel(
+        _channel)) for _channel in channels_to_process]
+    results_df = pd.concat(results_list, ignore_index=True)
+
+    return results_df</code></pre>
+</details>
+</dd>
+<dt id="pylars.processing.fixwindowprocessor.window_processor.process_channel"><code class="name flex">
+<span>def <span class="ident">process_channel</span></span>(<span>self, ch: str) ‑> dict</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Process a channel by iterating over all its waveforms and
+calculating the following:
+- baseline
+- integral in the LED window
+- max amplitude in the LED window</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>ch</code></strong> :&ensp;<code>str</code></dt>
+<dd>channel name as in the ROOT file.
+In files from DAQ_zero/XenoDAQ these will be 'wf#' with #
+the number of the channel [0,7]</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>dict</code></dt>
+<dd>Dictionary of keys module, channel, wf_number, led_amplitude, </dd>
+</dl>
+<p>led_area, led_ADCcounts in led window of the processed waveforms.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def process_channel(self, ch: str) -&gt; dict:
+    &#34;&#34;&#34;Process a channel by iterating over all its waveforms and 
+    calculating the following:
+        - baseline
+        - integral in the LED window
+        - max amplitude in the LED window
+
+    Args:
+        ch (str): channel name as in the ROOT file.
+            In files from DAQ_zero/XenoDAQ these will be &#39;wf#&#39; with #
+            the number of the channel [0,7]
+
+    Returns:
+        dict: Dictionary of keys module, channel, wf_number, led_amplitude, 
+        led_area, led_ADCcounts in led window of the processed waveforms.
+    &#34;&#34;&#34;
+    if ch not in self.raw_data.channels:
+        raise AssertionError(
+            f&#39;The requested channel is not available. &#39;
+            f&#39;Loaded channels:{self.raw_data.channels}&#39;)
+
+    module = self.raw_data.module
+    channel_data = self.raw_data.get_channel_data(ch)
+
+    amplitudes, areas, ADCcounts = fixed_window_processing.process_all_waveforms(
+        channel_data, self.baseline_samples, self.led_window)
+    
+    module_number = [module] * len(areas)
+    ch_name = [ch] * len(areas)
+    wf_number = np.arange(len(areas))
+        
+    results = {&#39;module&#39;: module_number,
+               &#39;channel&#39;: ch_name,
+               &#39;wf_number&#39;:wf_number,
+               &#39;led_amplitude&#39;: amplitudes,
+               &#39;led_area&#39;: areas,
+               &#39;led_ADCcounts&#39;: ADCcounts,
+               }
+
+    return results</code></pre>
+</details>
+</dd>
+<dt id="pylars.processing.fixwindowprocessor.window_processor.set_tqdm_config"><code class="name flex">
+<span>def <span class="ident">set_tqdm_config</span></span>(<span>self, bar: bool, show: bool)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Change the tqdm config</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>bar</code></strong> :&ensp;<code>bool</code></dt>
+<dd>show or not the tqdm bar.</dd>
+<dt><strong><code>show</code></strong> :&ensp;<code>bool</code></dt>
+<dd>use tqdm if true, disable if false</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def set_tqdm_config(self, bar: bool, show: bool):
+    &#34;&#34;&#34;Change the tqdm config
+
+    Args:
+        bar (bool): show or not the tqdm bar.
+        show (bool): use tqdm if true, disable if false
+    &#34;&#34;&#34;
+    self.show_loadbar_channel = bar
+    self.show_tqdm_channel = show</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="pylars.processing" href="index.html">pylars.processing</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="pylars.processing.fixwindowprocessor.window_processor" href="#pylars.processing.fixwindowprocessor.window_processor">window_processor</a></code></h4>
+<ul class="">
+<li><code><a title="pylars.processing.fixwindowprocessor.window_processor.load_raw_data" href="#pylars.processing.fixwindowprocessor.window_processor.load_raw_data">load_raw_data</a></code></li>
+<li><code><a title="pylars.processing.fixwindowprocessor.window_processor.process_all_channels" href="#pylars.processing.fixwindowprocessor.window_processor.process_all_channels">process_all_channels</a></code></li>
+<li><code><a title="pylars.processing.fixwindowprocessor.window_processor.process_channel" href="#pylars.processing.fixwindowprocessor.window_processor.process_channel">process_channel</a></code></li>
+<li><code><a title="pylars.processing.fixwindowprocessor.window_processor.set_tqdm_config" href="#pylars.processing.fixwindowprocessor.window_processor.set_tqdm_config">set_tqdm_config</a></code></li>
+<li><code><a title="pylars.processing.fixwindowprocessor.window_processor.version" href="#pylars.processing.fixwindowprocessor.window_processor.version">version</a></code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.9.2</a>.</p>
+</footer>
+</body>
+</html>

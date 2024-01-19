@@ -268,7 +268,7 @@ class peak_processing():
                 list of y.
         &#34;&#34;&#34;
 
-        if algo is not &#39;CoG&#39;:
+        if algo != &#39;CoG&#39;:
             raise NotImplementedError(f&#39;&#39;&#39;The requested reconstruction
             algorithm ({algo}) is not yet implemented,
             try: {cls.available_posrec_algos}&#39;&#39;&#39;)
@@ -592,7 +592,7 @@ object is then constructed.</p></div>
                 list of y.
         &#34;&#34;&#34;
 
-        if algo is not &#39;CoG&#39;:
+        if algo != &#39;CoG&#39;:
             raise NotImplementedError(f&#39;&#39;&#39;The requested reconstruction
             algorithm ({algo}) is not yet implemented,
             try: {cls.available_posrec_algos}&#39;&#39;&#39;)
@@ -1009,7 +1009,7 @@ def reconstruct_xy_position(cls, area_per_sensor: np.ndarray,
             list of y.
     &#34;&#34;&#34;
 
-    if algo is not &#39;CoG&#39;:
+    if algo != &#39;CoG&#39;:
         raise NotImplementedError(f&#39;&#39;&#39;The requested reconstruction
         algorithm ({algo}) is not yet implemented,
         try: {cls.available_posrec_algos}&#39;&#39;&#39;)

@@ -57,8 +57,8 @@ class waveform_processing():
     def process_waveform(cls, waveform: np.ndarray, baseline_samples: int,
                          sigma_level: float = 5, negative_polarity:bool = True):
         &#34;&#34;&#34;Main process function on the waveform level. Finds pulses above
-        (actually bellow) threshold and calls pulse level processing like
-        area, length and position.
+        (beelow if negative polarity) threshold and calls pulse level 
+        processing like area, length and position.
 
         Args:
             waveform (np.ndarray): ADC counts of the waveform;
@@ -138,8 +138,8 @@ class waveform_processing():
     def process_waveform(cls, waveform: np.ndarray, baseline_samples: int,
                          sigma_level: float = 5, negative_polarity:bool = True):
         &#34;&#34;&#34;Main process function on the waveform level. Finds pulses above
-        (actually bellow) threshold and calls pulse level processing like
-        area, length and position.
+        (beelow if negative polarity) threshold and calls pulse level 
+        processing like area, length and position.
 
         Args:
             waveform (np.ndarray): ADC counts of the waveform;
@@ -221,8 +221,8 @@ def get_std_rough(cls, waveform_array: np.ndarray,
 </code></dt>
 <dd>
 <div class="desc"><p>Main process function on the waveform level. Finds pulses above
-(actually bellow) threshold and calls pulse level processing like
-area, length and position.</p>
+(beelow if negative polarity) threshold and calls pulse level
+processing like area, length and position.</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>waveform</code></strong> :&ensp;<code>np.ndarray</code></dt>
@@ -246,8 +246,8 @@ times the std of the computed baseline. Defaults to 5.</p>
 def process_waveform(cls, waveform: np.ndarray, baseline_samples: int,
                      sigma_level: float = 5, negative_polarity:bool = True):
     &#34;&#34;&#34;Main process function on the waveform level. Finds pulses above
-    (actually bellow) threshold and calls pulse level processing like
-    area, length and position.
+    (beelow if negative polarity) threshold and calls pulse level 
+    processing like area, length and position.
 
     Args:
         waveform (np.ndarray): ADC counts of the waveform;

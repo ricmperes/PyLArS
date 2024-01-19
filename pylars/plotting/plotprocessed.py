@@ -1,3 +1,6 @@
+"""Main standard plots for processed data.
+"""
+
 import matplotlib.pyplot as plt
 
 

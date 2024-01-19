@@ -1,3 +1,6 @@
+"""Collection of functions to plot and analyse the fixed window processing.
+"""
+
 from typing import Optional, Tuple
 import numpy as np
 import matplotlib.pyplot as plt

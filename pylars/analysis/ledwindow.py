@@ -1,3 +1,7 @@
+"""Analysis of LED-type data with fixed integration window.
+"""
+
+
 from typing import Tuple, Union
 
 import numpy as np
