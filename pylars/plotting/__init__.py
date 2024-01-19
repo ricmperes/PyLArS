@@ -19,3 +19,4 @@ from .plotprocessed import *
 from .plotwaveforms import *
 from .plotanalysis import *
 from .plotpeaks import *
+from .plotfixwindow import *
