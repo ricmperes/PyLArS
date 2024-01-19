@@ -20,3 +20,5 @@ from . import rawprocessor
 from . import waveforms
 from . import peaks
 from . import peakprocessor
+from . import fixwindow
+from . import fixwindowprocessor
