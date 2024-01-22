@@ -63,4 +63,23 @@ class xenoscope_db():
         """
         _run_db = self.gs_run_db.get_all_records()
         return pd.DataFrame(_run_db)
+    
+    def get_run_dict(self, run_number):
+        row_number = self.get_db_row_number(run_number)
 
+        row_values = self.gs_run_db.get_values(f'{row_number}:{row_number}')[0]
+        header = self.get_header()
+        run_dict = {}
+        for i, key in enumerate(header):
+            run_dict[key] = row_values[i]
+        return run_dict
+        
+    def get_db_row_number(self, run_number):
+        """Get the row number of the run in the database.
+        """
+
+        ## Use self.db.gs_run_db.find(in_column=run_number_col) instead?
+        db_header = self.get_header()
+        run_number_col = db_header.index('Run number') + 1 #GShhet is 1-indexed
+        all_run_numbers = self.gs_run_db.col_values(run_number_col)
+        return all_run_numbers.index(str(run_number)) + 1 

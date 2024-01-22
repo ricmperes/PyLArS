@@ -1,11 +1,11 @@
 from glob import glob
-from typing import Tuple
+from typing import Tuple, Union
 
 import numpy as np
 import pandas as pd
 import uproot
 from pylars.utils.common import load_ADC_config
-
+from pylars.utils.gsheets_db import xenoscope_db
 
 class raw_data():
     '''
@@ -411,6 +411,66 @@ class dataset():
         module: {self.module}
         temperature: {self.temp}
         bias voltage: {self.vbias}
+        --- ---
+        '''
+        return config_print
+
+class db_dataset():
+    """A dataset is an object with the individual setup of each
+    data taking process, ie, each time the DAQ starts acquiring
+    at with a certain config. The db_dataset can point to different
+    raw_files, one for each module used.
+    """
+
+    def __init__(self, run_number: str, db: Union[None, xenoscope_db]):
+        
+        if db is None:
+            self.db = xenoscope_db()
+        
+        self.run_number = run_number
+        self.run_dict = self.db.get_run_dict(self.run_number)
+        self.path = self.run_dict['Path to remote raw data']
+        self.run_type = self.run_dict['Run type']
+        self.vbias = self.run_dict['SiPM bias voltage']
+        # self.read_sizes()
+
+        self.get_files()
+
+    def get_files(self):
+        files = glob(self.path + '**/*.root', recursive = True)
+        self.files = files
+        self.n_modules = len(files)
+        # Assuming each file is a different module, i.e., the full dataset is
+        # written to only 1 .root file (per module)
+
+    def read_sizes(self) -> Tuple[int, int]:
+        """Gets the number of waveforms and number of samples per waveform
+        of a given dataset.
+
+        Brieafly creates a raw_data object of the dataset to access the ROOT
+        file and read the number of entries as number of waveforms and size of
+        entries as number of samples in each waveform.
+
+        Returns:
+            Tuple[int, int]: (number of waveforms, number of samples)
+        """
+        raw = raw_data(raw_path=self.path,
+                       V=0, #mockup
+                       T=0, #mockup
+                       module=0) #mockup
+        raw.load_root()
+        n_samples = raw.get_n_samples()
+        n_waveforms = raw.get_n_waveforms()
+        return n_waveforms, n_samples
+
+    def print_config(self):
+        config_print = f'''
+        ---Dataset info---
+        path: {self.path}
+        run_type: {self.run_type}
+        number of modules found: {self.n_modules}
+        bias voltage: {self.vbias}
+        number of events: {self.run_dict['Total number of events']}
         --- ---
         '''
         return config_print
