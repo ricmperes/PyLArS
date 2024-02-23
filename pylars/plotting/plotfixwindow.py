@@ -24,12 +24,17 @@ def plot_LED_window_from_file(filename: str,
                               module: Optional[int] = None,
                               channel: Optional[str] = None,
                               wf_number: Optional[int] = None,
+                              truncate_wf_left: Optional[int] = None,
+                              truncate_wf_right: Optional[int] = None,
                               figax: Optional[Tuple] = None):
     """Plot the LED window on top of the waveform directly from a file.
     """
 
     process = pylars.processing.fixwindowprocessor.window_processor(
-    baseline_samples=50, led_window=(105,155))
+        baseline_samples=50, led_window=(105,155),
+        truncate_wf_left=truncate_wf_left, 
+        truncate_wf_right=truncate_wf_right)
+
     if module is None:
         module = 0
 

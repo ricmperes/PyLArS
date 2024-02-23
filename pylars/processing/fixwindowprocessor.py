@@ -3,7 +3,7 @@ import pandas as pd
 from pylars.utils.common import get_deterministic_hash
 from pylars.utils.input import raw_data, run
 from tqdm.autonotebook import tqdm
-from typing import Tuple, Union
+from typing import Optional, Tuple, Union
 
 from .fixwindow import fixed_window_processing
 
@@ -16,12 +16,16 @@ class window_processor():
     
     def __init__(self, 
                  led_window: Tuple[int, int], 
-                 baseline_samples: int) -> None:
+                 baseline_samples: int,
+                 truncate_wf_left: Optional[int] = None,
+                 truncate_wf_right: Optional[int] = None) -> None:
         self.baseline_samples = baseline_samples
         self.led_window = led_window
         self.hash = get_deterministic_hash(f"{self.version}" +
                                            f"{self.led_window}" +
                                            f"{self.baseline_samples:.2f}")
+        self.truncate_wf_left = truncate_wf_left
+        self.truncate_wf_right = truncate_wf_right
         self.processed_data = dict()
         self.show_loadbar_channel = True
         self.show_tqdm_channel = True
@@ -50,7 +54,9 @@ class window_processor():
             raw_data: the raw data object
         """
         raw = raw_data(raw_path = path_to_raw, V = -1, 
-                       T = -1, module = module)
+                       T = -1, module = module,
+                       truncate_wf_left=self.truncate_wf_left,
+                       truncate_wf_right=self.truncate_wf_right)
         raw.load_root()
         raw.get_available_channels()
 

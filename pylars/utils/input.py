@@ -1,5 +1,5 @@
 from glob import glob
-from typing import Tuple
+from typing import Tuple, Optional
 
 import numpy as np
 import pandas as pd
@@ -13,10 +13,14 @@ class raw_data():
     acquisition conditions, ...
     '''
 
-    def __init__(self, raw_path: str, V: float, T: float, module: int):
+    def __init__(self, raw_path: str, V: float, T: float, module: int,
+                 truncate_wf_left: Optional[int] = None,
+                 truncate_wf_right: Optional[int] = None):
 
         self.raw_path = raw_path
         self.tree = 't1'
+        self.truncate_wf_left = truncate_wf_left
+        self.truncate_wf_right = truncate_wf_right
 
         self.load_root()
         self.get_available_channels()
@@ -69,11 +73,21 @@ class raw_data():
             keys.pop(-1)
         self.channels = keys
 
-    def get_channel_data(self, ch: str) -> np.ndarray:
+    def get_channel_data(
+            self, ch: str) -> np.ndarray:
         '''
         Return the raw data array of a given channel.
         '''
+        truncate_wf_left = self.truncate_wf_left
+        truncate_wf_right = self.truncate_wf_right
+
+        if type(truncate_wf_left) == int and type(truncate_wf_right) == int:
+            if truncate_wf_right < truncate_wf_left:
+                raise ValueError(
+                    'truncate_wf_right must be greater than truncate_wf_left')
+        
         data = self.raw_file[self.tree][ch].array()  # type: ignore
+        data = data[:,truncate_wf_left:truncate_wf_right]
         return np.array(data)
 
     def get_n_waveforms(self) -> int:
@@ -91,7 +105,7 @@ class raw_data():
         return n_waveforms
 
     def get_n_samples(self) -> int:
-        """Get the number of samples in wach waveform in the root file
+        """Get the number of samples in each waveform in the root file
         without reading the whole array.
 
         Returns:
@@ -100,8 +114,17 @@ class raw_data():
         first_channel = self.channels[0]
         
         n_samples = self.raw_file[self.tree][first_channel].interpretation.inner_shape[0] # type: ignore
-        self.n_samples = n_samples
-        return n_samples
+        
+        truncated_n_samples = n_samples
+        if self.truncate_wf_left is not None:
+            truncated_n_samples -= self.truncate_wf_left  
+
+        if self.truncate_wf_right is not None:
+            truncated_n_samples -= n_samples - self.truncate_wf_right
+
+        self.n_samples = truncated_n_samples
+
+        return truncated_n_samples
 
 
 class run():
@@ -364,13 +387,17 @@ class dataset():
     """
 
     def __init__(self, path: str, kind: str,
-                 module: int, temp: float, vbias: float):
+                 module: int, temp: float, vbias: float,
+                 truncate_wf_left: Optional[int] = None,
+                 truncate_wf_right: Optional[int] = None):
         self.path = path
         self.kind = kind
         self.module = module
         self.temp = temp
         self.vbias = vbias
         # self.read_sizes()
+        self.truncate_wf_left = truncate_wf_left
+        self.truncate_wf_right = truncate_wf_right
 
         self.dict = dict(kind=self.kind,
                          module=self.module,
@@ -397,7 +424,9 @@ class dataset():
         raw = raw_data(raw_path=self.path,
                        V=self.vbias,
                        T=self.temp,
-                       module=self.module)
+                       module=self.module,
+                       truncate_wf_left=self.truncate_wf_left,
+                       truncate_wf_right=self.truncate_wf_right)
         raw.load_root()
         n_samples = raw.get_n_samples()
         n_waveforms = raw.get_n_waveforms()

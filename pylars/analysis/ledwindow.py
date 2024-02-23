@@ -1,4 +1,4 @@
-from typing import Tuple, Union
+from typing import Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -13,10 +13,14 @@ class LED_window():
 
     def __init__(self,
                  led_window: Tuple[int, int],
-                 led_data_path: str) -> None:
+                 led_data_path: str,
+                 truncate_wf_left: Optional[int] = None,
+                 truncate_wf_right: Optional[int] = None) -> None:
         self.led_window = led_window
         self.led_data_path = led_data_path
         self.baseline_samples = 50
+        self.truncate_wf_left = truncate_wf_left
+        self.truncate_wf_right = truncate_wf_right
 
         self.files_df = self.find_files()
 
@@ -58,7 +62,9 @@ class LED_window():
 
         processor = pylars.processing.fixwindowprocessor.window_processor(
             baseline_samples=self.baseline_samples, 
-            led_window=(self.led_window[0],self.led_window[1]))
+            led_window=(self.led_window[0],self.led_window[1]),
+            truncate_wf_right=self.truncate_wf_right,
+            truncate_wf_left=self.truncate_wf_left)
         
         processor.load_raw_data(path_to_raw=data_path, module=module)
         df_processed = processor.process_all_channels()

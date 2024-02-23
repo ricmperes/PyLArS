@@ -1,3 +1,4 @@
+from typing import Optional
 import numpy as np
 import pandas as pd
 from pylars.utils.common import get_deterministic_hash
@@ -15,7 +16,9 @@ class simple_processor():
     processing_method = 'simple'
 
     def __init__(self, sigma_level: float, baseline_samples: int, 
-                 signal_negative_polarity: bool = True):
+                 signal_negative_polarity: bool = True,
+                 truncate_wf_left: Optional[int] = None,
+                 truncate_wf_right: Optional[int] = None):
 
         self.sigma_level = sigma_level
         self.baseline_samples = baseline_samples
@@ -24,6 +27,8 @@ class simple_processor():
                                            f"{self.sigma_level}" +
                                            f"{self.baseline_samples:.2f}")
         self.signal_negative_polarity = signal_negative_polarity
+        self.truncate_wf_left = truncate_wf_left
+        self.truncate_wf_right = truncate_wf_right
         self.processed_data = dict()
         self.show_loadbar_channel = True
         self.show_tqdm_channel = True
@@ -54,7 +59,9 @@ class simple_processor():
         Returns:
             raw_data: _description_
         """
-        raw = raw_data(path_to_raw, V, T, module)
+        raw = raw_data(path_to_raw, V, T, module, 
+                       truncate_wf_left=self.truncate_wf_left,
+                       truncate_wf_right=self.truncate_wf_right)
         raw.load_root()
         raw.get_available_channels()
 
@@ -174,7 +181,9 @@ class run_processor(simple_processor):
     """
 
     def __init__(self, run_to_process: run, processor_type: str,
-                 sigma_level: float, baseline_samples: int):
+                 sigma_level: float, baseline_samples: int,
+                 truncate_wf_left: Optional[int] = None,
+                 truncate_wf_right: Optional[int] = None):
         if not isinstance(run_to_process, run):
             raise TypeError("Needs run type object.")
         if processor_type != 'simple':
@@ -182,7 +191,9 @@ class run_processor(simple_processor):
                 "Only 'simple' is available. Please make a PR to add more.")
 
         self.run = run_to_process
-
+        self.truncate_wf_left = truncate_wf_left
+        self.truncate_wf_right = truncate_wf_right
+        
         super().__init__(
             sigma_level, baseline_samples, 
             signal_negative_polarity = self.run.signal_negative_polarity)
@@ -256,10 +267,10 @@ class run_processor(simple_processor):
                             total=total,
                             disable=(not self.show_tqdm_run)):
 
-            self.load_raw_data(path_to_raw=dataset.path,
-                               V=dataset.vbias,
-                               T=dataset.temp,
-                               module=dataset.module)
+            self.load_raw_data(path_to_raw=dataset.path, # type: ignore
+                               V=dataset.vbias, # type: ignore
+                               T=dataset.temp, # type: ignore
+                               module=dataset.module) # type: ignore
 
             # this returns a pd.DataFrame
             _results_of_dataset = self.process_all_channels()
