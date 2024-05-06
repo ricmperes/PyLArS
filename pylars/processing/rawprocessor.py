@@ -184,20 +184,19 @@ class run_processor(simple_processor):
                  sigma_level: float, baseline_samples: int,
                  truncate_wf_left: Optional[int] = None,
                  truncate_wf_right: Optional[int] = None):
-        if not isinstance(run_to_process, run):
-            raise TypeError("Needs run type object.")
+        #if not isinstance(run_to_process, run):
+        #    raise TypeError("Needs run type object.")
         if processor_type != 'simple':
             raise NotImplementedError(
                 "Only 'simple' is available. Please make a PR to add more.")
-
-        self.run = run_to_process
-        self.truncate_wf_left = truncate_wf_left
-        self.truncate_wf_right = truncate_wf_right
         
+        self.run = run_to_process
         super().__init__(
             sigma_level, baseline_samples, 
-            signal_negative_polarity = self.run.signal_negative_polarity)
-
+            signal_negative_polarity = self.run.signal_negative_polarity,
+            truncate_wf_left=truncate_wf_left,
+            truncate_wf_right=truncate_wf_right)
+        
         self.datasets_df = self.run.get_run_df()
         self.show_loadbar_run = True
         self.show_tqdm_run = True

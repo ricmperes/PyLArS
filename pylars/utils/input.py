@@ -157,6 +157,8 @@ class run():
         if self.run_number < 6:
             main_run_path = self.main_data_path + \
                 f'run{self.run_number}/'
+        elif self.run_number == 11:
+            main_run_path = self.main_data_path
         else:
             main_run_path = self.main_data_path + \
                 f'run{self.run_number}/data/'
@@ -219,6 +221,16 @@ class run():
         """
         all_root_files = self.root_files
         datasets = []
+
+        if self.run_number == 11:
+            self.root_files = []
+            for path in all_root_files:
+                splited_f = path.split('_')
+                t = int(splited_f[-6][:-1])
+                v = float(splited_f[-5] + '.' + splited_f[-4][:-1])
+                datasets.append(dataset(path, 'DCR', 0, t, v))
+            return datasets
+
         if self.run_number == 9:
             self.root_files = []
             temps = [190, 195, 200, 205, 210]

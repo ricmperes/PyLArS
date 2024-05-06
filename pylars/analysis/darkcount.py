@@ -10,7 +10,7 @@ dataset/run. It is divided into:
 
 import copy
 import time
-from typing import Tuple, Union
+from typing import Tuple, Union, Optional
 
 import numba
 import numpy as np
@@ -311,7 +311,8 @@ class DCR_dataset(DCR_analysis):
 
     def __init__(self, run: pylars.utils.input.run, temperature: float,
                  module: int, channel: str,
-                 processor: pylars.processing.rawprocessor.run_processor):
+                 processor: pylars.processing.rawprocessor.run_processor,
+                 force_processing = False):
 
         self.run = run
         self.temp = temperature
@@ -321,6 +322,7 @@ class DCR_dataset(DCR_analysis):
         self.voltages = self.get_voltages_available()
         self.plots_flag = False
         self.livetimes = self.get_livetimes()
+        self.force_processing = force_processing
 
         self.set_standard_cuts()
 
@@ -459,7 +461,12 @@ class DCR_dataset(DCR_analysis):
         Returns:
             dict: dictionary with the data df for each voltage as a key.
         """
+
+        if force_processing != self.force_processing:
+            self.force_processing = force_processing
+
         self.data = {}
+
         for _voltage in tqdm(self.voltages,
                              desc=f'Loading processed data for DCR ' +
                              f'data at {self.temp}K: ',
@@ -473,7 +480,7 @@ class DCR_dataset(DCR_analysis):
                 path_processed=('/disk/gfs_atp/xenoscope/SiPMs/char_campaign/'
                                 'processed_data/'),
                 process_hash=self.process.hash)
-            processed_data.load_data(force=force_processing)
+            processed_data.load_data(force=self.force_processing)
 
             _df = processed_data.data
             mask = ((_df['module'] == self.module) &
@@ -689,7 +696,9 @@ class DCR_run():
 
     def __init__(self, run: pylars.utils.input.run,
                  processor: pylars.processing.rawprocessor.run_processor,
-                 use_n_pulse: bool = True):
+                 use_n_pulse: bool = True,
+                 force_processing: bool = False,
+                 analysis_path: Optional[str] = None):
 
         self.run = run
         self.process = processor
@@ -697,8 +706,11 @@ class DCR_run():
         self.datasets = self.process.datasets_df
         self.temperatures = self.get_run_temperatures()
         self.plots_flag = False
-        self.analysis_path = (f'{self.run.main_data_path[:-9]}analysis_data'
+        if analysis_path is None:
+            self.analysis_path = (f'{self.run.main_data_path[:-9]}analysis_data'
                               f'/run{self.run.run_number}/')
+        else: self.analysis_path = analysis_path
+        self.force_processing = force_processing
 
     def set_plots_flag(self, flag: bool) -> None:
         """Set if computing properties makes plots (True) or not (False).
@@ -792,14 +804,16 @@ class DCR_run():
         Returns:
             DCR_dataset: dataset obeject
         """
-        particular_DCR_dataset = DCR_dataset(run=self.run,
-                                             temperature=temp,
-                                             module=module,
-                                             channel=channel,
-                                             processor=self.process,
-                                             )
+        particular_DCR_dataset = DCR_dataset(
+            run=self.run,
+            temperature=temp,
+            module=module,
+            channel=channel,
+            processor=self.process,
+            force_processing=self.force_processing)
 
-        particular_DCR_dataset.load_processed_data()
+        particular_DCR_dataset.load_processed_data(
+            force_processing=self.force_processing)
 
         return particular_DCR_dataset
 
