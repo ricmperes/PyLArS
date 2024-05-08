@@ -5,7 +5,7 @@ import json
 from typing import Dict, List, Union, Tuple
 
 import numpy as np
-import pylars.utils.input
+import pylars
 from scipy.signal import find_peaks
 import scipy.ndimage
 
