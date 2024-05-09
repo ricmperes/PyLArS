@@ -10,7 +10,7 @@ def open_requirements(path):
 requires = open_requirements('requirements.txt')
 setup(
     name='pylars',
-    version='0.0.2',
+    version='0.0.3',
     packages=find_packages(exclude=['tests*']),
     license='none',
     description='A python-based simple processor for data acquired with XenoDAQ',
@@ -19,5 +19,5 @@ setup(
     url='https://github.com/ricmperes/PyLArS',
     author='Ricardo Peres',
     author_email='rperes@physik.uzh.ch',
-    scripts=['bin/pylars']
+    scripts=['bin/pylars', 'bin/pylars_led']
 )

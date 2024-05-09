@@ -154,8 +154,6 @@ def get_results(args, polarity: bool, root_files: list) -> str:
     results.to_hdf(processed_file_path, key = 'df')
     return processed_file_path
 
-
-
 if __name__ == '__main__':
     'Ramping up processing.'
     args = parser.parse_args()
