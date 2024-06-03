@@ -116,8 +116,8 @@ class LED_window():
                                            distance=5)
             spe_rough = middle_bins[peaks[1]]
         except:
-            spe_rough = 2000
-        if (spe_rough -2000) > 1000: spe_rough = 2000
+            spe_rough = 2500
+        #if (spe_rough -2000) > 1000: spe_rough = 2000
 
         spe_mask = np.abs(middle_bins-spe_rough) < spe_rough*0.5
         (A, mu, sigma), cov = curve_fit(pylars.utils.common.Gaussian, 
@@ -212,7 +212,6 @@ class LED_window():
                                    'module': [_module], 
                                    'channel': [_channel]})), 
                     ignore_index=True)
-                continue
 
         self.failed_calculation_df = failed_calculation_df
         self.results_df = results_df
@@ -227,3 +226,12 @@ class LED_window():
         # Save results
         now = datetime.datetime.now().isoformat()
         self.results_df.to_csv(f'gain_results_{str(now)}.csv', index=False)
+
+    def print_gains_occ_for_wiki(self):
+        if not hasattr(self, 'df_gains'):
+            raise AssertionError('No computed gains found. Run '
+                                 'calculate_all_gains_occ first.')
+        for i, row in self.df_gains.iterrows(): # type: ignore
+            print(f"| {row['tile']} | {row['gain']:.3f} $\pm$ "
+                f"{row['gain_err']:.3f} | {row['occ']:.3f} $\pm$ "
+                f"{row['occ_err']:.3f} |")

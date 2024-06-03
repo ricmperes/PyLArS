@@ -169,3 +169,30 @@ def plot_1_pe_fit_led(df_processed, led_voltage, module, channel, A, mu, sigma, 
             plt.show()
         else:
             return fig, ax
+        
+def plot_gains_occ(df_gains, figaxs = None):
+    if figaxs == None:
+        fig, axs = plt.subplots(2,1, figsize = (4,4), 
+                        dpi = 120, sharex = True,
+                        gridspec_kw = {'hspace':0, 'wspace':0},
+                        constrained_layout = False)
+        axs = axs.flatten()
+
+    _x = np.arange(len(df_gains))
+    axs[0].errorbar(_x, df_gains['gain'], yerr = df_gains['gain_err'],
+                    ls = '', capsize = 4, marker = '.')
+
+    axs[1].errorbar(_x, df_gains['occ'], yerr = df_gains['occ_err'],
+                    ls = '', capsize = 4, marker = '.')
+
+
+    axs[0].set_xticks(_x, df_gains['tile'])
+    axs[0].set_ylim(0,1.5)
+    axs[0].set_ylabel('Gain [$10^6$]')
+    axs[1].set_ylabel('Occupancy')
+    axs[1].set_ylim(-0.1,3.9)
+    if figaxs == None:
+        plt.show()
+
+    else:
+        return (fig, axs)
