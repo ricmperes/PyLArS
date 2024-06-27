@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
 import argparse
-
-import pandas as pd
-import pylars
+import glob
 
 import matplotlib.pyplot as plt
-import glob
+import pandas as pd
+
+import pylars
 
 plt.style.use('~/notebooks/thesis_plots/thesis_style.mplstyle')
 
@@ -41,8 +41,13 @@ def get_files(args):
     _dfs = []
     for _f in files:
         _fname = _f.split('/')[-1].split('_')
+        _vled = _fname[1]
+        if _vled[-1] == 'p':
+            _vled = float(_vled[:-3])
+        else:
+            _vled = float(_vled[:-1])
         _dfs.append({'Vbias': float(_fname[0][:-1]),
-                    'LEDvoltage': float(_fname[1][:-3]),
+                    'LEDvoltage': _vled,
                     'LEDwidth': 100,
                     'module' : int(_fname[5]),
                     'path' : _f})

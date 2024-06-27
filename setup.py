@@ -19,5 +19,5 @@ setup(
     url='https://github.com/ricmperes/PyLArS',
     author='Ricardo Peres',
     author_email='rperes@physik.uzh.ch',
-    scripts=['bin/pylars', 'bin/pylars_led']
+    scripts=['bin/pylars', 'bin/pylars_led', 'bin/pylars_gainevo']
 )

@@ -196,3 +196,40 @@ def plot_gains_occ(df_gains, figaxs = None):
 
     else:
         return (fig, axs)
+    
+
+def plot_gain_evolution(gain_evolution: pd.DataFrame, 
+                        tile_list: list, mod, 
+                        figax = None):
+    
+    if figax == None:
+        fig, ax = plt.subplots(1,1, figsize=(6,4), dpi = 120)
+    else:
+        fig, ax = figax
+
+    for _tile in tile_list:
+        _df = gain_evolution[gain_evolution['tile'] == _tile]
+        ax.errorbar(_df['date'], _df['gain'], yerr = _df['gain_err'], 
+                     fmt='-', 
+                    marker = '.', label=_tile)
+    ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left', 
+            title='Tile', 
+            labelspacing=1.0)
+    ax.set_ylim(0.7,1.05)
+    ax.set_title(f'Gain evolution - ADC #{mod}')
+    ax.tick_params(axis = 'x', rotation=45)
+    ax.set_ylabel('SiPM Gain [M]')
+    # plt.twinx()
+    # plt.plot(tt09['datetime'], tt09['TT09'], 'k--', alpha = 0.3,
+    #          zorder = -10,label='Gast temperature')
+    
+    # plt.axvline(np.datetime64('2024-06-14T17:00:00'),ls = '--', color = 'gray', alpha = 0.8)
+    # plt.text(np.datetime64('2024-06-14T08:00:00'), 0.78, 
+    #          'Filling complete', color = 'gray',rotation=90)
+    
+    
+    if figax == None:
+        fig.savefig(f'21062024_mod{mod}.png')
+        plt.show()
+    else:
+        return fig, ax

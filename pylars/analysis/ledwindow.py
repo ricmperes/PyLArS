@@ -216,7 +216,7 @@ class LED_window():
         self.failed_calculation_df = failed_calculation_df
         self.results_df = results_df
     
-    def save_gain_results(self):
+    def save_gain_results(self, name = ''):
 
         # Check if results exist
         if not hasattr(self, 'results_df'):
@@ -224,8 +224,11 @@ class LED_window():
                 'No results found. Run calculate_all_gains_occ first.')
         
         # Save results
-        now = datetime.datetime.now().isoformat()
-        self.results_df.to_csv(f'gain_results_{str(now)}.csv', index=False)
+        if name == '':
+            now = datetime.datetime.now().isoformat()
+            self.results_df.to_csv(f'gain_results_{str(now)}.csv', index=False)
+        else:
+            self.results_df.to_csv(f'{name}.csv', index=False)
 
     def print_gains_occ_for_wiki(self):
         if not hasattr(self, 'df_gains'):
