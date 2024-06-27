@@ -256,10 +256,10 @@ class run_processor(simple_processor):
                             total=total,
                             disable=(not self.show_tqdm_run)):
 
-            self.load_raw_data(path_to_raw=dataset.path,
-                               V=dataset.vbias,
-                               T=dataset.temp,
-                               module=dataset.module)
+            self.load_raw_data(path_to_raw=dataset.path, # type: ignore
+                               V=dataset.vbias, # type: ignore
+                               T=dataset.temp, # type: ignore
+                               module=dataset.module) # type: ignore
 
             # this returns a pd.DataFrame
             _results_of_dataset = self.process_all_channels()
