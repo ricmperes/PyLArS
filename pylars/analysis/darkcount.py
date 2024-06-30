@@ -92,7 +92,7 @@ class DCR_analysis():
     def get_1pe_rough(cls, df: pd.DataFrame,
                       length_cut_min: int,
                       length_cut_max: int,
-                      bins: int or list = 200,
+                      bins: Union[int, list] = 200,
                       use_scipy_find_peaks: bool = False) -> tuple:
         """From an event df (1 channel), find the rough position of the
         SPE from the DCR vs threshold curve and its derivative
@@ -115,7 +115,7 @@ class DCR_analysis():
         grad = np.gradient(DCR_values)
         grad_spline = itp.UnivariateSpline(area_hist_x, grad)
         # , s = len(area_hist_x)*3)
-        DCR_der_x_points = np.linspace(area_hist_x[0], area_hist_x[-1], bins)
+        DCR_der_x_points = np.linspace(area_hist_x[0], area_hist_x[-1], bins) # type: ignore
         DCR_der_y_points = grad_spline(DCR_der_x_points)
 
         if use_scipy_find_peaks:
@@ -142,7 +142,7 @@ class DCR_analysis():
     def get_DCR_above_threshold_values(cls, df: pd.DataFrame,
                                        length_cut_min: int = 5,
                                        length_cut_max: int = 80,
-                                       bins: int or list = 200,
+                                       bins: Union[int, list] = 200,
                                        output: str = 'values',
                                        **kwargs) -> Union[
             tuple,
@@ -894,7 +894,7 @@ class DCR_run():
                                           "disk space")
 
         name = f'DCR_results_{custom_name}'
-        self.results_df.to_hdf(self.analysis_path + name + '.h5', 'df')
+        self.results_df.to_hdf(self.analysis_path + name + '.h5', key = 'df')
         print('Saved results to ')
 
     def load_results(self, name: str) -> None:

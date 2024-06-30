@@ -1,0 +1,166 @@
+#!/usr/bin/env python3
+
+import argparse
+import datetime
+import glob
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import tqdm
+
+import pylars
+
+plt.style.use('~/notebooks/thesis_plots/thesis_style.mplstyle')
+
+parser = argparse.ArgumentParser(
+    description=('Script to process an LED dataset.'))
+
+parser.add_argument('-m', '--main_path',
+                    help='Path to the main data path.',
+                    default = '/disk/gfs_atp/xenoscope/tpc/filling/LED/',
+                    type = str,
+                    required=False)
+
+parser.add_argument('-l', '--led_window',
+                    help='Led window.',
+                    default = (105,150),
+                    type = tuple,
+                    required=False)
+
+parser.add_argument('-vl','--vled',
+                    help='LED voltage.',
+                    default = 3.4,
+                    type = float,
+                    required=False)
+
+parser.add_argument('-s', '--start_date',
+                    help='Start date for the LED monitor.',
+                    default = '2024-06-14',
+                    type = str,
+                    required=False)
+
+parser.add_argument('-e', '--end_date',
+                    help='End date for the LED monitor.',
+                    default = 'now',
+                    type = str,
+                    required=False)
+
+parser.add_argument('-o', '--output_path',
+                    help='Path to save the output files.',
+                    default = './',
+                    type = str,
+                    required=False)
+
+labels = {'mod0' : {'wf1': 'wf1 | Tile H', 'wf2': 'wf2 | Tile J', 
+                        'wf3': 'wf3 | Tile K', 'wf4': 'wf4 | Tile L',
+                        'wf5': 'wf5 | Tile M', 
+                        'wf6': 'wf6 | Muon detector 1', 
+                        'wf7': 'wf7 | Muon detector 2'},
+              'mod1' : {'wf1': 'wf1 | Tile A', 'wf2': ' wf2 | Tile B', 
+                        'wf3': 'wf3 | Tile C', 'wf4': 'wf4 | Tile D',
+                        'wf5': 'wf5 | Tile E', 'wf6': 'wf6 | Tile F', 
+                        'wf7': 'wf7 | Tile G' }
+             }
+labels_tiles = {'mod0' : {'wf1': 'H', 'wf2': 'J', 
+                        'wf3': 'K', 'wf4': 'L',
+                        'wf5': 'M', 
+                        'wf6': 'Muon detector 1', 
+                        'wf7': 'Muon detector 2'},
+              'mod1' : {'wf1': 'A', 'wf2': 'B', 
+                        'wf3': 'C', 'wf4': 'D',
+                        'wf5': 'E', 'wf6': 'F', 
+                        'wf7': 'G' }
+                        }
+
+def get_files(args) -> pd.DataFrame:
+    """Get raw files for LED monitor plot.
+
+    Args:
+        args: arguments from the parser.
+
+    Returns:
+        pd.DataFrame: the files to be processed.
+    """
+    gain_cal_files = np.sort(glob.glob(args.main_path + '**/*.root', 
+                                       recursive=True))
+
+    cal_select = []
+
+    for file in gain_cal_files:
+        if ('52' in file) and (str(args.vled) in file):
+            cal_select.append(file)
+
+    _dfs = []
+    for _fname in cal_select:
+        _date_str = _fname.split('/')[-1].split('_')[2]
+        _date = np.datetime64(
+            f'{_date_str[:4]}-{_date_str[4:6]}-{_date_str[6:8]}')
+        _dfs.append({'Vbias': 52,
+                    'LEDvoltage': float(args.vled),
+                    'LEDwidth': 100,
+                    'module' : int(_fname.split('/')[-1].split('_')[-2]),
+                    'path' : _fname,
+                    'date': _date})
+        
+    files_df = pd.DataFrame(_dfs)
+    files_df.sort_values(['date','module'], 
+                         inplace=True, 
+                         ignore_index=True)
+
+    if args.end_date == 'now':
+        args.end_date = files_df['date'].max()
+
+    files_df = files_df[(files_df['date'] >= np.datetime64(args.start_date)) & 
+                        (files_df['date'] <= np.datetime64(args.end_date))]
+    return files_df
+
+def load_and_process_LED(files_df):
+
+    LED_calib = pylars.analysis.LED_window(led_window=(105,150),
+                                       led_data_path=args.main_path)
+    LED_calib.files_df = files_df
+    LED_calib.process_all_datasets()
+    
+    return LED_calib
+
+def process_date(files_df, _date):
+
+    
+    _select_files = files_df[files_df['date'] == _date]
+
+    LED_calib = load_and_process_LED(_select_files)
+
+    LED_calib.calculate_all_gains_occ()
+
+    LED_calib.save_gain_results(name = _date)
+
+    results_df = pylars.utils.common.apply_tile_labels(
+        LED_calib.results_df, labels_tiles)
+    results_df['date'] = _date
+
+    return results_df
+
+def process_all_evolution(files_df):
+    dates_avail = files_df['date'].unique()
+
+    gain_evolution = pd.DataFrame()
+    for _date in tqdm.tqdm(dates_avail):
+        gains_1_date = process_date(files_df, _date)
+        gain_evolution = pd.concat([gain_evolution,gains_1_date])
+    return gain_evolution
+
+if __name__ == '__main__':
+    print('Starting LED evolution processing.')
+    args = parser.parse_args()
+
+    files_df = get_files(args)
+    gain_evolution = process_all_evolution(files_df)
+
+    now = datetime.datetime.now().isoformat(timespec='seconds').replace(':','-')
+                                                                                  
+    gain_evolution.to_hdf(args.output_path + 
+                          f'./gain_evolution_{now}.h5', 
+                          key='df', mode='w')
+
+    print('LED calibration processing and evolution finished.')
