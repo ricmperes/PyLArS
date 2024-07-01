@@ -4,7 +4,7 @@ from typing import Tuple, Union
 import numpy as np
 import pandas as pd
 import uproot
-from pylars.utils.common import load_ADC_config
+from pylars.utils.common import load_ADC_config, get_summary_info
 from pylars.utils.gsheets_db import xenoscope_db
 
 class raw_data():
@@ -474,3 +474,111 @@ class db_dataset():
         --- ---
         '''
         return config_print
+
+class muon_run():
+    """Main class of a muon run. It contains the necessary functions to find,
+    load and process the data of muon data taking. Some DB would be much 
+    better, please make a PR.
+    """
+
+    def __init__(self, run_number: int, main_data_path: str, F_amp: float,
+                 ADC_model: str = 'v1724', 
+                 signal_negative_polarity: bool = True):
+        self.run_number = run_number
+        self.main_data_path = main_data_path
+
+        self.root_files = self.get_all_files_of_run()
+        self.files_df, self.files_fail = self.get_all_datasets()
+        
+        self.define_ADC_config(F_amp=F_amp, model=ADC_model)
+        self.signal_negative_polarity = signal_negative_polarity
+        self.load_labels()
+
+    def __repr__(self) -> str:
+        repr = f'Run {self.run_number}'
+        return repr
+    
+    def get_all_files_of_run(self) -> list:
+        """Look for all the raw files stored for a given run.
+
+        Returns:
+            list: list of all ROOT files in the run.
+        """
+
+        all_root_files = glob(
+            self.main_data_path + '/**/*.root', recursive=True)
+        return all_root_files
+    
+
+    def muon_run_info(self,file):
+        file_name = file.split('/')[-1]
+        specific_name = file_name[:-16]
+        summary_file = f'{self.main_data_path}/{specific_name}/Summary_{specific_name}.txt'
+
+        end, duration, n_events = get_summary_info(summary_file)
+
+        start = end - duration
+
+        module = file_name[-8]
+
+        info_dict = {'start' : start, 'end' : end, 
+                    'duration' : duration, 'n_events' : int(n_events), 
+                    'module' : int(module), 'path' : file}
+        
+        return  info_dict
+
+    def get_all_datasets(self) -> Union[pd.DataFrame, Tuple]:
+        files_df = pd.DataFrame(columns=['start','end','duration',
+                                         'n_events','module','path'])
+        files_fail = []
+        for file in self.root_files:
+            try:
+                files_df = files_df.append(self.muon_run_info(file), 
+                                           ignore_index=True) # type: ignore
+            except FileNotFoundError:
+                files_fail.append(file)
+
+        files_df.sort_values(by=['start', 'module'], inplace=True, 
+                             ignore_index=True)
+        return files_df, files_fail
+    
+    def define_ADC_config(self, F_amp: float, model: str = 'v1724') -> None:
+        """Load the ADC related quantities for the run.
+
+        Args:
+        model (str): model of the digitizer
+        F_amp (float): signal amplification from the sensor (pre-amp *
+            external amplification on rack).
+        """
+
+        self.ADC_config = load_ADC_config(model, F_amp)
+        
+    def load_labels(self) -> None:
+        """Define the labeling of all the channels and corresponding tiles.
+        """
+        labels_complete = {'mod0' : {'wf1': 'wf1 | Tile H', 
+                                     'wf2': 'wf2 | Tile J', 
+                                     'wf3': 'wf3 | Tile K', 
+                                     'wf4': 'wf4 | Tile L',
+                                     'wf5': 'wf5 | Tile M', 
+                                     'wf6': 'wf6 | Muon detector 1', 
+                                     'wf7': 'wf7 | Muon detector 2'},
+                           'mod1' : {'wf1': 'wf1 | Tile A', 
+                                     'wf2': ' wf2 | Tile B', 
+                                     'wf3': 'wf3 | Tile C', 
+                                     'wf4': 'wf4 | Tile D',
+                                     'wf5': 'wf5 | Tile E', 
+                                     'wf6': 'wf6 | Tile F', 
+                                     'wf7': 'wf7 | Tile G' }
+                            }
+        labels_tiles = {'mod0' : {'wf1': 'H', 'wf2': 'J', 'wf3': 'K',
+                                  'wf4': 'L', 'wf5': 'M', 
+                                  'wf6': 'Muon detector 1', 
+                                  'wf7': 'Muon detector 2'},
+                        'mod1' : {'wf1': 'A', 'wf2': 'B', 'wf3': 'C', 
+                                  'wf4': 'D', 'wf5': 'E', 'wf6': 'F', 
+                                  'wf7': 'G' }
+                       }
+
+        self.labels_complete = labels_complete
+        self.labels_tiles = labels_tiles
