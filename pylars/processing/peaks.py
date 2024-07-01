@@ -100,7 +100,8 @@ class peak_processing():
         assert len(baselines) == np.shape(waveforms)[0], ('''Size of
         baseines and channels in waveforms array do not match.''')
 
-        waveforms_subtracted = (baselines - waveforms.T).T  # type: ignore
+        baselines_expanded = baselines[:, :, np.newaxis]
+        waveforms_subtracted = baselines_expanded - waveforms
 
         return waveforms_subtracted
 

@@ -19,7 +19,7 @@ class peak_processor():
     processing_method = 'peaks_simple'
 
     # for run6
-    index_reorder_data_to_layout = [9, 4, 5, 6, 11, 10, 8, 0, 2, 3, 7, 1]
+    index_reorder_channels = [5, 6, 7, 8, 9, 10, 11, 0, 1, 2, 3, 4]
 
     def __init__(self, sigma_level: float, baseline_samples: int,
                  gains_tag: str, gains_path: str) -> None:
@@ -64,10 +64,11 @@ class peak_processor():
 
         # return gains
 
-        gain_df = pd.read_csv(self.gains_path + self.gains_tag,
-                              header=None,
-                              names=['module', 'channel', 'gain'])
-        gain_df = gain_df.sort_values(['module', 'channel'], ignore_index=True)
+        gain_df = pd.read_csv(f'{self.gains_path}/gains_{self.gains_tag}.csv')
+        gain_df = gain_df.sort_values(by=['tile'], 
+                                      ignore_index=True)
+        if gain_df.iloc[0]['gain'] < 1e4:
+            gain_df['gain'] = gain_df['gain'] * 1e6
 
         return np.array(gain_df['gain'])
 
@@ -105,16 +106,9 @@ class peak_processor():
             waveforms (np.ndarray): waveforms of all channels stacked.
         """
 
-        baselines = np.apply_along_axis(
-            func1d=waveform_processing.get_baseline_rough,
-            axis=1,
-            arr=waveforms,
-            baseline_samples=self.baseline_samples)
+        waveforms_pe, sum_waveform = self.flip_and_apply_gains(waveforms)
 
-        waveforms_pe = peak_processing.apply_waveforms_transform(
-            waveforms, baselines, self.gains, self.ADC_config)
-        sum_waveform = peak_processing.get_sum_waveform(waveforms_pe)
-
+        
         areas, lengths, positions, amplitudes = waveform_processing.process_waveform(
             sum_waveform, self.baseline_samples, self.sigma_level)
 
@@ -123,19 +117,64 @@ class peak_processor():
 
         return areas, lengths, positions, amplitudes
 
-    def load_raw_data(self, path_to_raw: str, V: float, T: float, module: int):
+    def flip_and_apply_gains(self, waveforms):
+        baselines = np.apply_along_axis(
+            func1d=waveform_processing.get_baseline_rough,
+            axis=2,
+            arr=waveforms,
+            baseline_samples=self.baseline_samples)
+
+        waveforms_pe = peak_processing.apply_waveforms_transform(
+            waveforms, baselines, self.gains, self.ADC_config)
+        sum_waveform = peak_processing.get_sum_waveform(waveforms_pe)
+        return waveforms_pe,sum_waveform
+
+    def load_raw_data(self, path_to_raw_both_modules: list, 
+                      modules : list, V: float, T: float,
+                      ignore_channels: list = []):
         """Raw data loader to pass to the processing scripts.
 
         Args:
-            path_to_raw (str): _description_
+            path_to_raw_both_modules (list): list with path to both raw files, 
+                one for each module. If len(pat_list) = 1, then it assumes 
+                one only module.
             V (float): _description_
             T (float): _description_
+            ignore_channels (list): list of channels to ignore. Each element 
+                should be a list corresponding to each module, in order.
 
         Returns:
             raw_data: _description_
         """
-        raw = raw_data(path_to_raw, V, T, module)
-        raw.load_root()
-        raw.get_available_channels()
+        
+        assert len(path_to_raw_both_modules) == len(modules) == len(ignore_channels), "Number of paths and modules needs to be the same."
+        
+        self.raw_data_list = []
+        for module, path_to_raw in zip(modules, path_to_raw_both_modules):
 
-        self.raw_data = raw
+            raw = raw_data(path_to_raw, V, T, module)
+            raw.load_root()
+            raw.get_available_channels()
+            raw.channels = [ch for ch in raw.channels if 
+                            ch not in ignore_channels[module]]
+            
+            self.raw_data_list.append(raw)
+        
+    def get_stacked_waveforms(self):
+        """Get the waveforms from all channels stacked.
+        FROM HERE THE WAVEFORMS ARE STACKED IN THE ORDER OF THE TILES,
+        FROM A TO M!
+
+
+        Returns:
+            np.ndarray: waveforms of all channels stacked.
+        """
+        _stacked_channel_data_list = []
+        for raw in self.raw_data_list:
+            _stacked_channel_data_list.append(np.stack(
+                [raw.get_channel_data(ch) for ch in raw.channels],
+                axis = 0))
+        stacked_waveforms = np.concatenate(_stacked_channel_data_list, axis = 0)
+        stacked_waveforms = stacked_waveforms[self.index_reorder_channels]
+
+        return stacked_waveforms
