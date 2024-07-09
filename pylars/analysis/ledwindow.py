@@ -3,7 +3,7 @@ from typing import Tuple, Union
 import datetime
 import numpy as np
 import pandas as pd
-from tqdm.autonotebook import tqdm
+from tqdm import tqdm
 import glob 
 import pylars
 

@@ -25,7 +25,7 @@ from pylars.analysis.breakdown import compute_BV_df
 from pylars.utils.common import Gaussian, get_gain
 from scipy.optimize import curve_fit
 from scipy.signal import find_peaks
-from tqdm.autonotebook import tqdm
+from tqdm import tqdm
 
 
 class DCR_analysis():

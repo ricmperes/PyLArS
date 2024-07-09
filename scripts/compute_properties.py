@@ -5,7 +5,7 @@ import pandas as pd
 import pylars
 import pylars.utils.input
 from pylars.utils.common import get_channel_list, get_gain
-from tqdm.autonotebook import tqdm
+from tqdm import tqdm
 from itertools import product
 
 parser = argparse.ArgumentParser(

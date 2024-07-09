@@ -187,10 +187,10 @@ def plot_gains_occ(df_gains, figaxs = None):
 
 
     axs[0].set_xticks(_x, df_gains['tile'])
-    axs[0].set_ylim(0,1.5)
+    #axs[0].set_ylim(0,1.5)
     axs[0].set_ylabel('Gain [$10^6$]')
     axs[1].set_ylabel('Occupancy')
-    axs[1].set_ylim(-0.1,3.9)
+    #axs[1].set_ylim(-0.1,3.9)
     if figaxs == None:
         plt.show()
 
@@ -215,7 +215,7 @@ def plot_gain_evolution(gain_evolution: pd.DataFrame,
     ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left', 
             title='Tile', 
             labelspacing=1.0)
-    ax.set_ylim(0.7,1.05)
+    ax.set_ylim(0,None)
     ax.set_title(f'Gain evolution - ADC #{mod}')
     ax.tick_params(axis = 'x', rotation=45)
     ax.set_ylabel('SiPM Gain [M]')
