@@ -93,42 +93,6 @@ class peak_processor():
 
         self.ADC_config = load_ADC_config(model, F_amp)
 
-    def process_waveform_set(self, waveforms: np.ndarray,
-                             return_waveforms=False):
-        """Process an array of waveforms from all channels.
-
-        The waveforms are assumed to be synchronized and each row of the
-        array is a channel. Once a summed waveform is formed, uses the same
-        functions as the pulse processing to find peaks and compute its
-        properties.
-
-        Args:
-            waveforms (np.ndarray): waveforms of all channels stacked.
-        """
-
-        waveforms_pe, sum_waveform = self.flip_and_apply_gains(waveforms)
-
-        
-        areas, lengths, positions, amplitudes = waveform_processing.process_waveform(
-            sum_waveform, self.baseline_samples, self.sigma_level)
-
-        if return_waveforms is True:
-            return waveforms_pe, sum_waveform
-
-        return areas, lengths, positions, amplitudes
-
-    def flip_and_apply_gains(self, waveforms):
-        baselines = np.apply_along_axis(
-            func1d=waveform_processing.get_baseline_rough,
-            axis=2,
-            arr=waveforms,
-            baseline_samples=self.baseline_samples)
-
-        waveforms_pe = peak_processing.apply_waveforms_transform(
-            waveforms, baselines, self.gains, self.ADC_config)
-        sum_waveform = peak_processing.get_sum_waveform(waveforms_pe)
-        return waveforms_pe,sum_waveform
-
     def load_raw_data(self, path_to_raw_both_modules: list, 
                       modules : list, V: float, T: float,
                       ignore_channels: list = []):
@@ -178,3 +142,52 @@ class peak_processor():
         stacked_waveforms = stacked_waveforms[self.index_reorder_channels]
 
         return stacked_waveforms
+    
+    def make_sum_waveforms_all_channels(self):
+
+        waveforms = self.get_stacked_waveforms()
+
+        baselines = np.apply_along_axis(
+            func1d = waveform_processing.get_baseline_rough,
+            axis = 2,
+            arr = waveforms,
+            baseline_samples = 50)
+
+        stds = np.apply_along_axis(
+            func1d = waveform_processing.get_std_rough,
+            axis = 2,
+            arr = waveforms,
+            baseline_samples = 50)
+        
+        waveforms_pe = peak_processing.apply_waveforms_transform(
+            waveforms, baselines, self.gains, self.ADC_config)
+        
+        sum_waveform = peak_processing.get_sum_waveform(waveforms_pe)
+
+        return waveforms_pe, sum_waveform
+    
+    def process_waveform_set(self, waveforms_pe_single: np.ndarray,
+                             sum_waveform_single: np.ndarray):
+        """Process an array of waveforms from all channels.
+
+        The waveforms are assumed to be synchronized and each row of the
+        array is a channel. Once a summed waveform is formed, uses the same
+        functions as the pulse processing to find peaks and compute its
+        properties.
+
+        Args:
+            waveforms (np.ndarray): waveforms of all channels stacked.
+        """
+
+        areas, lengths, positions, amplitudes = waveform_processing.process_waveform(
+            waveform = sum_waveform_single, 
+            baseline_samples = self.baseline_samples,
+            sigma_level = self.sigma_level, 
+            negative_polarity = False,
+            baseline_subtracted = True)
+        
+        areas_individual_channels = [peak_processing.get_area_of_single_waveform_each_channel(
+            waveforms_pe_single, positions[i], positions[i] + lengths[i]) for i in range(len(positions))]
+
+        return areas, lengths, positions, amplitudes, areas_individual_channels
+
