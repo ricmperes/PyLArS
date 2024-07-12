@@ -475,10 +475,10 @@ class db_dataset():
         '''
         return config_print
 
-class muon_run():
-    """Main class of a muon run. It contains the necessary functions to find,
-    load and process the data of muon data taking. Some DB would be much 
-    better, please make a PR.
+class xenoscope_run():
+    """Main class of a Xenoscope run. It contains the necessary functions to 
+    find, load and process the data of muon and chntrg data taking. 
+    Some DB would be much better, please make a PR.
     """
 
     def __init__(self, run_number: int, main_data_path: str, F_amp: float,
@@ -510,7 +510,7 @@ class muon_run():
         return all_root_files
     
 
-    def muon_run_info(self,file):
+    def get_run_info(self,file):
         file_name = file.split('/')[-1]
         specific_name = file_name[:-16]
         run_type = specific_name.split('_')[0]
@@ -537,7 +537,7 @@ class muon_run():
         files_fail = []
         for file in self.root_files:
             try:
-                files_df = files_df.append(self.muon_run_info(file), 
+                files_df = files_df.append(self.get_run_info(file), 
                                            ignore_index=True) # type: ignore
             except FileNotFoundError:
                 files_fail.append(file)
