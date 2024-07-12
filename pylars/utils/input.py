@@ -513,6 +513,7 @@ class muon_run():
     def muon_run_info(self,file):
         file_name = file.split('/')[-1]
         specific_name = file_name[:-16]
+        run_type = specific_name.split('_')[0]
         summary_file = f'{self.main_data_path}/{specific_name}/Summary_{specific_name}.txt'
 
         end, duration, n_events = get_summary_info(summary_file)
@@ -522,14 +523,17 @@ class muon_run():
         module = file_name[-8]
 
         info_dict = {'start' : start, 'end' : end, 
-                    'duration' : duration, 'n_events' : int(n_events), 
+                    'duration' : duration, 
+                    'run_type' : run_type,
+                    'n_events' : int(n_events), 
                     'module' : int(module), 'path' : file}
         
         return  info_dict
 
     def get_all_datasets(self) -> Union[pd.DataFrame, Tuple]:
         files_df = pd.DataFrame(columns=['start','end','duration',
-                                         'n_events','module','path'])
+                                         'run_type','n_events',
+                                         'module','path'])
         files_fail = []
         for file in self.root_files:
             try:
