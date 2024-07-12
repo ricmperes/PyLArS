@@ -1,5 +1,5 @@
 import numpy as np
-from tqdm.autonotebook import tqdm
+from tqdm import tqdm
 import datetime
 import pylars
 import pylars.utils.output

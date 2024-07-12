@@ -3,7 +3,7 @@ from typing import Tuple, Union
 import datetime
 import numpy as np
 import pandas as pd
-from tqdm.autonotebook import tqdm
+from tqdm import tqdm
 import glob 
 import pylars
 
@@ -238,3 +238,18 @@ class LED_window():
             print(f"| {row['tile']} | {row['gain']:.3f} $\pm$ "
                 f"{row['gain_err']:.3f} | {row['occ']:.3f} $\pm$ "
                 f"{row['occ_err']:.3f} |")
+            
+    @staticmethod
+    def export_gains(gain_evolution: pd.DataFrame, 
+                     method: str = 'mean',
+                     tag: str = 'vx'):
+        if method == 'mean':
+            gains = gain_evolution.groupby(['module', 'tile', 'channel']).mean()
+        elif method == 'median':
+            gains = gain_evolution.groupby(['module', 'tile', 'channel']).median()
+        elif method == 'last':
+            gains = gain_evolution.groupby(['module', 'tile', 'channel']).last()
+        else:
+            raise ValueError('Method not recognized')
+        
+        gains.to_csv(f'gains_{tag}.csv')
