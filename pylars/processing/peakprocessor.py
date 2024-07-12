@@ -1,7 +1,9 @@
+from typing import List, Tuple
 
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+
 from pylars.utils.common import get_deterministic_hash, load_ADC_config
 from pylars.utils.input import raw_data
 
@@ -72,7 +74,7 @@ class peak_processor():
 
         return np.array(gain_df['gain'])
 
-    def set_tqdm_channel(self, bar: bool, show: bool):
+    def set_tqdm_channel(self, bar: bool, show: bool) -> None:
         """Change the tqdm config
 
         Args:
@@ -95,7 +97,7 @@ class peak_processor():
 
     def load_raw_data(self, path_to_raw_both_modules: list, 
                       modules : list, V: float, T: float,
-                      ignore_channels: list = []):
+                      ignore_channels: list = []) -> None:
         """Raw data loader to pass to the processing scripts.
 
         Args:
@@ -124,7 +126,7 @@ class peak_processor():
             
             self.raw_data_list.append(raw)
         
-    def get_stacked_waveforms(self):
+    def get_stacked_waveforms(self) -> np.ndarray:
         """Get the waveforms from all channels stacked.
         FROM HERE THE WAVEFORMS ARE STACKED IN THE ORDER OF THE TILES,
         FROM A TO M!
@@ -143,7 +145,14 @@ class peak_processor():
 
         return stacked_waveforms
     
-    def make_sum_waveforms_all_channels(self):
+    def make_sum_waveforms_all_channels(self) -> Tuple[np.ndarray, np.ndarray]:
+        """Loads the waveforms from all the channels at once and constructs 
+        the sum waveform.
+
+        Returns:
+            tuple: both the waveforms of all channels and the summed waveform, 
+                both converted to PE and gain corrected.
+        """
 
         waveforms = self.get_stacked_waveforms()
 
@@ -176,7 +185,8 @@ class peak_processor():
         properties.
 
         Args:
-            waveforms (np.ndarray): waveforms of all channels stacked.
+            waveforms_pe_single (np.ndarray): waveforms of all channels stacked.
+            sum_waveform_single (np.ndarray): the sum waveform
         """
 
         areas, lengths, positions, amplitudes = waveform_processing.process_waveform(
@@ -191,8 +201,16 @@ class peak_processor():
 
         return areas, lengths, positions, amplitudes, areas_individual_channels
 
-    def process_all_waveforms(self):
+    def process_all_waveforms(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        """Main function to process all waveforms of a run.
+        Constructs the sum waveforms and processes them to find peaks, looping
+        individualy over each one. Gives the results in two pandas dataframes.
 
+        Returns:
+            Tuple[pd.DataFrame, pd.DataFrame]: both the main results 
+                dataframe and the individual areas for each channel for 
+                each identified peak.
+        """
         waveforms_pe, sum_waveform = self.make_sum_waveforms_all_channels()
 
         n_wfs = sum_waveform.shape[0]
@@ -258,4 +276,5 @@ class peak_processor():
         areas_individual_channels_results = pd.DataFrame(areas_individual_channels_results)
         self.results_df = results
         self.areas_individual_channels_results_df = areas_individual_channels_results
+        
         return results, areas_individual_channels_results

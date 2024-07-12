@@ -1,10 +1,11 @@
 from typing import List, Optional, Union
 
 import matplotlib
-from matplotlib.gridspec import GridSpec
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.gridspec import GridSpec
 from matplotlib.patches import Circle, Rectangle
+
 
 def plot_sensor_layout(layout: np.ndarray,
                        r_tpc: Optional[float] = None,

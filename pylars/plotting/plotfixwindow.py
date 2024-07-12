@@ -1,8 +1,11 @@
 from typing import Optional, Tuple
-import numpy as np
+
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
+
 import pylars
+
 
 def plot_LED_window(waveform: np.ndarray, led_window, figax = None):
     """Plot the LED window on top of the waveform.

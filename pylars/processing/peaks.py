@@ -1,7 +1,9 @@
 from typing import List, Tuple
 
 import numpy as np
+
 from .waveforms import waveform_processing
+
 
 class peak_processing():
     """All the things peaks. Peaks are sums of pulses found in waveforms.

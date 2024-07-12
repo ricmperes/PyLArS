@@ -4,8 +4,10 @@ from typing import Tuple, Union
 import numpy as np
 import pandas as pd
 import uproot
-from pylars.utils.common import load_ADC_config, get_summary_info
+
+from pylars.utils.common import get_summary_info, load_ADC_config
 from pylars.utils.gsheets_db import xenoscope_db
+
 
 class raw_data():
     '''
