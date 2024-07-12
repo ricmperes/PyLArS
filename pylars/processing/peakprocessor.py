@@ -1,6 +1,7 @@
 
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 from pylars.utils.common import get_deterministic_hash, load_ADC_config
 from pylars.utils.input import raw_data
 
@@ -20,7 +21,7 @@ class peak_processor():
 
     # for run6
     index_reorder_channels = [5, 6, 7, 8, 9, 10, 11, 0, 1, 2, 3, 4]
-
+    list_of_tiles = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'J', 'K', 'L', 'M']
     def __init__(self, sigma_level: float, baseline_samples: int,
                  gains_tag: str, gains_path: str) -> None:
 
@@ -30,7 +31,6 @@ class peak_processor():
                                            f"{self.version}" +
                                            f"{self.sigma_level}" +
                                            f"{self.baseline_samples:.2f}")
-        self.processed_data = dict()
         self.show_loadbar_channel = True
         self.show_tqdm_channel = True
 
@@ -191,3 +191,71 @@ class peak_processor():
 
         return areas, lengths, positions, amplitudes, areas_individual_channels
 
+    def process_all_waveforms(self):
+
+        waveforms_pe, sum_waveform = self.make_sum_waveforms_all_channels()
+
+        n_wfs = sum_waveform.shape[0]
+
+        results = {'wf_number': [],
+                   'peak_number': [],
+                   'n_peaks': [],
+                   'area': [],
+                   'length': [],
+                   'position': [],
+                   'amplitude': [],
+                   }
+        
+        areas_individual_channels_results = {
+                   'wf_number': [],
+                   'peak_number': [],
+                   'A': [],
+                   'B': [],
+                   'C': [],
+                   'D': [],
+                   'E': [],
+                   'F': [],
+                   'G': [],
+                   'H': [],
+                   'J': [],
+                   'K': [],
+                   'L': [],
+                   'M': [],
+                   }
+        
+
+        for wf_i in tqdm(range(n_wfs), total=
+                         n_wfs, desc='Processing waveforms: '):
+            
+            _sum_waveform_single = sum_waveform[wf_i,:]
+            _waverform_pe_single = waveforms_pe[:,wf_i,:]
+
+            areas, lengths, positions, amplitudes, areas_individual_channels = self.process_waveform_set(
+                waveforms_pe_single=_waverform_pe_single,
+                sum_waveform_single = _sum_waveform_single)
+            
+            wf_number = np.ones(len(areas), dtype=int) * wf_i
+            peak_number = np.arange(len(areas))
+            n_pulses = np.ones(len(areas), dtype=int) * len(areas)
+
+            results['wf_number'] += list(wf_number)
+            results['peak_number'] += list(peak_number)
+            results['n_peaks'] += list(n_pulses)
+            results['area'] += list(areas)
+            results['length'] += list(lengths)
+            results['position'] += list(positions)
+            results['amplitude'] += list(amplitudes)
+
+            areas_individual_channels_results['wf_number'] += list(wf_number)
+            areas_individual_channels_results['peak_number'] += list(peak_number)
+
+            for peak_i in range(len(areas)):
+                for tile_i, tile_name in enumerate(self.list_of_tiles):
+                    areas_individual_channels_results[tile_name] += [
+                        areas_individual_channels[peak_i][tile_i]]
+        
+        results = pd.DataFrame(results)
+        areas_individual_channels_results = pd.DataFrame(areas_individual_channels_results)
+        self.results_df = results
+        self.areas_individual_channels_results_df = areas_individual_channels_results
+        return results, areas_individual_channels_results
