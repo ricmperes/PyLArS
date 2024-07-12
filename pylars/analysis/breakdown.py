@@ -13,7 +13,7 @@ import pylars.utils.input
 import pylars.utils.output
 from pylars.utils.common import get_peak_rough_positions
 from scipy import stats
-from tqdm.autonotebook import tqdm
+from tqdm import tqdm
 
 
 class BV_dataset():

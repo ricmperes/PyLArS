@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from pylars.utils.common import get_deterministic_hash
 from pylars.utils.input import raw_data, run
-from tqdm.autonotebook import tqdm
+from tqdm import tqdm
 from typing import Tuple, Union
 
 from .fixwindow import fixed_window_processing

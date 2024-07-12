@@ -234,3 +234,12 @@ def apply_tile_labels(df:pd.DataFrame, label_map:dict):
     df['tile'] = df.apply(map_label, axis=1)
     df = df.sort_values('tile', ignore_index = True)
     return df
+
+def get_summary_info(summary_path):
+    with open(summary_path, 'r') as _summ_file:
+        _summary = _summ_file.readlines()
+    _t_stop = np.datetime64(int(_summary[0].strip().split(' ')[-1]), 's')
+    _duration = np.timedelta64(int(_summary[1].strip().split(' ')[3]), 's')
+    _n_events = int(_summary[2].strip().split(' ')[-1])
+
+    return _t_stop, _duration, _n_events

@@ -187,10 +187,10 @@ def plot_gains_occ(df_gains, figaxs = None):
 
 
     axs[0].set_xticks(_x, df_gains['tile'])
-    axs[0].set_ylim(0,1.5)
+    #axs[0].set_ylim(0,1.5)
     axs[0].set_ylabel('Gain [$10^6$]')
     axs[1].set_ylabel('Occupancy')
-    axs[1].set_ylim(-0.1,3.9)
+    #axs[1].set_ylim(-0.1,3.9)
     if figaxs == None:
         plt.show()
 
@@ -215,7 +215,7 @@ def plot_gain_evolution(gain_evolution: pd.DataFrame,
     ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left', 
             title='Tile', 
             labelspacing=1.0)
-    ax.set_ylim(0.7,1.05)
+    ax.set_ylim(0,None) # type:ignore
     ax.set_title(f'Gain evolution - ADC #{mod}')
     ax.tick_params(axis = 'x', rotation=45)
     ax.set_ylabel('SiPM Gain [M]')
@@ -233,3 +233,22 @@ def plot_gain_evolution(gain_evolution: pd.DataFrame,
         plt.show()
     else:
         return fig, ax
+
+def plot_gains_occ_ledvoltage(LED_calib, module, channel, labels):
+    fig, ax = plt.subplots(1,1, figsize = (6,3))
+    _df = LED_calib.results_df
+    _df = _df[(_df['module'] == module) & 
+              (_df['channel'] == channel) &
+              (_df['LEDvoltage'] > 1)]
+    ax.errorbar(_df['LEDvoltage'], _df['gain'], yerr = _df['gain_err'], fmt = 'o')
+    ax.set_xlabel('LED voltage [V]')
+    ax.set_ylabel('Gain [ADC/PE/10^6]')
+    ax.set_title(labels[f"mod{module}"][channel])
+    
+    ax1 = ax.twinx()
+    ax1.errorbar(_df['LEDvoltage'], _df['occ'], 
+                 yerr = _df['occ_err'], fmt = 'o',
+                 color = 'C1')
+    ax1.set_ylabel('Occupancy [PE]', color = 'C1')
+    ax.grid()
+    plt.show()
