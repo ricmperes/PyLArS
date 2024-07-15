@@ -9,7 +9,7 @@ import datetime
 from matplotlib.gridspec import GridSpec
 
 
-array_layout = np.loadtxt('tiles_layout.txt')
+array_layout = np.loadtxt('/disk/gfs_atp/xenoscope/tpc/tiles_layout.txt')
 array_labels = ['A', 'B', 'C', 'D', 'E', 'F',
                 'G', 'H', 'J', 'K', 'L', 'M']
 ## Loading
