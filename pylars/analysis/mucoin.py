@@ -8,10 +8,6 @@ import datetime
 
 from matplotlib.gridspec import GridSpec
 
-
-array_layout = np.loadtxt('/disk/gfs_atp/xenoscope/tpc/tiles_layout.txt')
-array_labels = ['A', 'B', 'C', 'D', 'E', 'F',
-                'G', 'H', 'J', 'K', 'L', 'M']
 ## Loading
 
 def get_file(n_run, module, run_name, run_period = 'commissioning'):
@@ -60,7 +56,7 @@ def get_data_dict(n_run, run_name, run_period):
     return data_dict
 
 def load_layout():
-    array_layout = np.loadtxt('tiles_layout.txt')
+    array_layout = np.loadtxt('/disk/gfs_atp/xenoscope/tpc/tiles_layout.txt')
     array_labels = ['A', 'B', 'C', 'D', 'E', 'F',
                     'G', 'H', 'J', 'K', 'L', 'M']
         
