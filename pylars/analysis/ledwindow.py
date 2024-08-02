@@ -1,14 +1,13 @@
-from typing import Tuple, Union
-
 import datetime
+from typing import Tuple
+
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
-import glob 
+from scipy.optimize import curve_fit
+from scipy.signal import find_peaks
+
 import pylars
 
-from scipy.signal import find_peaks
-from scipy.optimize import curve_fit
 
 class LED_window():
     '''Class to hold analysis of LED ON data with integrating window. 
@@ -25,6 +24,7 @@ class LED_window():
 
     def find_files(self)-> pd.DataFrame: # type: ignore
         '''Find the raw data file and the LED data file.
+        TODO
         '''
         pass
 
@@ -50,6 +50,8 @@ class LED_window():
 
     @staticmethod
     def get_LED_width_voltage(path):
+        """Read LED width and voltage from the file path."""
+
         root_name_list = path.split('/')[-1].split('_')
         pulser_width = int(root_name_list[0][:-2])
         voltage = float(root_name_list[1] + '.' + root_name_list[2][0])
@@ -78,9 +80,10 @@ class LED_window():
             raise AssertionError('No files found. Run find_files first.')
 
         _dfs = []
-        for i, row in tqdm(self.files_df.iterrows(),  # type: ignore
-                           total=len(self.files_df),  # type: ignore
-                           desc='Processing LED data: '):
+        # for i, row in tqdm(self.files_df.iterrows(),  # type: ignore
+        #                    total=len(self.files_df),  # type: ignore
+        #                    desc='Processing LED data: '):^
+        for i, row in self.files_df.iterrows():
             _df = self.process_dataset(row['path'], module=row['module'])
             _df['Vbias'] = row['Vbias']
             _df['LEDwidth'] = row['LEDwidth']
@@ -96,12 +99,32 @@ class LED_window():
         self.df_processed = df_processed
     
     def check_settings_available(self):
+        """Set led_voltages, led_widths and sipms_voltages as object 
+        attributes.
+        """
 
         self.led_voltages = self.files_df['LEDvoltage'].unique()
         self.led_widths = self.files_df['LEDwidth'].unique()
         self.sipms_voltages = self.files_df['Vbias'].unique()
     
-    def get_1_pe_fit_led(self, df_processed, module, channel):
+    def get_1_pe_fit_led(self, 
+                         df_processed:pd.DataFrame, 
+                         module: int, 
+                         channel: str) -> Tuple[float, float, 
+                                                float, np.ndarray]:
+        """Fit the SPE peak of an LED area hsitogram for a given module and 
+        channel. Uses scipy.curve_fit with a Gaussian function.
+
+        Args:
+            df_processed (pd.DataFrame): dataframe with processed data
+            module (int): module to consider
+            channel (str): channel to consider
+
+        Returns:
+            Tuple[float, float, float, np.ndarray]: A, mu, sigma, 
+                and cov resulting of the fit
+        """
+
         df_processed_mask = (
             (df_processed['module'] == module) & 
             (df_processed['channel'] == channel))
@@ -127,15 +150,58 @@ class LED_window():
                                               spe_rough*0.05])
         return A, mu, sigma, cov
     
-    def get_occupancy(self, results_one_channel, mu, mu_err):
-        med = np.median(results_one_channel['led_area'])
-        med_err = np.std(results_one_channel['led_area'])/np.sqrt(len(results_one_channel['led_area']))
+    def get_occupancy(self, results_one_channel: pd.DataFrame, 
+                      mu:float, mu_err:float,
+                      method: str = 'mean') -> Tuple[float, float]:
+        """Calculate the occupancy of an LED dataset for a given channel.
+
+        Args:
+            results_one_channel (pd.DataFrame): dataframe with the results
+                of a single channel
+            mu (float): the SPE fit mean in ADCcounts
+            mu_err (float): error in mu in ADCcounts
+            method (str, optional): Method to calculate the occupancy. Either
+                'mean' or 'median'. Defaults to 'mean'.
+
+        Returns:
+            Tuple[float, float]: Occupancy and its error. Uses mean by default!
+        """
+
+        if method == 'mean':
+            med = np.mean(results_one_channel['led_area'])
+        elif method == 'median':
+            med = np.median(results_one_channel['led_area'])
+        else:
+            raise ValueError(
+                'Method for occupancy calculation neither mean nor median')
+        
+        med_err = np.std(
+            results_one_channel['led_area'])/np.sqrt(
+                len(results_one_channel['led_area']))
 
         occ = med/mu
         occ_err = ((med_err/mu)**2 + ((med/mu**2)*mu_err)**2)**0.5
         return occ, occ_err
 
-    def calculate_gain_occ(self, processed_df_single_led, module, channel):
+    def calculate_gain_occ(self, processed_df_single_led: pd.DataFrame, 
+                           module: int, channel: str,
+                           occ_method: str = 'mean') -> Tuple[float, float,
+                                                               float, float]:
+        """Calculates the gain, occupancy and their errors for a given module
+        and channel from a dataframe with the processed LED data.
+
+        Args:
+            processed_df_single_led (pd.DataFrame): dataframe with the 
+                processed LED data
+            module (int): module to consider
+            channel (str): channel to consider
+            occ_method (str, optional): Method to calculate the occupancy. 
+                'mean' or 'median'. Defaults to 'mean'.
+
+        Returns:
+            Tuple[float, float, float, float]: Return the gain, gain_err, 
+                occ, occ_err of the requested channel.
+        """
 
         A, mu, sigma, cov = self.get_1_pe_fit_led(processed_df_single_led, 
                                                   module, 
@@ -150,11 +216,15 @@ class LED_window():
                         (processed_df_single_led['channel'] == channel)
                         )
         occ, occ_err = self.get_occupancy(processed_df_single_led[results_mask], 
-                                          mu, mu_err)
+                                          mu, mu_err, method=occ_method)
         
         return gain, gain_err, occ, occ_err
     
     def calculate_all_gains_occ(self):
+        '''Calculate gains and occupancies for all channels available in the
+        processed data. The results are stored in self.results_df and a 
+        registry of failed processing in self.failed_calculation_df.
+        '''
 
         # Check if processed data exists
         if not hasattr(self, 'df_processed'):
@@ -170,9 +240,10 @@ class LED_window():
                                                       'LEDwidth', 'module', 
                                                       'channel'])
         
-        for i, row in tqdm(self.files_df.iterrows(), 
-                           total=len(self.files_df), 
-                           desc='Calculating gains and occupancies: '):
+        # for i, row in tqdm(self.files_df.iterrows(), 
+        #                    total=len(self.files_df), 
+        #                    desc='Calculating gains and occupancies: '):
+        for i, row in self.files_df.iterrows():
             _vbias = row['Vbias']
             _led_voltage = row['LEDvoltage']
             _led_width = row['LEDwidth']
@@ -186,37 +257,49 @@ class LED_window():
             _channels = _df_select_processed[
                 _df_select_processed['module'] == _module]['channel'].unique()
             
-            try:
-                for _channel in _channels:
+            
+            for _channel in _channels:
+                try:
                     _gain, _gain_err, _occ, _occ_err = self.calculate_gain_occ(
                         _df_select_processed, _module, _channel)
                     
                     results_df = pd.concat(
                         (results_df,
-                         pd.DataFrame({'Vbias' : [_vbias],
-                                       'LEDvoltage': [_led_voltage], 
-                                       'LEDwidth': [_led_width], 
-                                       'module': [_module], 
-                                       'channel': [_channel], 
-                                       'gain': [_gain], 
-                                       'gain_err': [_gain_err], 
-                                       'occ': [_occ], 
-                                       'occ_err': [_occ_err]}),
+                            pd.DataFrame({'Vbias' : [_vbias],
+                                        'LEDvoltage': [_led_voltage], 
+                                        'LEDwidth': [_led_width], 
+                                        'module': [_module], 
+                                        'channel': [_channel], 
+                                        'gain': [_gain], 
+                                        'gain_err': [_gain_err], 
+                                        'occ': [_occ], 
+                                        'occ_err': [_occ_err]}),
                         ), ignore_index=True)
-            except:
-                failed_calculation_df = pd.concat(
-                    (failed_calculation_df,
-                     pd.DataFrame({'Vbias' : [_vbias],
-                                   'LEDvoltage': [_led_voltage], 
-                                   'LEDwidth': [_led_width], 
-                                   'module': [_module], 
-                                   'channel': [_channel]})), 
-                    ignore_index=True)
+                except:
+                    failed_calculation_df = pd.concat(
+                        (failed_calculation_df,
+                        pd.DataFrame({'Vbias' : [_vbias],
+                                    'LEDvoltage': [_led_voltage], 
+                                    'LEDwidth': [_led_width], 
+                                    'module': [_module], 
+                                    'channel': [_channel]})), 
+                        ignore_index=True)
 
         self.failed_calculation_df = failed_calculation_df
         self.results_df = results_df
     
-    def save_gain_results(self, name = ''):
+    def save_gain_results(self, name: str = ''):
+        """Save the results of the gain and occupancy calculations to a csv
+        file.
+
+        Args:
+            name (str, optional): name to give to the file. Defaults to '', 
+            saving a file with the current timestamp.
+
+        Raises:
+            AssertionError: raised if no results dataframe is found in the 
+                object.
+        """
 
         # Check if results exist
         if not hasattr(self, 'results_df'):
@@ -235,14 +318,27 @@ class LED_window():
             raise AssertionError('No computed gains found. Run '
                                  'calculate_all_gains_occ first.')
         for i, row in self.df_gains.iterrows(): # type: ignore
-            print(f"| {row['tile']} | {row['gain']:.3f} $\pm$ "
-                f"{row['gain_err']:.3f} | {row['occ']:.3f} $\pm$ "
+            print(f"| {row['tile']} | {row['gain']:.3f} $\pm$ " # type: ignore
+                f"{row['gain_err']:.3f} | {row['occ']:.3f} $\pm$ " # type: ignore
                 f"{row['occ_err']:.3f} |")
             
     @staticmethod
     def export_gains(gain_evolution: pd.DataFrame, 
                      method: str = 'mean',
                      tag: str = 'vx'):
+        """Export the gains as a single number to a csv file. Method can be 
+            'mean', 'median' or 'last'. Default is 'mean'.
+
+        Args:
+            gain_evolution (pd.DataFrame): dataframe with the gain evolution
+            method (str, optional): method to calculate the number to use as 
+                gain. Can be 'mean', 'median' or 'last'. Defaults to 'mean'.
+            tag (str, optional): Tag to give the gains in the form v# 
+                (v0,v1,v2,...). Defaults to 'vx'.
+
+        Raises:
+            ValueError: Raised if the method is not recognized.
+        """
         if method == 'mean':
             gains = gain_evolution.groupby(['module', 'tile', 'channel']).mean()
         elif method == 'median':
