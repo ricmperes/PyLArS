@@ -1,7 +1,9 @@
 # PyLArS
-> Ricardo Peres, Julian Haas
 
-Comprehensive processing and analysis of SiPM data.
+Comprehensive processing and analysis of SiPM data. Adapted for the [XenoDAQ](https://github.com/Physik-Institut-UZH/AutoXenoDAQ) data acquistion software.
+
+[![PyPI version shields.io](https://img.shields.io/pypi/v/sipmarray.svg)](https://pypi.org/project/pylars-sipm/) [![Static Badge](https://img.shields.io/badge/Docs-%235F9EA0)](https://ricmperes.github.io/PyLArS/)
+
 
 Check the [docs](https://ricmperes.github.io/PyLArS/) and the example 
 notebooks for a quick start!
