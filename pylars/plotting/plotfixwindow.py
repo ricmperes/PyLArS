@@ -209,8 +209,8 @@ def plot_gain_evolution(gain_evolution: pd.DataFrame,
 
     for _tile in tile_list:
         _df = gain_evolution[gain_evolution['tile'] == _tile]
-        ax.errorbar(_df['date'], _df['gain'], yerr = _df['gain_err'], 
-                     fmt='-', 
+        ax.errorbar(_df['start'], _df['gain'], yerr = _df['gain_err'], 
+                     ls='--', 
                     marker = '.', label=_tile)
     ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left', 
             title='Tile', 
