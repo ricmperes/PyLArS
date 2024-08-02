@@ -9,7 +9,7 @@ def open_requirements(path):
 
 requires = open_requirements('requirements.txt')
 setup(
-    name='pylars',
+    name='pylars-sipm',
     version='0.3.0',
     packages=find_packages(exclude=['tests*']),
     license='none',
