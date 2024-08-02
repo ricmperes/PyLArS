@@ -1,10 +1,11 @@
 from typing import List, Optional, Union
 
 import matplotlib
-from matplotlib.gridspec import GridSpec
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.gridspec import GridSpec
 from matplotlib.patches import Circle, Rectangle
+
 
 def plot_sensor_layout(layout: np.ndarray,
                        r_tpc: Optional[float] = None,
@@ -300,14 +301,27 @@ def plot_identified_peaks_each_channel_waveforms(
     else:
         return fig, ax
 
-def plot_full_waveform_peaks(areas,
-                             lengths, 
-                             positions, 
-                             amplitudes, 
-                             sum_waveform_single,
-                             areas_individual_channels,
-                             array_layout,
-                             array_labels,):
+def plot_full_waveform_peaks(areas: list,
+                             lengths: list, 
+                             positions: list, 
+                             amplitudes: list, 
+                             sum_waveform_single: np.ndarray,
+                             areas_individual_channels: list,
+                             array_layout: np.ndarray,
+                             array_labels: list,):
+    """Make plot of the full waveform with the identified peaks.
+
+    Args:
+        areas (list): area of the identified peaks in the waveform
+        lengths (list): length of the identified peaks in the waveform
+        positions (list): position of the identified peaks in the waveform
+        amplitudes (list): amplitude of the identified peaks in the waveform
+        sum_waveform_single (np.ndarray): sum waveform of the event
+        areas_individual_channels (list): areas of the peak seen in 
+            each channel
+        array_layout (np.ndarray): layout of the array
+        array_labels (list): labels of the array
+    """
 
     fig = plt.figure(figsize = (14,6))
     gs = GridSpec(2,2, width_ratios=[1, 0.5], height_ratios=[1, 1])
@@ -327,7 +341,7 @@ def plot_full_waveform_peaks(areas,
                                             figax = (fig,ax_sumwf))
 
     ax_individual_ch = plot_identified_peaks_each_channel(
-        areas_individual_channels, 
+        areas_individual_channels,
         positions, 
         lengths, 
         x_unit='time',
@@ -362,10 +376,32 @@ def plot_full_waveform_peaks(areas,
 
     plt.show()
 
-def plot_peak_info(peak_id, areas, lengths, positions, amplitudes, 
-                   sum_waveform_single,areas_individual_channels,
-                   array_layout, array_labels,
-                   waveforms_pe_single_event = None):
+def plot_peak_info(peak_id: int, areas: list, lengths: list, 
+                   positions: list, amplitudes: list, 
+                   sum_waveform_single: np.ndarray, 
+                   areas_individual_channels: list,
+                   array_layout: np.ndarray, array_labels: list,
+                   waveforms_pe_single_event: Optional[np.ndarray] = None,
+                   save_fig: Optional[str] = None):
+    """Fancy plot of the peak information, i.e., the sum waveform, the 
+    hitpattern, the individual channel waveforms and the peak information.
+
+    Args:
+        peak_id (int): number of the peak in the waveform
+        areas (list): area of the identified peaks in the waveform
+        lengths (list): length of the identified peaks in the waveform
+        positions (list): position of the identified peaks in the waveform
+        amplitudes (list): amplitude of the identified peaks in the waveform
+        sum_waveform_single (np.ndarray): sum waveform of the event
+        areas_individual_channels (list): areas of the peak seen in 
+            each channel
+        array_layout (np.ndarray): layout of the array
+        array_labels (list): labels of the array
+        waveforms_pe_single_event (Optional[np.ndarray], optional): waveforms 
+            of each channel to make an even fancier plot. Defaults to None.
+        save_fig (Optional[str], optional): path to save the figure (include 
+            extension). Defaults to None.
+    """
 
     fig = plt.figure(figsize = (14,6), dpi = 100)
     gs = GridSpec(2,2, width_ratios=[1, 0.5], height_ratios=[1, 0.8])
@@ -400,7 +436,7 @@ def plot_peak_info(peak_id, areas, lengths, positions, amplitudes,
     
     else:
         fig, ax_individual_ch = plot_identified_peaks_each_channel( # type: ignore
-            areas_individual_channels, 
+            areas_individual_channels,
             positions, 
             lengths, 
             x_unit='time',
@@ -442,5 +478,7 @@ def plot_peak_info(peak_id, areas, lengths, positions, amplitudes,
                     
     ax_text.text(0.5, 0.4,s = text_for_box, ha='center', va='center', fontsize=12)
     ax_text.axis('off')
-
+    if save_fig:
+        plt.savefig(save_fig)
     plt.show()
+    

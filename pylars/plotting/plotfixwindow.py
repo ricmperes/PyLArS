@@ -101,6 +101,7 @@ def plot_light_levels(led_processed_df: pd.DataFrame,
                       channel: Optional[str] = None,
                       module: Optional[int] = None,
                       figax: Optional[Tuple] = None):
+    """Plot the LED area histogram for all the available light levels."""
 
     select_mask = ((led_processed_df['LEDwidth'] == led_width) &
                      (led_processed_df['channel'] == channel) &
@@ -145,6 +146,7 @@ def plot_light_levels(led_processed_df: pd.DataFrame,
 
 
 def plot_1_pe_fit_led(df_processed, led_voltage, module, channel, A, mu, sigma, figax = None):
+        """Plot the SPE Gaussean fit of the LED area histogram."""
         if figax == None:
             fig, ax = plt.subplots(1,1, figsize = (5,3), dpi = 120)   
         else:
@@ -171,6 +173,7 @@ def plot_1_pe_fit_led(df_processed, led_voltage, module, channel, A, mu, sigma, 
             return fig, ax
         
 def plot_gains_occ(df_gains, figaxs = None):
+    """Plot the gains and occupancies for all the tiles."""
     if figaxs == None:
         fig, axs = plt.subplots(2,1, figsize = (4,4), 
                         dpi = 120, sharex = True,
@@ -201,6 +204,7 @@ def plot_gains_occ(df_gains, figaxs = None):
 def plot_gain_evolution(gain_evolution: pd.DataFrame, 
                         tile_list: list, mod, 
                         figax = None):
+    """Plot the gain evolution for a list of tiles."""
     
     if figax == None:
         fig, ax = plt.subplots(1,1, figsize=(6,4), dpi = 120)
@@ -235,6 +239,8 @@ def plot_gain_evolution(gain_evolution: pd.DataFrame,
         return fig, ax
 
 def plot_gains_occ_ledvoltage(LED_calib, module, channel, labels):
+    """Plot the gains and occupancies for a given module and channel as a 
+    function of the LED voltage."""
     fig, ax = plt.subplots(1,1, figsize = (6,3))
     _df = LED_calib.results_df
     _df = _df[(_df['module'] == module) & 
