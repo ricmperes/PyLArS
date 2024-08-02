@@ -14,26 +14,26 @@ class custom_waveform():
         self.baseline_subtracted = baseline_subtracted
         self.dt = dt
 
+
 @pytest.fixture
 def flat_waveform():
-    return custom_waveform(waveform = np.arange(50) * -1,
-                           baseline_value = 0,
-                           pulse_start = 10,
-                           pulse_end = 20,
-                           negative_polarity = True,
-                           baseline_subtracted = False,
-                           dt = 10)
+    return custom_waveform(waveform=np.arange(50) * -1,
+                           baseline_value=0,
+                           pulse_start=10,
+                           pulse_end=20,
+                           negative_polarity=True,
+                           baseline_subtracted=False,
+                           dt=10)
 
-    
 
 @pytest.fixture
 def square_pulse():
     wf = np.zeros(30)
     wf[10:20] = 1
-    return custom_waveform(waveform = wf,
-                           baseline_value = 0,
-                           pulse_start = 10,
-                           pulse_end = 20,
-                           negative_polarity = False,
-                           baseline_subtracted = False,
-                           dt = 10)
+    return custom_waveform(waveform=wf,
+                           baseline_value=0,
+                           pulse_start=10,
+                           pulse_end=20,
+                           negative_polarity=False,
+                           baseline_subtracted=False,
+                           dt=10)

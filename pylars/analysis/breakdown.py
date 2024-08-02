@@ -13,7 +13,7 @@ import pylars.utils.input
 import pylars.utils.output
 from pylars.utils.common import get_peak_rough_positions
 from scipy import stats
-from tqdm.autonotebook import tqdm
+from tqdm import tqdm
 
 
 class BV_dataset():
@@ -97,7 +97,7 @@ class BV_dataset():
                         (_df['channel'] == self.channel))
 
                 self.data[_voltage] = copy.deepcopy(_df[mask])
-            except:
+            except BaseException:
                 print(f'Failed to load dataset for V = {_voltage}. Skipping.')
 
     def compute_BV_LED_simple(self, LED_position: int,
