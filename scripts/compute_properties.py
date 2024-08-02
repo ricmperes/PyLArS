@@ -21,7 +21,7 @@ args = parser.parse_args()
 
 
 def prepare():
-    main_data_path='/disk/gfs_atp/xenoscope/SiPMs/char_campaign/raw_data/'
+    main_data_path = '/disk/gfs_atp/xenoscope/SiPMs/char_campaign/raw_data/'
     if args.run == 8:
         F_amp = 20
     else:
@@ -29,7 +29,7 @@ def prepare():
 
     if args.run == 9:
         polarity = False
-        main_data_path='/disk/gfs_atp/xenoscope/SiPMs/FebMar2022/6x6A/'
+        main_data_path = '/disk/gfs_atp/xenoscope/SiPMs/FebMar2022/6x6A/'
     else:
         polarity = True
 
@@ -68,15 +68,15 @@ if __name__ == '__main__':
     DCR_run.set_plots_flag(False)
 
     if args.run == 8:
-        DCR_run.define_run_SiPM_config(24*24)
+        DCR_run.define_run_SiPM_config(24 * 24)
         DCR_run.set_standard_cuts_run(cut_n_pulses_max=8)
     elif args.run == 9:
-        DCR_run.define_run_SiPM_config(6*6)
+        DCR_run.define_run_SiPM_config(6 * 6)
         DCR_run.set_standard_cuts_run(cut_n_pulses_max=2)
     else:
         DCR_run.define_run_SiPM_config()
         DCR_run.set_standard_cuts_run(cut_n_pulses_max=3)
-    
+
     print('Starting loading and computation')
     DCR_run.compute_properties_of_run(amplitude_based=False)
 

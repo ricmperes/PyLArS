@@ -3,6 +3,7 @@ import pytest
 
 from pylars.processing.waveforms import waveform_processing
 
+
 class Test_Waveforms():
 
     def test_get_std_rough(self, flat_waveform, square_pulse):
@@ -25,19 +26,17 @@ class Test_Waveforms():
 
     def test_process_waveform(self, square_pulse):
         processed_lists = waveform_processing.process_waveform(
-            waveform = square_pulse.waveform, 
-            baseline_samples = 10,
-            sigma_level = 3, 
-            negative_polarity = square_pulse.negative_polarity)
-        
+            waveform=square_pulse.waveform,
+            baseline_samples=10,
+            sigma_level=3,
+            negative_polarity=square_pulse.negative_polarity)
+
         areas, lengths, positions, amplitudes = processed_lists
 
-        assert len(areas) == len(lengths) == 1 
+        assert len(areas) == len(lengths) == 1
         assert len(positions) == len(amplitudes) == 1
 
         assert areas[0] == 90
         assert lengths[0] == 10
         assert positions[0] == 10
         assert amplitudes[0] == 1
-
-        

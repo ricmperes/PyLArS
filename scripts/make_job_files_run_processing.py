@@ -15,8 +15,8 @@ parser.add_argument('-r', '--run',
 args = parser.parse_args()
 
 
-def make_batch_script(job_name, run, kind, temp, vbias, 
-    polarity,main_data_path, F_amp):
+def make_batch_script(job_name, run, kind, temp, vbias,
+                      polarity, main_data_path, F_amp):
     main_str = f"""#!/bin/bash
 #SBATCH --partition=express
 #SBATCH --job-name={job_name}
@@ -53,7 +53,7 @@ def main():
     ### INPUTS HERE ###
     run_number = args.run
     ### ### ###
-    main_data_path='/disk/gfs_atp/xenoscope/SiPMs/char_campaign/raw_data/'
+    main_data_path = '/disk/gfs_atp/xenoscope/SiPMs/char_campaign/raw_data/'
     if args.run == 8:
         F_amp = 20
     else:
@@ -61,10 +61,10 @@ def main():
 
     if args.run == 9:
         polarity = 0
-        main_data_path='/disk/gfs_atp/xenoscope/SiPMs/FebMar2022/6x6A/'
+        main_data_path = '/disk/gfs_atp/xenoscope/SiPMs/FebMar2022/6x6A/'
     else:
         polarity = 1
-    
+
     base_run = pylars.utils.input.run(
         run_number=args.run,
         main_data_path=main_data_path,
@@ -81,8 +81,8 @@ def main():
         job_name = f'run{run_number}_{_kind}_{_temp}_{_vbias}'
         ID_list.append(job_name)
 
-        make_batch_script(job_name, _run, _kind, _temp, 
-            _vbias, polarity,main_data_path, F_amp)
+        make_batch_script(job_name, _run, _kind, _temp,
+                          _vbias, polarity, main_data_path, F_amp)
 
     make_launch_file(ID_list)
 

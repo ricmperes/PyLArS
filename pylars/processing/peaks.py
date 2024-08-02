@@ -3,6 +3,7 @@ from typing import List, Tuple
 import numpy as np
 from .waveforms import waveform_processing
 
+
 class peak_processing():
     """All the things peaks. Peaks are sums of pulses found in waveforms.
 
@@ -135,10 +136,10 @@ class peak_processing():
         return waveforms_pe
 
     @classmethod
-    def flip_and_apply_gains(cls, 
-                             waveforms: np.ndarray, 
+    def flip_and_apply_gains(cls,
+                             waveforms: np.ndarray,
                              gains: np.ndarray,
-                             ADC_config:dict,
+                             ADC_config: dict,
                              baseline_samples: int = 50,
                              ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Prepare a set of waveforms for processing by:
@@ -153,15 +154,14 @@ class peak_processing():
             waveforms (np.ndarray): all the waveforms of a file, from all the channels
             gains (np.ndarray): gains for each channel **in alphabetical order**
             ADC_config (dict): ADCconfig dictionary
-            baseline_samples (int, optional): How many samples used to 
+            baseline_samples (int, optional): How many samples used to
                 calculate the baseline. Defaults to 50.
 
         Returns:
-            Tuple[np.ndarray, np.ndarray, np.ndarray]: waveforms_pe, stds_pe, 
+            Tuple[np.ndarray, np.ndarray, np.ndarray]: waveforms_pe, stds_pe,
                 sum_waveform
         """
-        
-        
+
         baselines = np.apply_along_axis(
             func1d=waveform_processing.get_baseline_rough,
             axis=2,
@@ -170,31 +170,30 @@ class peak_processing():
 
         waveforms_pe = cls.apply_waveforms_transform(
             waveforms, baselines, gains, ADC_config)
-        
+
         stds_pe = np.apply_along_axis(
             func1d=waveform_processing.get_std_rough,
             axis=2,
             arr=waveforms_pe,
             baseline_samples=baseline_samples)
-        
+
         sum_waveform = peak_processing.get_sum_waveform(waveforms_pe)
 
         return waveforms_pe, stds_pe, sum_waveform
-    
+
     @classmethod
-    def get_area_of_single_waveform_each_channel(cls, 
+    def get_area_of_single_waveform_each_channel(cls,
                                                  single_waveforms_pe: np.ndarray,
-                                                 peak_start: int, 
-                                                 peak_end: int, 
-                                                 dt :int = 10) -> np.ndarray:
+                                                 peak_start: int,
+                                                 peak_end: int,
+                                                 dt: int = 10) -> np.ndarray:
         """Get the area of identified peak in each channel.
         """
 
         area_individual_channels = np.sum(
-            single_waveforms_pe[ :, peak_start:peak_end], axis=1)*dt
-        
-        return area_individual_channels
+            single_waveforms_pe[:, peak_start:peak_end], axis=1) * dt
 
+        return area_individual_channels
 
     @classmethod
     def reorder_channel(cls, data_array: np.ndarray,

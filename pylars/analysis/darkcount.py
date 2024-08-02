@@ -115,7 +115,8 @@ class DCR_analysis():
         grad = np.gradient(DCR_values)
         grad_spline = itp.UnivariateSpline(area_hist_x, grad)
         # , s = len(area_hist_x)*3)
-        DCR_der_x_points = np.linspace(area_hist_x[0], area_hist_x[-1], bins) # type: ignore
+        DCR_der_x_points = np.linspace(
+            area_hist_x[0], area_hist_x[-1], bins)  # type: ignore
         DCR_der_y_points = grad_spline(DCR_der_x_points)
 
         if use_scipy_find_peaks:
@@ -580,7 +581,7 @@ class DCR_dataset(DCR_analysis):
                                    'CTP_error': [CTP_error * 100]})
                      ), ignore_index=True
                 )
-            except:
+            except BaseException:
                 print(f'Could not compute properties of module {self.module}, '
                       f'channel {self.channel}, {self.temp} K, {_volt} V. '
                       f'Skipping dataset.')
@@ -744,14 +745,14 @@ class DCR_run():
         SiPM_config = {'sensor_area': sensor_area,
                        }
         self.SiPM_config = SiPM_config
-    
+
     def set_standard_cuts_run(self,
-                          cut_area_min: float = 5,
-                          cut_area_max: float = 1e6,
-                          cut_length_min: int = 4,
-                          cut_length_max: int = 70,
-                          cut_n_pulses_min: float = 0,
-                          cut_n_pulses_max: float = 2) -> None:
+                              cut_area_min: float = 5,
+                              cut_area_max: float = 1e6,
+                              cut_length_min: int = 4,
+                              cut_length_max: int = 70,
+                              cut_n_pulses_min: float = 0,
+                              cut_n_pulses_max: float = 2) -> None:
         """Sets the cuts to use in analysis as (run) object variables.
 
         Args:
@@ -894,7 +895,7 @@ class DCR_run():
                                           "disk space")
 
         name = f'DCR_results_{custom_name}'
-        self.results_df.to_hdf(self.analysis_path + name + '.h5', key = 'df')
+        self.results_df.to_hdf(self.analysis_path + name + '.h5', key='df')
         print('Saved results to ')
 
     def load_results(self, name: str) -> None:

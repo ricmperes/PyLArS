@@ -80,8 +80,9 @@ def get_config_lists(run_number: int,
         kind_list = np.unique(selection['kind'].values)
         vbias_list = values
         temp_list = np.unique(selection['temp'].values)
-        
-    else: kind_list = vbias_list = temp_list = []
+
+    else:
+        kind_list = vbias_list = temp_list = []
 
     print('The following kinds will be processed:', kind_list)
     print('The following voltages will be processed:', vbias_list)

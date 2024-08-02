@@ -34,7 +34,7 @@ parser.add_argument('-a', '--amplification',
                     required=False)
 parser.add_argument('-p', '--polarity',
                     help='Polarity of signal. 1 for negative, 0 for positive.',
-                    type = int,
+                    type=int,
                     default=1)
 parser.add_argument('-pr', '--path_raw',
                     help='Path to the main raw files directory.',
@@ -47,16 +47,17 @@ parser.add_argument('-pp', '--path_processed',
 
 args = parser.parse_args()
 
+
 def process_dataset(run_number: int, kind: str,
                     vbias: float, temp: float,
                     main_data_path: str, path_processed: str,
-                    polarity:bool) -> None:
+                    polarity: bool) -> None:
     # Define run
     base_run = pylars.utils.input.run(
         run_number=run_number,
         main_data_path=main_data_path,
         F_amp=args.amplification,
-        signal_negative_polarity = polarity)
+        signal_negative_polarity=polarity)
 
     # Define processor
     process = pylars.processing.rawprocessor.run_processor(
@@ -94,7 +95,7 @@ if __name__ == '__main__':
         temp=args.temperature,
         main_data_path=args.path_raw,
         path_processed=args.path_processed,
-        polarity = polarity)
+        polarity=polarity)
 
     tf = datetime.datetime.now()
     print('Processing finished at: ', tf)
