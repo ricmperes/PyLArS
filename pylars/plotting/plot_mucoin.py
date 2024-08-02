@@ -1,71 +1,72 @@
+# This file is more a collection of functions than an integral part of pylars
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
+
 import pylars
 
 
-def plot_rates()
+def plot_rates(result_df):
+    fig, ax = plt.subplots(
+        1, 1, figsize=(
+            6, 4), facecolor='white', gridspec_kw={
+            'hspace': 0, 'wspace': 0})
+
+    ax.bar(
+        np.arange(25),
+        200 /
+        result_df['livetime'].dt.total_seconds(),
+        alpha=1,
+        label='Double coin (2xPMT)')
+    ax.bar(
+        np.arange(25),
+        result_df['rate'],
+        alpha=1,
+        label='Triple coin (2xPMT + SiPM)')
+    ax.set_ylabel('Rate [Hz]')
+    ax.set_xlabel('Run #')
+    ax.ticklabel_format(axis='y', style='sci', scilimits=(0, 0))
+    ax.set_yscale('log')
+    ax.legend(loc='lower left', bbox_to_anchor=(0, 1, 1, 0.5))
+
+    #ax_histx = ax.inset_axes([0, 1.05, 1, 0.25], sharex=ax)
+    ax_histy = ax.inset_axes([1., 0, 0.25, 1], sharey=ax)
+    ax_histy.hist(200 / result_df['livetime'].dt.total_seconds(), bins=np.logspace(-5, -
+                                                                                2, 20), alpha=1, histtype='step', color='C0', orientation='horizontal')
+    ax_histy.hist(result_df['rate'], bins=np.logspace(-5, -2, 20),
+                alpha=1, histtype='step', color='C1', orientation='horizontal')
+
+    med_2coin = np.median(200 / result_df['livetime'].dt.total_seconds())
+    med_3coin = np.median(result_df['rate'])
+    ax_histy.axhline(med_2coin, ls='--', color='C0',
+                    label=f'2coin median: {med_2coin:.2e} Hz')
+    ax_histy.axhline(np.median(result_df['rate']), ls='--', color='C1',
+                    label=f'3coin median: {med_3coin:.2e} Hz')
+    #ax_histx.tick_params(axis="x", labelbottom=False)
+    ax_histy.tick_params(axis="y", labelleft=False)
+    ax_histy.set_xlabel('Rate [Hz]')
+    ax_histy.legend(loc='lower right', bbox_to_anchor=(0, 1, 1, 0.5))
+    # plt.subplot(122)
+    # plt.hist(result_df['rate'], bins = 10, alpha = 1, histtype='step', color = 'C1')
+    # plt.ticklabel_format(axis='x', style='sci', scilimits=(0, 0))
+    # plt.xlabel('Rate [Hz]')
+    plt.subplots_adjust(
+        left=None,
+        bottom=None,
+        right=None,
+        top=None,
+        wspace=0,
+        hspace=0)
+    plt.savefig(
+        'coin_rates.jpeg',
+        dpi=120,
+        bbox_inches='tight',
+        pad_inches=0.1)
+    plt.show()
 
 
-fig, ax = plt.subplots(
-    1, 1, figsize=(
-        6, 4), facecolor='white', gridspec_kw={
-        'hspace': 0, 'wspace': 0})
-
-ax.bar(
-    np.arange(25),
-    200 /
-    result_df['livetime'].dt.total_seconds(),
-    alpha=1,
-    label='Double coin (2xPMT)')
-ax.bar(
-    np.arange(25),
-    result_df['rate'],
-    alpha=1,
-    label='Triple coin (2xPMT + SiPM)')
-ax.set_ylabel('Rate [Hz]')
-ax.set_xlabel('Run #')
-ax.ticklabel_format(axis='y', style='sci', scilimits=(0, 0))
-ax.set_yscale('log')
-ax.legend(loc='lower left', bbox_to_anchor=(0, 1, 1, 0.5))
-
-#ax_histx = ax.inset_axes([0, 1.05, 1, 0.25], sharex=ax)
-ax_histy = ax.inset_axes([1., 0, 0.25, 1], sharey=ax)
-ax_histy.hist(200 / result_df['livetime'].dt.total_seconds(), bins=np.logspace(-5, -
-                                                                               2, 20), alpha=1, histtype='step', color='C0', orientation='horizontal')
-ax_histy.hist(result_df['rate'], bins=np.logspace(-5, -2, 20),
-              alpha=1, histtype='step', color='C1', orientation='horizontal')
-
-med_2coin = np.median(200 / result_df['livetime'].dt.total_seconds())
-med_3coin = np.median(result_df['rate'])
-ax_histy.axhline(med_2coin, ls='--', color='C0',
-                 label=f'2coin median: {med_2coin:.2e} Hz')
-ax_histy.axhline(np.median(result_df['rate']), ls='--', color='C1',
-                 label=f'3coin median: {med_3coin:.2e} Hz')
-#ax_histx.tick_params(axis="x", labelbottom=False)
-ax_histy.tick_params(axis="y", labelleft=False)
-ax_histy.set_xlabel('Rate [Hz]')
-ax_histy.legend(loc='lower right', bbox_to_anchor=(0, 1, 1, 0.5))
-# plt.subplot(122)
-# plt.hist(result_df['rate'], bins = 10, alpha = 1, histtype='step', color = 'C1')
-# plt.ticklabel_format(axis='x', style='sci', scilimits=(0, 0))
-# plt.xlabel('Rate [Hz]')
-plt.subplots_adjust(
-    left=None,
-    bottom=None,
-    right=None,
-    top=None,
-    wspace=0,
-    hspace=0)
-plt.savefig(
-    'coin_rates.jpeg',
-    dpi=120,
-    bbox_inches='tight',
-    pad_inches=0.1)
-plt.show()
-
-
-def plot_baseline_all_runs():
+def plot_baseline_all_runs(baseline_all_runs, std_all_runs,labels):
     fig, ax = plt.subplots(4, 3, figsize=(20, 10), sharey=True, sharex=True,
                            gridspec_kw={'hspace': 0, 'wspace': 0},
                            constrained_layout=False)
