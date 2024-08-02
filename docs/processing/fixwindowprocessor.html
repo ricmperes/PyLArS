@@ -30,7 +30,7 @@
 import pandas as pd
 from pylars.utils.common import get_deterministic_hash
 from pylars.utils.input import raw_data, run
-from tqdm.autonotebook import tqdm
+from tqdm import tqdm
 from typing import Tuple, Union
 
 from .fixwindow import fixed_window_processing
@@ -41,9 +41,9 @@ class window_processor():
     &#34;&#34;&#34;
 
     version = &#39;0.0.1&#39;
-    
-    def __init__(self, 
-                 led_window: Tuple[int, int], 
+
+    def __init__(self,
+                 led_window: Tuple[int, int],
                  baseline_samples: int) -&gt; None:
         self.baseline_samples = baseline_samples
         self.led_window = led_window
@@ -56,7 +56,7 @@ class window_processor():
 
     def __hash__(self) -&gt; str:
         return self.hash
-    
+
     def set_tqdm_config(self, bar: bool, show: bool):
         &#34;&#34;&#34;Change the tqdm config
 
@@ -77,8 +77,8 @@ class window_processor():
         Returns:
             raw_data: the raw data object
         &#34;&#34;&#34;
-        raw = raw_data(raw_path = path_to_raw, V = -1, 
-                       T = -1, module = module)
+        raw = raw_data(raw_path=path_to_raw, V=-1,
+                       T=-1, module=module)
         raw.load_root()
         raw.get_available_channels()
 
@@ -86,7 +86,7 @@ class window_processor():
 
     # Processing functions
     def process_channel(self, ch: str) -&gt; dict:
-        &#34;&#34;&#34;Process a channel by iterating over all its waveforms and 
+        &#34;&#34;&#34;Process a channel by iterating over all its waveforms and
         calculating the following:
             - baseline
             - integral in the LED window
@@ -98,7 +98,7 @@ class window_processor():
                 the number of the channel [0,7]
 
         Returns:
-            dict: Dictionary of keys module, channel, wf_number, led_amplitude, 
+            dict: Dictionary of keys module, channel, wf_number, led_amplitude,
             led_area, led_ADCcounts in led window of the processed waveforms.
         &#34;&#34;&#34;
         if ch not in self.raw_data.channels:
@@ -111,21 +111,21 @@ class window_processor():
 
         amplitudes, areas, ADCcounts = fixed_window_processing.process_all_waveforms(
             channel_data, self.baseline_samples, self.led_window)
-        
+
         module_number = [module] * len(areas)
         ch_name = [ch] * len(areas)
         wf_number = np.arange(len(areas))
-            
+
         results = {&#39;module&#39;: module_number,
                    &#39;channel&#39;: ch_name,
-                   &#39;wf_number&#39;:wf_number,
+                   &#39;wf_number&#39;: wf_number,
                    &#39;led_amplitude&#39;: amplitudes,
                    &#39;led_area&#39;: areas,
                    &#39;led_ADCcounts&#39;: ADCcounts,
                    }
 
         return results
-    
+
     def process_all_channels(self) -&gt; pd.DataFrame:
         &#34;&#34;&#34;Calls the process_channel method of each of
         the available channels in the dataset.
@@ -138,8 +138,7 @@ class window_processor():
             _channel)) for _channel in channels_to_process]
         results_df = pd.concat(results_list, ignore_index=True)
 
-        return results_df
-    </code></pre>
+        return results_df</code></pre>
 </details>
 </section>
 <section>
@@ -166,9 +165,9 @@ class window_processor():
     &#34;&#34;&#34;
 
     version = &#39;0.0.1&#39;
-    
-    def __init__(self, 
-                 led_window: Tuple[int, int], 
+
+    def __init__(self,
+                 led_window: Tuple[int, int],
                  baseline_samples: int) -&gt; None:
         self.baseline_samples = baseline_samples
         self.led_window = led_window
@@ -181,7 +180,7 @@ class window_processor():
 
     def __hash__(self) -&gt; str:
         return self.hash
-    
+
     def set_tqdm_config(self, bar: bool, show: bool):
         &#34;&#34;&#34;Change the tqdm config
 
@@ -202,8 +201,8 @@ class window_processor():
         Returns:
             raw_data: the raw data object
         &#34;&#34;&#34;
-        raw = raw_data(raw_path = path_to_raw, V = -1, 
-                       T = -1, module = module)
+        raw = raw_data(raw_path=path_to_raw, V=-1,
+                       T=-1, module=module)
         raw.load_root()
         raw.get_available_channels()
 
@@ -211,7 +210,7 @@ class window_processor():
 
     # Processing functions
     def process_channel(self, ch: str) -&gt; dict:
-        &#34;&#34;&#34;Process a channel by iterating over all its waveforms and 
+        &#34;&#34;&#34;Process a channel by iterating over all its waveforms and
         calculating the following:
             - baseline
             - integral in the LED window
@@ -223,7 +222,7 @@ class window_processor():
                 the number of the channel [0,7]
 
         Returns:
-            dict: Dictionary of keys module, channel, wf_number, led_amplitude, 
+            dict: Dictionary of keys module, channel, wf_number, led_amplitude,
             led_area, led_ADCcounts in led window of the processed waveforms.
         &#34;&#34;&#34;
         if ch not in self.raw_data.channels:
@@ -236,21 +235,21 @@ class window_processor():
 
         amplitudes, areas, ADCcounts = fixed_window_processing.process_all_waveforms(
             channel_data, self.baseline_samples, self.led_window)
-        
+
         module_number = [module] * len(areas)
         ch_name = [ch] * len(areas)
         wf_number = np.arange(len(areas))
-            
+
         results = {&#39;module&#39;: module_number,
                    &#39;channel&#39;: ch_name,
-                   &#39;wf_number&#39;:wf_number,
+                   &#39;wf_number&#39;: wf_number,
                    &#39;led_amplitude&#39;: amplitudes,
                    &#39;led_area&#39;: areas,
                    &#39;led_ADCcounts&#39;: ADCcounts,
                    }
 
         return results
-    
+
     def process_all_channels(self) -&gt; pd.DataFrame:
         &#34;&#34;&#34;Calls the process_channel method of each of
         the available channels in the dataset.
@@ -302,8 +301,8 @@ class window_processor():
     Returns:
         raw_data: the raw data object
     &#34;&#34;&#34;
-    raw = raw_data(raw_path = path_to_raw, V = -1, 
-                   T = -1, module = module)
+    raw = raw_data(raw_path=path_to_raw, V=-1,
+                   T=-1, module=module)
     raw.load_root()
     raw.get_available_channels()
 
@@ -359,7 +358,7 @@ the number of the channel [0,7]</dd>
 <h2 id="returns">Returns</h2>
 <dl>
 <dt><code>dict</code></dt>
-<dd>Dictionary of keys module, channel, wf_number, led_amplitude, </dd>
+<dd>Dictionary of keys module, channel, wf_number, led_amplitude,</dd>
 </dl>
 <p>led_area, led_ADCcounts in led window of the processed waveforms.</p></div>
 <details class="source">
@@ -367,7 +366,7 @@ the number of the channel [0,7]</dd>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def process_channel(self, ch: str) -&gt; dict:
-    &#34;&#34;&#34;Process a channel by iterating over all its waveforms and 
+    &#34;&#34;&#34;Process a channel by iterating over all its waveforms and
     calculating the following:
         - baseline
         - integral in the LED window
@@ -379,7 +378,7 @@ the number of the channel [0,7]</dd>
             the number of the channel [0,7]
 
     Returns:
-        dict: Dictionary of keys module, channel, wf_number, led_amplitude, 
+        dict: Dictionary of keys module, channel, wf_number, led_amplitude,
         led_area, led_ADCcounts in led window of the processed waveforms.
     &#34;&#34;&#34;
     if ch not in self.raw_data.channels:
@@ -392,14 +391,14 @@ the number of the channel [0,7]</dd>
 
     amplitudes, areas, ADCcounts = fixed_window_processing.process_all_waveforms(
         channel_data, self.baseline_samples, self.led_window)
-    
+
     module_number = [module] * len(areas)
     ch_name = [ch] * len(areas)
     wf_number = np.arange(len(areas))
-        
+
     results = {&#39;module&#39;: module_number,
                &#39;channel&#39;: ch_name,
-               &#39;wf_number&#39;:wf_number,
+               &#39;wf_number&#39;: wf_number,
                &#39;led_amplitude&#39;: amplitudes,
                &#39;led_area&#39;: areas,
                &#39;led_ADCcounts&#39;: ADCcounts,

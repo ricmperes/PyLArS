@@ -63,7 +63,7 @@ from pylars.analysis.breakdown import compute_BV_df
 from pylars.utils.common import Gaussian, get_gain
 from scipy.optimize import curve_fit
 from scipy.signal import find_peaks
-from tqdm.autonotebook import tqdm
+from tqdm import tqdm
 
 
 class DCR_analysis():
@@ -130,7 +130,7 @@ class DCR_analysis():
     def get_1pe_rough(cls, df: pd.DataFrame,
                       length_cut_min: int,
                       length_cut_max: int,
-                      bins: int or list = 200,
+                      bins: Union[int, list] = 200,
                       use_scipy_find_peaks: bool = False) -&gt; tuple:
         &#34;&#34;&#34;From an event df (1 channel), find the rough position of the
         SPE from the DCR vs threshold curve and its derivative
@@ -153,7 +153,8 @@ class DCR_analysis():
         grad = np.gradient(DCR_values)
         grad_spline = itp.UnivariateSpline(area_hist_x, grad)
         # , s = len(area_hist_x)*3)
-        DCR_der_x_points = np.linspace(area_hist_x[0], area_hist_x[-1], bins)
+        DCR_der_x_points = np.linspace(
+            area_hist_x[0], area_hist_x[-1], bins)  # type: ignore
         DCR_der_y_points = grad_spline(DCR_der_x_points)
 
         if use_scipy_find_peaks:
@@ -180,7 +181,7 @@ class DCR_analysis():
     def get_DCR_above_threshold_values(cls, df: pd.DataFrame,
                                        length_cut_min: int = 5,
                                        length_cut_max: int = 80,
-                                       bins: int or list = 200,
+                                       bins: Union[int, list] = 200,
                                        output: str = &#39;values&#39;,
                                        **kwargs) -&gt; Union[
             tuple,
@@ -618,7 +619,7 @@ class DCR_dataset(DCR_analysis):
                                    &#39;CTP_error&#39;: [CTP_error * 100]})
                      ), ignore_index=True
                 )
-            except:
+            except BaseException:
                 print(f&#39;Could not compute properties of module {self.module}, &#39;
                       f&#39;channel {self.channel}, {self.temp} K, {_volt} V. &#39;
                       f&#39;Skipping dataset.&#39;)
@@ -782,14 +783,14 @@ class DCR_run():
         SiPM_config = {&#39;sensor_area&#39;: sensor_area,
                        }
         self.SiPM_config = SiPM_config
-    
+
     def set_standard_cuts_run(self,
-                          cut_area_min: float = 5,
-                          cut_area_max: float = 1e6,
-                          cut_length_min: int = 4,
-                          cut_length_max: int = 70,
-                          cut_n_pulses_min: float = 0,
-                          cut_n_pulses_max: float = 2) -&gt; None:
+                              cut_area_min: float = 5,
+                              cut_area_max: float = 1e6,
+                              cut_length_min: int = 4,
+                              cut_length_max: int = 70,
+                              cut_n_pulses_min: float = 0,
+                              cut_n_pulses_max: float = 2) -&gt; None:
         &#34;&#34;&#34;Sets the cuts to use in analysis as (run) object variables.
 
         Args:
@@ -932,7 +933,7 @@ class DCR_run():
                                           &#34;disk space&#34;)
 
         name = f&#39;DCR_results_{custom_name}&#39;
-        self.results_df.to_hdf(self.analysis_path + name + &#39;.h5&#39;, &#39;df&#39;)
+        self.results_df.to_hdf(self.analysis_path + name + &#39;.h5&#39;, key=&#39;df&#39;)
         print(&#39;Saved results to &#39;)
 
     def load_results(self, name: str) -&gt; None:
@@ -1055,7 +1056,7 @@ have only object-specific methods.</p></div>
     def get_1pe_rough(cls, df: pd.DataFrame,
                       length_cut_min: int,
                       length_cut_max: int,
-                      bins: int or list = 200,
+                      bins: Union[int, list] = 200,
                       use_scipy_find_peaks: bool = False) -&gt; tuple:
         &#34;&#34;&#34;From an event df (1 channel), find the rough position of the
         SPE from the DCR vs threshold curve and its derivative
@@ -1078,7 +1079,8 @@ have only object-specific methods.</p></div>
         grad = np.gradient(DCR_values)
         grad_spline = itp.UnivariateSpline(area_hist_x, grad)
         # , s = len(area_hist_x)*3)
-        DCR_der_x_points = np.linspace(area_hist_x[0], area_hist_x[-1], bins)
+        DCR_der_x_points = np.linspace(
+            area_hist_x[0], area_hist_x[-1], bins)  # type: ignore
         DCR_der_y_points = grad_spline(DCR_der_x_points)
 
         if use_scipy_find_peaks:
@@ -1105,7 +1107,7 @@ have only object-specific methods.</p></div>
     def get_DCR_above_threshold_values(cls, df: pd.DataFrame,
                                        length_cut_min: int = 5,
                                        length_cut_max: int = 80,
-                                       bins: int or list = 200,
+                                       bins: Union[int, list] = 200,
                                        output: str = &#39;values&#39;,
                                        **kwargs) -&gt; Union[
             tuple,
@@ -1269,7 +1271,7 @@ have only object-specific methods.</p></div>
 <h3>Static methods</h3>
 <dl>
 <dt id="pylars.analysis.darkcount.DCR_analysis.get_1pe_rough"><code class="name flex">
-<span>def <span class="ident">get_1pe_rough</span></span>(<span>df: pandas.core.frame.DataFrame, length_cut_min: int, length_cut_max: int, bins: int = 200, use_scipy_find_peaks: bool = False) ‑> tuple</span>
+<span>def <span class="ident">get_1pe_rough</span></span>(<span>df: pandas.core.frame.DataFrame, length_cut_min: int, length_cut_max: int, bins: Union[int, list] = 200, use_scipy_find_peaks: bool = False) ‑> tuple</span>
 </code></dt>
 <dd>
 <div class="desc"><p>From an event df (1 channel), find the rough position of the
@@ -1301,7 +1303,7 @@ DCR_der_y_points, min_area_x</dd>
 def get_1pe_rough(cls, df: pd.DataFrame,
                   length_cut_min: int,
                   length_cut_max: int,
-                  bins: int or list = 200,
+                  bins: Union[int, list] = 200,
                   use_scipy_find_peaks: bool = False) -&gt; tuple:
     &#34;&#34;&#34;From an event df (1 channel), find the rough position of the
     SPE from the DCR vs threshold curve and its derivative
@@ -1324,7 +1326,8 @@ def get_1pe_rough(cls, df: pd.DataFrame,
     grad = np.gradient(DCR_values)
     grad_spline = itp.UnivariateSpline(area_hist_x, grad)
     # , s = len(area_hist_x)*3)
-    DCR_der_x_points = np.linspace(area_hist_x[0], area_hist_x[-1], bins)
+    DCR_der_x_points = np.linspace(
+        area_hist_x[0], area_hist_x[-1], bins)  # type: ignore
     DCR_der_y_points = grad_spline(DCR_der_x_points)
 
     if use_scipy_find_peaks:
@@ -1498,7 +1501,7 @@ def get_DCR(df: pd.DataFrame,
 </details>
 </dd>
 <dt id="pylars.analysis.darkcount.DCR_analysis.get_DCR_above_threshold_values"><code class="name flex">
-<span>def <span class="ident">get_DCR_above_threshold_values</span></span>(<span>df: pandas.core.frame.DataFrame, length_cut_min: int = 5, length_cut_max: int = 80, bins: int = 200, output: str = 'values', **kwargs) ‑> Union[tuple, scipy.interpolate.fitpack2.UnivariateSpline, scipy.interpolate.interpolate.interp1d, NoneType]</span>
+<span>def <span class="ident">get_DCR_above_threshold_values</span></span>(<span>df: pandas.core.frame.DataFrame, length_cut_min: int = 5, length_cut_max: int = 80, bins: Union[int, list] = 200, output: str = 'values', **kwargs) ‑> Union[tuple, scipy.interpolate.fitpack2.UnivariateSpline, scipy.interpolate.interpolate.interp1d, NoneType]</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Computes the event rate in a sweep of area thresholds and
@@ -1535,7 +1538,7 @@ Defaults to 200.</dd>
 def get_DCR_above_threshold_values(cls, df: pd.DataFrame,
                                    length_cut_min: int = 5,
                                    length_cut_max: int = 80,
-                                   bins: int or list = 200,
+                                   bins: Union[int, list] = 200,
                                    output: str = &#39;values&#39;,
                                    **kwargs) -&gt; Union[
         tuple,
@@ -1998,7 +2001,7 @@ a certain temperature.</p></div>
                                    &#39;CTP_error&#39;: [CTP_error * 100]})
                      ), ignore_index=True
                 )
-            except:
+            except BaseException:
                 print(f&#39;Could not compute properties of module {self.module}, &#39;
                       f&#39;channel {self.channel}, {self.temp} K, {_volt} V. &#39;
                       f&#39;Skipping dataset.&#39;)
@@ -2285,7 +2288,7 @@ the columns ['T', 'V', 'SPE_area','SPE_area_error', 'Gain',
                                &#39;CTP_error&#39;: [CTP_error * 100]})
                  ), ignore_index=True
             )
-        except:
+        except BaseException:
             print(f&#39;Could not compute properties of module {self.module}, &#39;
                   f&#39;channel {self.channel}, {self.temp} K, {_volt} V. &#39;
                   f&#39;Skipping dataset.&#39;)
@@ -2765,14 +2768,14 @@ DCR_run.results_df .</p></div>
         SiPM_config = {&#39;sensor_area&#39;: sensor_area,
                        }
         self.SiPM_config = SiPM_config
-    
+
     def set_standard_cuts_run(self,
-                          cut_area_min: float = 5,
-                          cut_area_max: float = 1e6,
-                          cut_length_min: int = 4,
-                          cut_length_max: int = 70,
-                          cut_n_pulses_min: float = 0,
-                          cut_n_pulses_max: float = 2) -&gt; None:
+                              cut_area_min: float = 5,
+                              cut_area_max: float = 1e6,
+                              cut_length_min: int = 4,
+                              cut_length_max: int = 70,
+                              cut_n_pulses_min: float = 0,
+                              cut_n_pulses_max: float = 2) -&gt; None:
         &#34;&#34;&#34;Sets the cuts to use in analysis as (run) object variables.
 
         Args:
@@ -2915,7 +2918,7 @@ DCR_run.results_df .</p></div>
                                           &#34;disk space&#34;)
 
         name = f&#39;DCR_results_{custom_name}&#39;
-        self.results_df.to_hdf(self.analysis_path + name + &#39;.h5&#39;, &#39;df&#39;)
+        self.results_df.to_hdf(self.analysis_path + name + &#39;.h5&#39;, key=&#39;df&#39;)
         print(&#39;Saved results to &#39;)
 
     def load_results(self, name: str) -&gt; None:
@@ -3246,7 +3249,7 @@ self.analysis_path.</p>
                                       &#34;disk space&#34;)
 
     name = f&#39;DCR_results_{custom_name}&#39;
-    self.results_df.to_hdf(self.analysis_path + name + &#39;.h5&#39;, &#39;df&#39;)
+    self.results_df.to_hdf(self.analysis_path + name + &#39;.h5&#39;, key=&#39;df&#39;)
     print(&#39;Saved results to &#39;)</code></pre>
 </details>
 </dd>
@@ -3309,12 +3312,12 @@ the waveform. Defaults to 2.</dd>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def set_standard_cuts_run(self,
-                      cut_area_min: float = 5,
-                      cut_area_max: float = 1e6,
-                      cut_length_min: int = 4,
-                      cut_length_max: int = 70,
-                      cut_n_pulses_min: float = 0,
-                      cut_n_pulses_max: float = 2) -&gt; None:
+                          cut_area_min: float = 5,
+                          cut_area_max: float = 1e6,
+                          cut_length_min: int = 4,
+                          cut_length_max: int = 70,
+                          cut_n_pulses_min: float = 0,
+                          cut_n_pulses_max: float = 2) -&gt; None:
     &#34;&#34;&#34;Sets the cuts to use in analysis as (run) object variables.
 
     Args:

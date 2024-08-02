@@ -28,6 +28,7 @@
 </summary>
 <pre><code class="python">import numpy as np
 import pandas as pd
+from tqdm import tqdm
 from pylars.utils.common import get_deterministic_hash, load_ADC_config
 from pylars.utils.input import raw_data
 
@@ -46,7 +47,20 @@ class peak_processor():
     processing_method = &#39;peaks_simple&#39;
 
     # for run6
-    index_reorder_data_to_layout = [9, 4, 5, 6, 11, 10, 8, 0, 2, 3, 7, 1]
+    index_reorder_channels = [5, 6, 7, 8, 9, 10, 11, 0, 1, 2, 3, 4]
+    list_of_tiles = [
+        &#39;A&#39;,
+        &#39;B&#39;,
+        &#39;C&#39;,
+        &#39;D&#39;,
+        &#39;E&#39;,
+        &#39;F&#39;,
+        &#39;G&#39;,
+        &#39;H&#39;,
+        &#39;J&#39;,
+        &#39;K&#39;,
+        &#39;L&#39;,
+        &#39;M&#39;]
 
     def __init__(self, sigma_level: float, baseline_samples: int,
                  gains_tag: str, gains_path: str) -&gt; None:
@@ -57,7 +71,6 @@ class peak_processor():
                                            f&#34;{self.version}&#34; +
                                            f&#34;{self.sigma_level}&#34; +
                                            f&#34;{self.baseline_samples:.2f}&#34;)
-        self.processed_data = dict()
         self.show_loadbar_channel = True
         self.show_tqdm_channel = True
 
@@ -91,10 +104,11 @@ class peak_processor():
 
         # return gains
 
-        gain_df = pd.read_csv(self.gains_path + self.gains_tag,
-                              header=None,
-                              names=[&#39;module&#39;, &#39;channel&#39;, &#39;gain&#39;])
-        gain_df = gain_df.sort_values([&#39;module&#39;, &#39;channel&#39;], ignore_index=True)
+        gain_df = pd.read_csv(f&#39;{self.gains_path}/gains_{self.gains_tag}.csv&#39;)
+        gain_df = gain_df.sort_values(by=[&#39;tile&#39;],
+                                      ignore_index=True)
+        if gain_df.iloc[0][&#39;gain&#39;] &lt; 1e4:
+            gain_df[&#39;gain&#39;] = gain_df[&#39;gain&#39;] * 1e6
 
         return np.array(gain_df[&#39;gain&#39;])
 
@@ -119,8 +133,82 @@ class peak_processor():
 
         self.ADC_config = load_ADC_config(model, F_amp)
 
-    def process_waveform_set(self, waveforms: np.ndarray,
-                             return_waveforms=False):
+    def load_raw_data(self, path_to_raw_both_modules: list,
+                      modules: list, V: float, T: float,
+                      ignore_channels: list = []):
+        &#34;&#34;&#34;Raw data loader to pass to the processing scripts.
+
+        Args:
+            path_to_raw_both_modules (list): list with path to both raw files,
+                one for each module. If len(pat_list) = 1, then it assumes
+                one only module.
+            V (float): _description_
+            T (float): _description_
+            ignore_channels (list): list of channels to ignore. Each element
+                should be a list corresponding to each module, in order.
+
+        Returns:
+            raw_data: _description_
+        &#34;&#34;&#34;
+
+        assert len(path_to_raw_both_modules) == len(modules) == len(
+            ignore_channels), &#34;Number of paths and modules needs to be the same.&#34;
+
+        self.raw_data_list = []
+        for module, path_to_raw in zip(modules, path_to_raw_both_modules):
+
+            raw = raw_data(path_to_raw, V, T, module)
+            raw.load_root()
+            raw.get_available_channels()
+            raw.channels = [ch for ch in raw.channels if
+                            ch not in ignore_channels[module]]
+
+            self.raw_data_list.append(raw)
+
+    def get_stacked_waveforms(self):
+        &#34;&#34;&#34;Get the waveforms from all channels stacked.
+        FROM HERE THE WAVEFORMS ARE STACKED IN THE ORDER OF THE TILES,
+        FROM A TO M!
+
+
+        Returns:
+            np.ndarray: waveforms of all channels stacked.
+        &#34;&#34;&#34;
+        _stacked_channel_data_list = []
+        for raw in self.raw_data_list:
+            _stacked_channel_data_list.append(np.stack(
+                [raw.get_channel_data(ch) for ch in raw.channels],
+                axis=0))
+        stacked_waveforms = np.concatenate(_stacked_channel_data_list, axis=0)
+        stacked_waveforms = stacked_waveforms[self.index_reorder_channels]
+
+        return stacked_waveforms
+
+    def make_sum_waveforms_all_channels(self):
+
+        waveforms = self.get_stacked_waveforms()
+
+        baselines = np.apply_along_axis(
+            func1d=waveform_processing.get_baseline_rough,
+            axis=2,
+            arr=waveforms,
+            baseline_samples=50)
+
+        stds = np.apply_along_axis(
+            func1d=waveform_processing.get_std_rough,
+            axis=2,
+            arr=waveforms,
+            baseline_samples=50)
+
+        waveforms_pe = peak_processing.apply_waveforms_transform(
+            waveforms, baselines, self.gains, self.ADC_config)
+
+        sum_waveform = peak_processing.get_sum_waveform(waveforms_pe)
+
+        return waveforms_pe, sum_waveform
+
+    def process_waveform_set(self, waveforms_pe_single: np.ndarray,
+                             sum_waveform_single: np.ndarray):
         &#34;&#34;&#34;Process an array of waveforms from all channels.
 
         The waveforms are assumed to be synchronized and each row of the
@@ -132,40 +220,87 @@ class peak_processor():
             waveforms (np.ndarray): waveforms of all channels stacked.
         &#34;&#34;&#34;
 
-        baselines = np.apply_along_axis(
-            func1d=waveform_processing.get_baseline_rough,
-            axis=1,
-            arr=waveforms,
-            baseline_samples=self.baseline_samples)
-
-        waveforms_pe = peak_processing.apply_waveforms_transform(
-            waveforms, baselines, self.gains, self.ADC_config)
-        sum_waveform = peak_processing.get_sum_waveform(waveforms_pe)
-
         areas, lengths, positions, amplitudes = waveform_processing.process_waveform(
-            sum_waveform, self.baseline_samples, self.sigma_level)
+            waveform=sum_waveform_single,
+            baseline_samples=self.baseline_samples,
+            sigma_level=self.sigma_level,
+            negative_polarity=False,
+            baseline_subtracted=True)
 
-        if return_waveforms is True:
-            return waveforms_pe, sum_waveform
+        areas_individual_channels = [peak_processing.get_area_of_single_waveform_each_channel(
+            waveforms_pe_single, positions[i], positions[i] + lengths[i]) for i in range(len(positions))]
 
-        return areas, lengths, positions, amplitudes
+        return areas, lengths, positions, amplitudes, areas_individual_channels
 
-    def load_raw_data(self, path_to_raw: str, V: float, T: float, module: int):
-        &#34;&#34;&#34;Raw data loader to pass to the processing scripts.
+    def process_all_waveforms(self):
 
-        Args:
-            path_to_raw (str): _description_
-            V (float): _description_
-            T (float): _description_
+        waveforms_pe, sum_waveform = self.make_sum_waveforms_all_channels()
 
-        Returns:
-            raw_data: _description_
-        &#34;&#34;&#34;
-        raw = raw_data(path_to_raw, V, T, module)
-        raw.load_root()
-        raw.get_available_channels()
+        n_wfs = sum_waveform.shape[0]
 
-        self.raw_data = raw</code></pre>
+        results = {&#39;wf_number&#39;: [],
+                   &#39;peak_number&#39;: [],
+                   &#39;n_peaks&#39;: [],
+                   &#39;area&#39;: [],
+                   &#39;length&#39;: [],
+                   &#39;position&#39;: [],
+                   &#39;amplitude&#39;: [],
+                   }
+
+        areas_individual_channels_results = {
+            &#39;wf_number&#39;: [],
+            &#39;peak_number&#39;: [],
+            &#39;A&#39;: [],
+            &#39;B&#39;: [],
+            &#39;C&#39;: [],
+            &#39;D&#39;: [],
+            &#39;E&#39;: [],
+            &#39;F&#39;: [],
+            &#39;G&#39;: [],
+            &#39;H&#39;: [],
+            &#39;J&#39;: [],
+            &#39;K&#39;: [],
+            &#39;L&#39;: [],
+            &#39;M&#39;: [],
+        }
+
+        for wf_i in tqdm(range(n_wfs), total=n_wfs,
+                         desc=&#39;Processing waveforms: &#39;):
+
+            _sum_waveform_single = sum_waveform[wf_i, :]
+            _waverform_pe_single = waveforms_pe[:, wf_i, :]
+
+            areas, lengths, positions, amplitudes, areas_individual_channels = self.process_waveform_set(
+                waveforms_pe_single=_waverform_pe_single,
+                sum_waveform_single=_sum_waveform_single)
+
+            wf_number = np.ones(len(areas), dtype=int) * wf_i
+            peak_number = np.arange(len(areas))
+            n_pulses = np.ones(len(areas), dtype=int) * len(areas)
+
+            results[&#39;wf_number&#39;] += list(wf_number)
+            results[&#39;peak_number&#39;] += list(peak_number)
+            results[&#39;n_peaks&#39;] += list(n_pulses)
+            results[&#39;area&#39;] += list(areas)
+            results[&#39;length&#39;] += list(lengths)
+            results[&#39;position&#39;] += list(positions)
+            results[&#39;amplitude&#39;] += list(amplitudes)
+
+            areas_individual_channels_results[&#39;wf_number&#39;] += list(wf_number)
+            areas_individual_channels_results[&#39;peak_number&#39;] += list(
+                peak_number)
+
+            for peak_i in range(len(areas)):
+                for tile_i, tile_name in enumerate(self.list_of_tiles):
+                    areas_individual_channels_results[tile_name] += [
+                        areas_individual_channels[peak_i][tile_i]]
+
+        results = pd.DataFrame(results)
+        areas_individual_channels_results = pd.DataFrame(
+            areas_individual_channels_results)
+        self.results_df = results
+        self.areas_individual_channels_results_df = areas_individual_channels_results
+        return results, areas_individual_channels_results</code></pre>
 </details>
 </section>
 <section>
@@ -200,7 +335,20 @@ channels in the photosensor array.</p></div>
     processing_method = &#39;peaks_simple&#39;
 
     # for run6
-    index_reorder_data_to_layout = [9, 4, 5, 6, 11, 10, 8, 0, 2, 3, 7, 1]
+    index_reorder_channels = [5, 6, 7, 8, 9, 10, 11, 0, 1, 2, 3, 4]
+    list_of_tiles = [
+        &#39;A&#39;,
+        &#39;B&#39;,
+        &#39;C&#39;,
+        &#39;D&#39;,
+        &#39;E&#39;,
+        &#39;F&#39;,
+        &#39;G&#39;,
+        &#39;H&#39;,
+        &#39;J&#39;,
+        &#39;K&#39;,
+        &#39;L&#39;,
+        &#39;M&#39;]
 
     def __init__(self, sigma_level: float, baseline_samples: int,
                  gains_tag: str, gains_path: str) -&gt; None:
@@ -211,7 +359,6 @@ channels in the photosensor array.</p></div>
                                            f&#34;{self.version}&#34; +
                                            f&#34;{self.sigma_level}&#34; +
                                            f&#34;{self.baseline_samples:.2f}&#34;)
-        self.processed_data = dict()
         self.show_loadbar_channel = True
         self.show_tqdm_channel = True
 
@@ -245,10 +392,11 @@ channels in the photosensor array.</p></div>
 
         # return gains
 
-        gain_df = pd.read_csv(self.gains_path + self.gains_tag,
-                              header=None,
-                              names=[&#39;module&#39;, &#39;channel&#39;, &#39;gain&#39;])
-        gain_df = gain_df.sort_values([&#39;module&#39;, &#39;channel&#39;], ignore_index=True)
+        gain_df = pd.read_csv(f&#39;{self.gains_path}/gains_{self.gains_tag}.csv&#39;)
+        gain_df = gain_df.sort_values(by=[&#39;tile&#39;],
+                                      ignore_index=True)
+        if gain_df.iloc[0][&#39;gain&#39;] &lt; 1e4:
+            gain_df[&#39;gain&#39;] = gain_df[&#39;gain&#39;] * 1e6
 
         return np.array(gain_df[&#39;gain&#39;])
 
@@ -273,8 +421,82 @@ channels in the photosensor array.</p></div>
 
         self.ADC_config = load_ADC_config(model, F_amp)
 
-    def process_waveform_set(self, waveforms: np.ndarray,
-                             return_waveforms=False):
+    def load_raw_data(self, path_to_raw_both_modules: list,
+                      modules: list, V: float, T: float,
+                      ignore_channels: list = []):
+        &#34;&#34;&#34;Raw data loader to pass to the processing scripts.
+
+        Args:
+            path_to_raw_both_modules (list): list with path to both raw files,
+                one for each module. If len(pat_list) = 1, then it assumes
+                one only module.
+            V (float): _description_
+            T (float): _description_
+            ignore_channels (list): list of channels to ignore. Each element
+                should be a list corresponding to each module, in order.
+
+        Returns:
+            raw_data: _description_
+        &#34;&#34;&#34;
+
+        assert len(path_to_raw_both_modules) == len(modules) == len(
+            ignore_channels), &#34;Number of paths and modules needs to be the same.&#34;
+
+        self.raw_data_list = []
+        for module, path_to_raw in zip(modules, path_to_raw_both_modules):
+
+            raw = raw_data(path_to_raw, V, T, module)
+            raw.load_root()
+            raw.get_available_channels()
+            raw.channels = [ch for ch in raw.channels if
+                            ch not in ignore_channels[module]]
+
+            self.raw_data_list.append(raw)
+
+    def get_stacked_waveforms(self):
+        &#34;&#34;&#34;Get the waveforms from all channels stacked.
+        FROM HERE THE WAVEFORMS ARE STACKED IN THE ORDER OF THE TILES,
+        FROM A TO M!
+
+
+        Returns:
+            np.ndarray: waveforms of all channels stacked.
+        &#34;&#34;&#34;
+        _stacked_channel_data_list = []
+        for raw in self.raw_data_list:
+            _stacked_channel_data_list.append(np.stack(
+                [raw.get_channel_data(ch) for ch in raw.channels],
+                axis=0))
+        stacked_waveforms = np.concatenate(_stacked_channel_data_list, axis=0)
+        stacked_waveforms = stacked_waveforms[self.index_reorder_channels]
+
+        return stacked_waveforms
+
+    def make_sum_waveforms_all_channels(self):
+
+        waveforms = self.get_stacked_waveforms()
+
+        baselines = np.apply_along_axis(
+            func1d=waveform_processing.get_baseline_rough,
+            axis=2,
+            arr=waveforms,
+            baseline_samples=50)
+
+        stds = np.apply_along_axis(
+            func1d=waveform_processing.get_std_rough,
+            axis=2,
+            arr=waveforms,
+            baseline_samples=50)
+
+        waveforms_pe = peak_processing.apply_waveforms_transform(
+            waveforms, baselines, self.gains, self.ADC_config)
+
+        sum_waveform = peak_processing.get_sum_waveform(waveforms_pe)
+
+        return waveforms_pe, sum_waveform
+
+    def process_waveform_set(self, waveforms_pe_single: np.ndarray,
+                             sum_waveform_single: np.ndarray):
         &#34;&#34;&#34;Process an array of waveforms from all channels.
 
         The waveforms are assumed to be synchronized and each row of the
@@ -286,44 +508,95 @@ channels in the photosensor array.</p></div>
             waveforms (np.ndarray): waveforms of all channels stacked.
         &#34;&#34;&#34;
 
-        baselines = np.apply_along_axis(
-            func1d=waveform_processing.get_baseline_rough,
-            axis=1,
-            arr=waveforms,
-            baseline_samples=self.baseline_samples)
-
-        waveforms_pe = peak_processing.apply_waveforms_transform(
-            waveforms, baselines, self.gains, self.ADC_config)
-        sum_waveform = peak_processing.get_sum_waveform(waveforms_pe)
-
         areas, lengths, positions, amplitudes = waveform_processing.process_waveform(
-            sum_waveform, self.baseline_samples, self.sigma_level)
+            waveform=sum_waveform_single,
+            baseline_samples=self.baseline_samples,
+            sigma_level=self.sigma_level,
+            negative_polarity=False,
+            baseline_subtracted=True)
 
-        if return_waveforms is True:
-            return waveforms_pe, sum_waveform
+        areas_individual_channels = [peak_processing.get_area_of_single_waveform_each_channel(
+            waveforms_pe_single, positions[i], positions[i] + lengths[i]) for i in range(len(positions))]
 
-        return areas, lengths, positions, amplitudes
+        return areas, lengths, positions, amplitudes, areas_individual_channels
 
-    def load_raw_data(self, path_to_raw: str, V: float, T: float, module: int):
-        &#34;&#34;&#34;Raw data loader to pass to the processing scripts.
+    def process_all_waveforms(self):
 
-        Args:
-            path_to_raw (str): _description_
-            V (float): _description_
-            T (float): _description_
+        waveforms_pe, sum_waveform = self.make_sum_waveforms_all_channels()
 
-        Returns:
-            raw_data: _description_
-        &#34;&#34;&#34;
-        raw = raw_data(path_to_raw, V, T, module)
-        raw.load_root()
-        raw.get_available_channels()
+        n_wfs = sum_waveform.shape[0]
 
-        self.raw_data = raw</code></pre>
+        results = {&#39;wf_number&#39;: [],
+                   &#39;peak_number&#39;: [],
+                   &#39;n_peaks&#39;: [],
+                   &#39;area&#39;: [],
+                   &#39;length&#39;: [],
+                   &#39;position&#39;: [],
+                   &#39;amplitude&#39;: [],
+                   }
+
+        areas_individual_channels_results = {
+            &#39;wf_number&#39;: [],
+            &#39;peak_number&#39;: [],
+            &#39;A&#39;: [],
+            &#39;B&#39;: [],
+            &#39;C&#39;: [],
+            &#39;D&#39;: [],
+            &#39;E&#39;: [],
+            &#39;F&#39;: [],
+            &#39;G&#39;: [],
+            &#39;H&#39;: [],
+            &#39;J&#39;: [],
+            &#39;K&#39;: [],
+            &#39;L&#39;: [],
+            &#39;M&#39;: [],
+        }
+
+        for wf_i in tqdm(range(n_wfs), total=n_wfs,
+                         desc=&#39;Processing waveforms: &#39;):
+
+            _sum_waveform_single = sum_waveform[wf_i, :]
+            _waverform_pe_single = waveforms_pe[:, wf_i, :]
+
+            areas, lengths, positions, amplitudes, areas_individual_channels = self.process_waveform_set(
+                waveforms_pe_single=_waverform_pe_single,
+                sum_waveform_single=_sum_waveform_single)
+
+            wf_number = np.ones(len(areas), dtype=int) * wf_i
+            peak_number = np.arange(len(areas))
+            n_pulses = np.ones(len(areas), dtype=int) * len(areas)
+
+            results[&#39;wf_number&#39;] += list(wf_number)
+            results[&#39;peak_number&#39;] += list(peak_number)
+            results[&#39;n_peaks&#39;] += list(n_pulses)
+            results[&#39;area&#39;] += list(areas)
+            results[&#39;length&#39;] += list(lengths)
+            results[&#39;position&#39;] += list(positions)
+            results[&#39;amplitude&#39;] += list(amplitudes)
+
+            areas_individual_channels_results[&#39;wf_number&#39;] += list(wf_number)
+            areas_individual_channels_results[&#39;peak_number&#39;] += list(
+                peak_number)
+
+            for peak_i in range(len(areas)):
+                for tile_i, tile_name in enumerate(self.list_of_tiles):
+                    areas_individual_channels_results[tile_name] += [
+                        areas_individual_channels[peak_i][tile_i]]
+
+        results = pd.DataFrame(results)
+        areas_individual_channels_results = pd.DataFrame(
+            areas_individual_channels_results)
+        self.results_df = results
+        self.areas_individual_channels_results_df = areas_individual_channels_results
+        return results, areas_individual_channels_results</code></pre>
 </details>
 <h3>Class variables</h3>
 <dl>
-<dt id="pylars.processing.peakprocessor.peak_processor.index_reorder_data_to_layout"><code class="name">var <span class="ident">index_reorder_data_to_layout</span></code></dt>
+<dt id="pylars.processing.peakprocessor.peak_processor.index_reorder_channels"><code class="name">var <span class="ident">index_reorder_channels</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="pylars.processing.peakprocessor.peak_processor.list_of_tiles"><code class="name">var <span class="ident">list_of_tiles</span></code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
@@ -375,6 +648,42 @@ external amplification on the rack).</p></div>
     self.ADC_config = load_ADC_config(model, F_amp)</code></pre>
 </details>
 </dd>
+<dt id="pylars.processing.peakprocessor.peak_processor.get_stacked_waveforms"><code class="name flex">
+<span>def <span class="ident">get_stacked_waveforms</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Get the waveforms from all channels stacked.
+FROM HERE THE WAVEFORMS ARE STACKED IN THE ORDER OF THE TILES,
+FROM A TO M!</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>np.ndarray</code></dt>
+<dd>waveforms of all channels stacked.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_stacked_waveforms(self):
+    &#34;&#34;&#34;Get the waveforms from all channels stacked.
+    FROM HERE THE WAVEFORMS ARE STACKED IN THE ORDER OF THE TILES,
+    FROM A TO M!
+
+
+    Returns:
+        np.ndarray: waveforms of all channels stacked.
+    &#34;&#34;&#34;
+    _stacked_channel_data_list = []
+    for raw in self.raw_data_list:
+        _stacked_channel_data_list.append(np.stack(
+            [raw.get_channel_data(ch) for ch in raw.channels],
+            axis=0))
+    stacked_waveforms = np.concatenate(_stacked_channel_data_list, axis=0)
+    stacked_waveforms = stacked_waveforms[self.index_reorder_channels]
+
+    return stacked_waveforms</code></pre>
+</details>
+</dd>
 <dt id="pylars.processing.peakprocessor.peak_processor.load_gains"><code class="name flex">
 <span>def <span class="ident">load_gains</span></span>(<span>self) ‑> numpy.ndarray</span>
 </code></dt>
@@ -407,27 +716,33 @@ dule-&gt;channel)</dd>
 
     # return gains
 
-    gain_df = pd.read_csv(self.gains_path + self.gains_tag,
-                          header=None,
-                          names=[&#39;module&#39;, &#39;channel&#39;, &#39;gain&#39;])
-    gain_df = gain_df.sort_values([&#39;module&#39;, &#39;channel&#39;], ignore_index=True)
+    gain_df = pd.read_csv(f&#39;{self.gains_path}/gains_{self.gains_tag}.csv&#39;)
+    gain_df = gain_df.sort_values(by=[&#39;tile&#39;],
+                                  ignore_index=True)
+    if gain_df.iloc[0][&#39;gain&#39;] &lt; 1e4:
+        gain_df[&#39;gain&#39;] = gain_df[&#39;gain&#39;] * 1e6
 
     return np.array(gain_df[&#39;gain&#39;])</code></pre>
 </details>
 </dd>
 <dt id="pylars.processing.peakprocessor.peak_processor.load_raw_data"><code class="name flex">
-<span>def <span class="ident">load_raw_data</span></span>(<span>self, path_to_raw: str, V: float, T: float, module: int)</span>
+<span>def <span class="ident">load_raw_data</span></span>(<span>self, path_to_raw_both_modules: list, modules: list, V: float, T: float, ignore_channels: list = [])</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Raw data loader to pass to the processing scripts.</p>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>path_to_raw</code></strong> :&ensp;<code>str</code></dt>
-<dd><em>description</em></dd>
+<dt><strong><code>path_to_raw_both_modules</code></strong> :&ensp;<code>list</code></dt>
+<dd>list with path to both raw files,
+one for each module. If len(pat_list) = 1, then it assumes
+one only module.</dd>
 <dt><strong><code>V</code></strong> :&ensp;<code>float</code></dt>
 <dd><em>description</em></dd>
 <dt><strong><code>T</code></strong> :&ensp;<code>float</code></dt>
 <dd><em>description</em></dd>
+<dt><strong><code>ignore_channels</code></strong> :&ensp;<code>list</code></dt>
+<dd>list of channels to ignore. Each element
+should be a list corresponding to each module, in order.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -438,26 +753,154 @@ dule-&gt;channel)</dd>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def load_raw_data(self, path_to_raw: str, V: float, T: float, module: int):
+<pre><code class="python">def load_raw_data(self, path_to_raw_both_modules: list,
+                  modules: list, V: float, T: float,
+                  ignore_channels: list = []):
     &#34;&#34;&#34;Raw data loader to pass to the processing scripts.
 
     Args:
-        path_to_raw (str): _description_
+        path_to_raw_both_modules (list): list with path to both raw files,
+            one for each module. If len(pat_list) = 1, then it assumes
+            one only module.
         V (float): _description_
         T (float): _description_
+        ignore_channels (list): list of channels to ignore. Each element
+            should be a list corresponding to each module, in order.
 
     Returns:
         raw_data: _description_
     &#34;&#34;&#34;
-    raw = raw_data(path_to_raw, V, T, module)
-    raw.load_root()
-    raw.get_available_channels()
 
-    self.raw_data = raw</code></pre>
+    assert len(path_to_raw_both_modules) == len(modules) == len(
+        ignore_channels), &#34;Number of paths and modules needs to be the same.&#34;
+
+    self.raw_data_list = []
+    for module, path_to_raw in zip(modules, path_to_raw_both_modules):
+
+        raw = raw_data(path_to_raw, V, T, module)
+        raw.load_root()
+        raw.get_available_channels()
+        raw.channels = [ch for ch in raw.channels if
+                        ch not in ignore_channels[module]]
+
+        self.raw_data_list.append(raw)</code></pre>
+</details>
+</dd>
+<dt id="pylars.processing.peakprocessor.peak_processor.make_sum_waveforms_all_channels"><code class="name flex">
+<span>def <span class="ident">make_sum_waveforms_all_channels</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def make_sum_waveforms_all_channels(self):
+
+    waveforms = self.get_stacked_waveforms()
+
+    baselines = np.apply_along_axis(
+        func1d=waveform_processing.get_baseline_rough,
+        axis=2,
+        arr=waveforms,
+        baseline_samples=50)
+
+    stds = np.apply_along_axis(
+        func1d=waveform_processing.get_std_rough,
+        axis=2,
+        arr=waveforms,
+        baseline_samples=50)
+
+    waveforms_pe = peak_processing.apply_waveforms_transform(
+        waveforms, baselines, self.gains, self.ADC_config)
+
+    sum_waveform = peak_processing.get_sum_waveform(waveforms_pe)
+
+    return waveforms_pe, sum_waveform</code></pre>
+</details>
+</dd>
+<dt id="pylars.processing.peakprocessor.peak_processor.process_all_waveforms"><code class="name flex">
+<span>def <span class="ident">process_all_waveforms</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def process_all_waveforms(self):
+
+    waveforms_pe, sum_waveform = self.make_sum_waveforms_all_channels()
+
+    n_wfs = sum_waveform.shape[0]
+
+    results = {&#39;wf_number&#39;: [],
+               &#39;peak_number&#39;: [],
+               &#39;n_peaks&#39;: [],
+               &#39;area&#39;: [],
+               &#39;length&#39;: [],
+               &#39;position&#39;: [],
+               &#39;amplitude&#39;: [],
+               }
+
+    areas_individual_channels_results = {
+        &#39;wf_number&#39;: [],
+        &#39;peak_number&#39;: [],
+        &#39;A&#39;: [],
+        &#39;B&#39;: [],
+        &#39;C&#39;: [],
+        &#39;D&#39;: [],
+        &#39;E&#39;: [],
+        &#39;F&#39;: [],
+        &#39;G&#39;: [],
+        &#39;H&#39;: [],
+        &#39;J&#39;: [],
+        &#39;K&#39;: [],
+        &#39;L&#39;: [],
+        &#39;M&#39;: [],
+    }
+
+    for wf_i in tqdm(range(n_wfs), total=n_wfs,
+                     desc=&#39;Processing waveforms: &#39;):
+
+        _sum_waveform_single = sum_waveform[wf_i, :]
+        _waverform_pe_single = waveforms_pe[:, wf_i, :]
+
+        areas, lengths, positions, amplitudes, areas_individual_channels = self.process_waveform_set(
+            waveforms_pe_single=_waverform_pe_single,
+            sum_waveform_single=_sum_waveform_single)
+
+        wf_number = np.ones(len(areas), dtype=int) * wf_i
+        peak_number = np.arange(len(areas))
+        n_pulses = np.ones(len(areas), dtype=int) * len(areas)
+
+        results[&#39;wf_number&#39;] += list(wf_number)
+        results[&#39;peak_number&#39;] += list(peak_number)
+        results[&#39;n_peaks&#39;] += list(n_pulses)
+        results[&#39;area&#39;] += list(areas)
+        results[&#39;length&#39;] += list(lengths)
+        results[&#39;position&#39;] += list(positions)
+        results[&#39;amplitude&#39;] += list(amplitudes)
+
+        areas_individual_channels_results[&#39;wf_number&#39;] += list(wf_number)
+        areas_individual_channels_results[&#39;peak_number&#39;] += list(
+            peak_number)
+
+        for peak_i in range(len(areas)):
+            for tile_i, tile_name in enumerate(self.list_of_tiles):
+                areas_individual_channels_results[tile_name] += [
+                    areas_individual_channels[peak_i][tile_i]]
+
+    results = pd.DataFrame(results)
+    areas_individual_channels_results = pd.DataFrame(
+        areas_individual_channels_results)
+    self.results_df = results
+    self.areas_individual_channels_results_df = areas_individual_channels_results
+    return results, areas_individual_channels_results</code></pre>
 </details>
 </dd>
 <dt id="pylars.processing.peakprocessor.peak_processor.process_waveform_set"><code class="name flex">
-<span>def <span class="ident">process_waveform_set</span></span>(<span>self, waveforms: numpy.ndarray, return_waveforms=False)</span>
+<span>def <span class="ident">process_waveform_set</span></span>(<span>self, waveforms_pe_single: numpy.ndarray, sum_waveform_single: numpy.ndarray)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Process an array of waveforms from all channels.</p>
@@ -474,8 +917,8 @@ properties.</p>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def process_waveform_set(self, waveforms: np.ndarray,
-                         return_waveforms=False):
+<pre><code class="python">def process_waveform_set(self, waveforms_pe_single: np.ndarray,
+                         sum_waveform_single: np.ndarray):
     &#34;&#34;&#34;Process an array of waveforms from all channels.
 
     The waveforms are assumed to be synchronized and each row of the
@@ -487,23 +930,17 @@ properties.</p>
         waveforms (np.ndarray): waveforms of all channels stacked.
     &#34;&#34;&#34;
 
-    baselines = np.apply_along_axis(
-        func1d=waveform_processing.get_baseline_rough,
-        axis=1,
-        arr=waveforms,
-        baseline_samples=self.baseline_samples)
-
-    waveforms_pe = peak_processing.apply_waveforms_transform(
-        waveforms, baselines, self.gains, self.ADC_config)
-    sum_waveform = peak_processing.get_sum_waveform(waveforms_pe)
-
     areas, lengths, positions, amplitudes = waveform_processing.process_waveform(
-        sum_waveform, self.baseline_samples, self.sigma_level)
+        waveform=sum_waveform_single,
+        baseline_samples=self.baseline_samples,
+        sigma_level=self.sigma_level,
+        negative_polarity=False,
+        baseline_subtracted=True)
 
-    if return_waveforms is True:
-        return waveforms_pe, sum_waveform
+    areas_individual_channels = [peak_processing.get_area_of_single_waveform_each_channel(
+        waveforms_pe_single, positions[i], positions[i] + lengths[i]) for i in range(len(positions))]
 
-    return areas, lengths, positions, amplitudes</code></pre>
+    return areas, lengths, positions, amplitudes, areas_individual_channels</code></pre>
 </details>
 </dd>
 <dt id="pylars.processing.peakprocessor.peak_processor.set_tqdm_channel"><code class="name flex">
@@ -557,9 +994,13 @@ properties.</p>
 <li><code><a title="pylars.processing.peakprocessor.peak_processor.define_ADC_config" href="#pylars.processing.peakprocessor.peak_processor.define_ADC_config">define_ADC_config</a></code></li>
 <li><code><a title="pylars.processing.peakprocessor.peak_processor.gains" href="#pylars.processing.peakprocessor.peak_processor.gains">gains</a></code></li>
 <li><code><a title="pylars.processing.peakprocessor.peak_processor.gains_path" href="#pylars.processing.peakprocessor.peak_processor.gains_path">gains_path</a></code></li>
-<li><code><a title="pylars.processing.peakprocessor.peak_processor.index_reorder_data_to_layout" href="#pylars.processing.peakprocessor.peak_processor.index_reorder_data_to_layout">index_reorder_data_to_layout</a></code></li>
+<li><code><a title="pylars.processing.peakprocessor.peak_processor.get_stacked_waveforms" href="#pylars.processing.peakprocessor.peak_processor.get_stacked_waveforms">get_stacked_waveforms</a></code></li>
+<li><code><a title="pylars.processing.peakprocessor.peak_processor.index_reorder_channels" href="#pylars.processing.peakprocessor.peak_processor.index_reorder_channels">index_reorder_channels</a></code></li>
+<li><code><a title="pylars.processing.peakprocessor.peak_processor.list_of_tiles" href="#pylars.processing.peakprocessor.peak_processor.list_of_tiles">list_of_tiles</a></code></li>
 <li><code><a title="pylars.processing.peakprocessor.peak_processor.load_gains" href="#pylars.processing.peakprocessor.peak_processor.load_gains">load_gains</a></code></li>
 <li><code><a title="pylars.processing.peakprocessor.peak_processor.load_raw_data" href="#pylars.processing.peakprocessor.peak_processor.load_raw_data">load_raw_data</a></code></li>
+<li><code><a title="pylars.processing.peakprocessor.peak_processor.make_sum_waveforms_all_channels" href="#pylars.processing.peakprocessor.peak_processor.make_sum_waveforms_all_channels">make_sum_waveforms_all_channels</a></code></li>
+<li><code><a title="pylars.processing.peakprocessor.peak_processor.process_all_waveforms" href="#pylars.processing.peakprocessor.peak_processor.process_all_waveforms">process_all_waveforms</a></code></li>
 <li><code><a title="pylars.processing.peakprocessor.peak_processor.process_waveform_set" href="#pylars.processing.peakprocessor.peak_processor.process_waveform_set">process_waveform_set</a></code></li>
 <li><code><a title="pylars.processing.peakprocessor.peak_processor.processing_method" href="#pylars.processing.peakprocessor.peak_processor.processing_method">processing_method</a></code></li>
 <li><code><a title="pylars.processing.peakprocessor.peak_processor.set_tqdm_channel" href="#pylars.processing.peakprocessor.peak_processor.set_tqdm_channel">set_tqdm_channel</a></code></li>

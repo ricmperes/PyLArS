@@ -27,12 +27,13 @@
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">from glob import glob
-from typing import Tuple
+from typing import Tuple, Union
 
 import numpy as np
 import pandas as pd
 import uproot
-from pylars.utils.common import load_ADC_config
+from pylars.utils.common import load_ADC_config, get_summary_info
+from pylars.utils.gsheets_db import xenoscope_db
 
 
 class raw_data():
@@ -139,7 +140,7 @@ class run():
     conditions but the layout of the array stays the same.&#34;&#34;&#34;
 
     def __init__(self, run_number: int, main_data_path: str, F_amp: float,
-                 ADC_model: str = &#39;v1724&#39;, 
+                 ADC_model: str = &#39;v1724&#39;,
                  signal_negative_polarity: bool = True):
         self.run_number = run_number
         self.main_data_path = main_data_path
@@ -148,7 +149,7 @@ class run():
         self.datasets = self.fetch_datasets()
         self.define_ADC_config(F_amp=F_amp, model=ADC_model)
         self.signal_negative_polarity = signal_negative_polarity
-        
+
     def __repr__(self) -&gt; str:
         repr = f&#39;Run {self.run_number}&#39;
         return repr
@@ -229,20 +230,20 @@ class run():
             temps = [190, 195, 200, 205, 210]
             for t in temps:
                 root_files = glob(
-                    f&#39;{self.main_data_path}{str(t)}/breakdown-v/**/*.root&#39;, 
-                    recursive = True)
+                    f&#39;{self.main_data_path}{str(t)}/breakdown-v/**/*.root&#39;,
+                    recursive=True)
                 for path in root_files:
                     f = path.split(&#39;/&#39;)[-1].split(&#39;_&#39;)
                     if f[0] == &#39;test&#39;:
                         continue
                     v = float(f&#39;{f[0]}.{f[1][:-1]}&#39;)
                     datasets.append(dataset(path, &#39;BV&#39;, 0, t, v))
-                    
-            #LED OFF
+
+            # LED OFF
             for t in temps:
                 root_files = glob(
-                    f&#39;{self.main_data_path}{str(t)}/dcr/**/*.root&#39;, 
-                    recursive = True)
+                    f&#39;{self.main_data_path}{str(t)}/dcr/**/*.root&#39;,
+                    recursive=True)
                 for path in root_files:
                     f = path.split(&#39;/&#39;)[-1].split(&#39;_&#39;)
                     if f[0] == &#39;test&#39;:
@@ -441,7 +442,180 @@ class dataset():
         bias voltage: {self.vbias}
         --- ---
         &#39;&#39;&#39;
-        return config_print</code></pre>
+        return config_print
+
+
+class db_dataset():
+    &#34;&#34;&#34;A dataset is an object with the individual setup of each
+    data taking process, ie, each time the DAQ starts acquiring
+    at with a certain config. The db_dataset can point to different
+    raw_files, one for each module used.
+    &#34;&#34;&#34;
+
+    def __init__(self, run_number: str, db: Union[None, xenoscope_db]):
+
+        if db is None:
+            self.db = xenoscope_db()
+
+        self.run_number = run_number
+        self.run_dict = self.db.get_run_dict(self.run_number)
+        self.path = self.run_dict[&#39;Path to remote raw data&#39;]
+        self.run_type = self.run_dict[&#39;Run type&#39;]
+        self.vbias = self.run_dict[&#39;SiPM bias voltage&#39;]
+        # self.read_sizes()
+
+        self.get_files()
+
+    def get_files(self):
+        files = glob(self.path + &#39;**/*.root&#39;, recursive=True)
+        self.files = files
+        self.n_modules = len(files)
+        # Assuming each file is a different module, i.e., the full dataset is
+        # written to only 1 .root file (per module)
+
+    def read_sizes(self) -&gt; Tuple[int, int]:
+        &#34;&#34;&#34;Gets the number of waveforms and number of samples per waveform
+        of a given dataset.
+
+        Brieafly creates a raw_data object of the dataset to access the ROOT
+        file and read the number of entries as number of waveforms and size of
+        entries as number of samples in each waveform.
+
+        Returns:
+            Tuple[int, int]: (number of waveforms, number of samples)
+        &#34;&#34;&#34;
+        raw = raw_data(raw_path=self.path,
+                       V=0,  # mockup
+                       T=0,  # mockup
+                       module=0)  # mockup
+        raw.load_root()
+        n_samples = raw.get_n_samples()
+        n_waveforms = raw.get_n_waveforms()
+        return n_waveforms, n_samples
+
+    def print_config(self):
+        config_print = f&#39;&#39;&#39;
+        ---Dataset info---
+        path: {self.path}
+        run_type: {self.run_type}
+        number of modules found: {self.n_modules}
+        bias voltage: {self.vbias}
+        number of events: {self.run_dict[&#39;Total number of events&#39;]}
+        --- ---
+        &#39;&#39;&#39;
+        return config_print
+
+
+class xenoscope_run():
+    &#34;&#34;&#34;Main class of a Xenoscope run. It contains the necessary functions to
+    find, load and process the data of muon and chntrg data taking.
+    Some DB would be much better, please make a PR.
+    &#34;&#34;&#34;
+
+    def __init__(self, run_number: int, main_data_path: str, F_amp: float,
+                 ADC_model: str = &#39;v1724&#39;,
+                 signal_negative_polarity: bool = True):
+        self.run_number = run_number
+        self.main_data_path = main_data_path
+
+        self.root_files = self.get_all_files_of_run()
+        self.files_df, self.files_fail = self.get_all_datasets()
+
+        self.define_ADC_config(F_amp=F_amp, model=ADC_model)
+        self.signal_negative_polarity = signal_negative_polarity
+        self.load_labels()
+
+    def __repr__(self) -&gt; str:
+        repr = f&#39;Run {self.run_number}&#39;
+        return repr
+
+    def get_all_files_of_run(self) -&gt; list:
+        &#34;&#34;&#34;Look for all the raw files stored for a given run.
+
+        Returns:
+            list: list of all ROOT files in the run.
+        &#34;&#34;&#34;
+
+        all_root_files = glob(
+            self.main_data_path + &#39;/**/*.root&#39;, recursive=True)
+        return all_root_files
+
+    def get_run_info(self, file):
+        file_name = file.split(&#39;/&#39;)[-1]
+        specific_name = file_name[:-16]
+        run_type = specific_name.split(&#39;_&#39;)[0]
+        summary_file = f&#39;{self.main_data_path}/{specific_name}/Summary_{specific_name}.txt&#39;
+
+        end, duration, n_events = get_summary_info(summary_file)
+
+        start = end - duration
+
+        module = file_name[-8]
+
+        info_dict = {&#39;start&#39;: start, &#39;end&#39;: end,
+                     &#39;duration&#39;: duration,
+                     &#39;run_type&#39;: run_type,
+                     &#39;n_events&#39;: int(n_events),
+                     &#39;module&#39;: int(module), &#39;path&#39;: file}
+
+        return info_dict
+
+    def get_all_datasets(self) -&gt; Union[pd.DataFrame, Tuple]:
+        files_df = pd.DataFrame(columns=[&#39;start&#39;, &#39;end&#39;, &#39;duration&#39;,
+                                         &#39;run_type&#39;, &#39;n_events&#39;,
+                                         &#39;module&#39;, &#39;path&#39;])
+        files_fail = []
+        for file in self.root_files:
+            try:
+                files_df = files_df.append(self.get_run_info(file),
+                                           ignore_index=True)  # type: ignore
+            except FileNotFoundError:
+                files_fail.append(file)
+
+        files_df.sort_values(by=[&#39;start&#39;, &#39;module&#39;], inplace=True,
+                             ignore_index=True)
+        return files_df, files_fail
+
+    def define_ADC_config(self, F_amp: float, model: str = &#39;v1724&#39;) -&gt; None:
+        &#34;&#34;&#34;Load the ADC related quantities for the run.
+
+        Args:
+        model (str): model of the digitizer
+        F_amp (float): signal amplification from the sensor (pre-amp *
+            external amplification on rack).
+        &#34;&#34;&#34;
+
+        self.ADC_config = load_ADC_config(model, F_amp)
+
+    def load_labels(self) -&gt; None:
+        &#34;&#34;&#34;Define the labeling of all the channels and corresponding tiles.
+        &#34;&#34;&#34;
+        labels_complete = {&#39;mod0&#39;: {&#39;wf1&#39;: &#39;wf1 | Tile H&#39;,
+                                    &#39;wf2&#39;: &#39;wf2 | Tile J&#39;,
+                                    &#39;wf3&#39;: &#39;wf3 | Tile K&#39;,
+                                    &#39;wf4&#39;: &#39;wf4 | Tile L&#39;,
+                                    &#39;wf5&#39;: &#39;wf5 | Tile M&#39;,
+                                    &#39;wf6&#39;: &#39;wf6 | Muon detector 1&#39;,
+                                    &#39;wf7&#39;: &#39;wf7 | Muon detector 2&#39;},
+                           &#39;mod1&#39;: {&#39;wf1&#39;: &#39;wf1 | Tile A&#39;,
+                                    &#39;wf2&#39;: &#39; wf2 | Tile B&#39;,
+                                    &#39;wf3&#39;: &#39;wf3 | Tile C&#39;,
+                                    &#39;wf4&#39;: &#39;wf4 | Tile D&#39;,
+                                    &#39;wf5&#39;: &#39;wf5 | Tile E&#39;,
+                                    &#39;wf6&#39;: &#39;wf6 | Tile F&#39;,
+                                    &#39;wf7&#39;: &#39;wf7 | Tile G&#39;}
+                           }
+        labels_tiles = {&#39;mod0&#39;: {&#39;wf1&#39;: &#39;H&#39;, &#39;wf2&#39;: &#39;J&#39;, &#39;wf3&#39;: &#39;K&#39;,
+                                 &#39;wf4&#39;: &#39;L&#39;, &#39;wf5&#39;: &#39;M&#39;,
+                                 &#39;wf6&#39;: &#39;Muon detector 1&#39;,
+                                 &#39;wf7&#39;: &#39;Muon detector 2&#39;},
+                        &#39;mod1&#39;: {&#39;wf1&#39;: &#39;A&#39;, &#39;wf2&#39;: &#39;B&#39;, &#39;wf3&#39;: &#39;C&#39;,
+                                 &#39;wf4&#39;: &#39;D&#39;, &#39;wf5&#39;: &#39;E&#39;, &#39;wf6&#39;: &#39;F&#39;,
+                                 &#39;wf7&#39;: &#39;G&#39;}
+                        }
+
+        self.labels_complete = labels_complete
+        self.labels_tiles = labels_tiles</code></pre>
 </details>
 </section>
 <section>
@@ -580,6 +754,161 @@ entries as number of samples in each waveform.</p>
                    V=self.vbias,
                    T=self.temp,
                    module=self.module)
+    raw.load_root()
+    n_samples = raw.get_n_samples()
+    n_waveforms = raw.get_n_waveforms()
+    return n_waveforms, n_samples</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="pylars.utils.input.db_dataset"><code class="flex name class">
+<span>class <span class="ident">db_dataset</span></span>
+<span>(</span><span>run_number: str, db: Union[NoneType, <a title="pylars.utils.gsheets_db.xenoscope_db" href="gsheets_db.html#pylars.utils.gsheets_db.xenoscope_db">xenoscope_db</a>])</span>
+</code></dt>
+<dd>
+<div class="desc"><p>A dataset is an object with the individual setup of each
+data taking process, ie, each time the DAQ starts acquiring
+at with a certain config. The db_dataset can point to different
+raw_files, one for each module used.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class db_dataset():
+    &#34;&#34;&#34;A dataset is an object with the individual setup of each
+    data taking process, ie, each time the DAQ starts acquiring
+    at with a certain config. The db_dataset can point to different
+    raw_files, one for each module used.
+    &#34;&#34;&#34;
+
+    def __init__(self, run_number: str, db: Union[None, xenoscope_db]):
+
+        if db is None:
+            self.db = xenoscope_db()
+
+        self.run_number = run_number
+        self.run_dict = self.db.get_run_dict(self.run_number)
+        self.path = self.run_dict[&#39;Path to remote raw data&#39;]
+        self.run_type = self.run_dict[&#39;Run type&#39;]
+        self.vbias = self.run_dict[&#39;SiPM bias voltage&#39;]
+        # self.read_sizes()
+
+        self.get_files()
+
+    def get_files(self):
+        files = glob(self.path + &#39;**/*.root&#39;, recursive=True)
+        self.files = files
+        self.n_modules = len(files)
+        # Assuming each file is a different module, i.e., the full dataset is
+        # written to only 1 .root file (per module)
+
+    def read_sizes(self) -&gt; Tuple[int, int]:
+        &#34;&#34;&#34;Gets the number of waveforms and number of samples per waveform
+        of a given dataset.
+
+        Brieafly creates a raw_data object of the dataset to access the ROOT
+        file and read the number of entries as number of waveforms and size of
+        entries as number of samples in each waveform.
+
+        Returns:
+            Tuple[int, int]: (number of waveforms, number of samples)
+        &#34;&#34;&#34;
+        raw = raw_data(raw_path=self.path,
+                       V=0,  # mockup
+                       T=0,  # mockup
+                       module=0)  # mockup
+        raw.load_root()
+        n_samples = raw.get_n_samples()
+        n_waveforms = raw.get_n_waveforms()
+        return n_waveforms, n_samples
+
+    def print_config(self):
+        config_print = f&#39;&#39;&#39;
+        ---Dataset info---
+        path: {self.path}
+        run_type: {self.run_type}
+        number of modules found: {self.n_modules}
+        bias voltage: {self.vbias}
+        number of events: {self.run_dict[&#39;Total number of events&#39;]}
+        --- ---
+        &#39;&#39;&#39;
+        return config_print</code></pre>
+</details>
+<h3>Methods</h3>
+<dl>
+<dt id="pylars.utils.input.db_dataset.get_files"><code class="name flex">
+<span>def <span class="ident">get_files</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_files(self):
+    files = glob(self.path + &#39;**/*.root&#39;, recursive=True)
+    self.files = files
+    self.n_modules = len(files)
+    # Assuming each file is a different module, i.e., the full dataset is
+    # written to only 1 .root file (per module)</code></pre>
+</details>
+</dd>
+<dt id="pylars.utils.input.db_dataset.print_config"><code class="name flex">
+<span>def <span class="ident">print_config</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def print_config(self):
+    config_print = f&#39;&#39;&#39;
+    ---Dataset info---
+    path: {self.path}
+    run_type: {self.run_type}
+    number of modules found: {self.n_modules}
+    bias voltage: {self.vbias}
+    number of events: {self.run_dict[&#39;Total number of events&#39;]}
+    --- ---
+    &#39;&#39;&#39;
+    return config_print</code></pre>
+</details>
+</dd>
+<dt id="pylars.utils.input.db_dataset.read_sizes"><code class="name flex">
+<span>def <span class="ident">read_sizes</span></span>(<span>self) ‑> Tuple[int, int]</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Gets the number of waveforms and number of samples per waveform
+of a given dataset.</p>
+<p>Brieafly creates a raw_data object of the dataset to access the ROOT
+file and read the number of entries as number of waveforms and size of
+entries as number of samples in each waveform.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Tuple[int, int]</code></dt>
+<dd>(number of waveforms, number of samples)</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def read_sizes(self) -&gt; Tuple[int, int]:
+    &#34;&#34;&#34;Gets the number of waveforms and number of samples per waveform
+    of a given dataset.
+
+    Brieafly creates a raw_data object of the dataset to access the ROOT
+    file and read the number of entries as number of waveforms and size of
+    entries as number of samples in each waveform.
+
+    Returns:
+        Tuple[int, int]: (number of waveforms, number of samples)
+    &#34;&#34;&#34;
+    raw = raw_data(raw_path=self.path,
+                   V=0,  # mockup
+                   T=0,  # mockup
+                   module=0)  # mockup
     raw.load_root()
     n_samples = raw.get_n_samples()
     n_waveforms = raw.get_n_waveforms()
@@ -885,7 +1214,7 @@ conditions but the layout of the array stays the same.</p></div>
     conditions but the layout of the array stays the same.&#34;&#34;&#34;
 
     def __init__(self, run_number: int, main_data_path: str, F_amp: float,
-                 ADC_model: str = &#39;v1724&#39;, 
+                 ADC_model: str = &#39;v1724&#39;,
                  signal_negative_polarity: bool = True):
         self.run_number = run_number
         self.main_data_path = main_data_path
@@ -894,7 +1223,7 @@ conditions but the layout of the array stays the same.</p></div>
         self.datasets = self.fetch_datasets()
         self.define_ADC_config(F_amp=F_amp, model=ADC_model)
         self.signal_negative_polarity = signal_negative_polarity
-        
+
     def __repr__(self) -&gt; str:
         repr = f&#39;Run {self.run_number}&#39;
         return repr
@@ -975,20 +1304,20 @@ conditions but the layout of the array stays the same.</p></div>
             temps = [190, 195, 200, 205, 210]
             for t in temps:
                 root_files = glob(
-                    f&#39;{self.main_data_path}{str(t)}/breakdown-v/**/*.root&#39;, 
-                    recursive = True)
+                    f&#39;{self.main_data_path}{str(t)}/breakdown-v/**/*.root&#39;,
+                    recursive=True)
                 for path in root_files:
                     f = path.split(&#39;/&#39;)[-1].split(&#39;_&#39;)
                     if f[0] == &#39;test&#39;:
                         continue
                     v = float(f&#39;{f[0]}.{f[1][:-1]}&#39;)
                     datasets.append(dataset(path, &#39;BV&#39;, 0, t, v))
-                    
-            #LED OFF
+
+            # LED OFF
             for t in temps:
                 root_files = glob(
-                    f&#39;{self.main_data_path}{str(t)}/dcr/**/*.root&#39;, 
-                    recursive = True)
+                    f&#39;{self.main_data_path}{str(t)}/dcr/**/*.root&#39;,
+                    recursive=True)
                 for path in root_files:
                     f = path.split(&#39;/&#39;)[-1].split(&#39;_&#39;)
                     if f[0] == &#39;test&#39;:
@@ -1189,20 +1518,20 @@ are type dataset.</dd>
         temps = [190, 195, 200, 205, 210]
         for t in temps:
             root_files = glob(
-                f&#39;{self.main_data_path}{str(t)}/breakdown-v/**/*.root&#39;, 
-                recursive = True)
+                f&#39;{self.main_data_path}{str(t)}/breakdown-v/**/*.root&#39;,
+                recursive=True)
             for path in root_files:
                 f = path.split(&#39;/&#39;)[-1].split(&#39;_&#39;)
                 if f[0] == &#39;test&#39;:
                     continue
                 v = float(f&#39;{f[0]}.{f[1][:-1]}&#39;)
                 datasets.append(dataset(path, &#39;BV&#39;, 0, t, v))
-                
-        #LED OFF
+
+        # LED OFF
         for t in temps:
             root_files = glob(
-                f&#39;{self.main_data_path}{str(t)}/dcr/**/*.root&#39;, 
-                recursive = True)
+                f&#39;{self.main_data_path}{str(t)}/dcr/**/*.root&#39;,
+                recursive=True)
             for path in root_files:
                 f = path.split(&#39;/&#39;)[-1].split(&#39;_&#39;)
                 if f[0] == &#39;test&#39;:
@@ -1470,6 +1799,280 @@ which mppc(s): layout[<module>][<channel>]['mppc'] -&gt; list of ints</p></div>
 </dd>
 </dl>
 </dd>
+<dt id="pylars.utils.input.xenoscope_run"><code class="flex name class">
+<span>class <span class="ident">xenoscope_run</span></span>
+<span>(</span><span>run_number: int, main_data_path: str, F_amp: float, ADC_model: str = 'v1724', signal_negative_polarity: bool = True)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Main class of a Xenoscope run. It contains the necessary functions to
+find, load and process the data of muon and chntrg data taking.
+Some DB would be much better, please make a PR.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class xenoscope_run():
+    &#34;&#34;&#34;Main class of a Xenoscope run. It contains the necessary functions to
+    find, load and process the data of muon and chntrg data taking.
+    Some DB would be much better, please make a PR.
+    &#34;&#34;&#34;
+
+    def __init__(self, run_number: int, main_data_path: str, F_amp: float,
+                 ADC_model: str = &#39;v1724&#39;,
+                 signal_negative_polarity: bool = True):
+        self.run_number = run_number
+        self.main_data_path = main_data_path
+
+        self.root_files = self.get_all_files_of_run()
+        self.files_df, self.files_fail = self.get_all_datasets()
+
+        self.define_ADC_config(F_amp=F_amp, model=ADC_model)
+        self.signal_negative_polarity = signal_negative_polarity
+        self.load_labels()
+
+    def __repr__(self) -&gt; str:
+        repr = f&#39;Run {self.run_number}&#39;
+        return repr
+
+    def get_all_files_of_run(self) -&gt; list:
+        &#34;&#34;&#34;Look for all the raw files stored for a given run.
+
+        Returns:
+            list: list of all ROOT files in the run.
+        &#34;&#34;&#34;
+
+        all_root_files = glob(
+            self.main_data_path + &#39;/**/*.root&#39;, recursive=True)
+        return all_root_files
+
+    def get_run_info(self, file):
+        file_name = file.split(&#39;/&#39;)[-1]
+        specific_name = file_name[:-16]
+        run_type = specific_name.split(&#39;_&#39;)[0]
+        summary_file = f&#39;{self.main_data_path}/{specific_name}/Summary_{specific_name}.txt&#39;
+
+        end, duration, n_events = get_summary_info(summary_file)
+
+        start = end - duration
+
+        module = file_name[-8]
+
+        info_dict = {&#39;start&#39;: start, &#39;end&#39;: end,
+                     &#39;duration&#39;: duration,
+                     &#39;run_type&#39;: run_type,
+                     &#39;n_events&#39;: int(n_events),
+                     &#39;module&#39;: int(module), &#39;path&#39;: file}
+
+        return info_dict
+
+    def get_all_datasets(self) -&gt; Union[pd.DataFrame, Tuple]:
+        files_df = pd.DataFrame(columns=[&#39;start&#39;, &#39;end&#39;, &#39;duration&#39;,
+                                         &#39;run_type&#39;, &#39;n_events&#39;,
+                                         &#39;module&#39;, &#39;path&#39;])
+        files_fail = []
+        for file in self.root_files:
+            try:
+                files_df = files_df.append(self.get_run_info(file),
+                                           ignore_index=True)  # type: ignore
+            except FileNotFoundError:
+                files_fail.append(file)
+
+        files_df.sort_values(by=[&#39;start&#39;, &#39;module&#39;], inplace=True,
+                             ignore_index=True)
+        return files_df, files_fail
+
+    def define_ADC_config(self, F_amp: float, model: str = &#39;v1724&#39;) -&gt; None:
+        &#34;&#34;&#34;Load the ADC related quantities for the run.
+
+        Args:
+        model (str): model of the digitizer
+        F_amp (float): signal amplification from the sensor (pre-amp *
+            external amplification on rack).
+        &#34;&#34;&#34;
+
+        self.ADC_config = load_ADC_config(model, F_amp)
+
+    def load_labels(self) -&gt; None:
+        &#34;&#34;&#34;Define the labeling of all the channels and corresponding tiles.
+        &#34;&#34;&#34;
+        labels_complete = {&#39;mod0&#39;: {&#39;wf1&#39;: &#39;wf1 | Tile H&#39;,
+                                    &#39;wf2&#39;: &#39;wf2 | Tile J&#39;,
+                                    &#39;wf3&#39;: &#39;wf3 | Tile K&#39;,
+                                    &#39;wf4&#39;: &#39;wf4 | Tile L&#39;,
+                                    &#39;wf5&#39;: &#39;wf5 | Tile M&#39;,
+                                    &#39;wf6&#39;: &#39;wf6 | Muon detector 1&#39;,
+                                    &#39;wf7&#39;: &#39;wf7 | Muon detector 2&#39;},
+                           &#39;mod1&#39;: {&#39;wf1&#39;: &#39;wf1 | Tile A&#39;,
+                                    &#39;wf2&#39;: &#39; wf2 | Tile B&#39;,
+                                    &#39;wf3&#39;: &#39;wf3 | Tile C&#39;,
+                                    &#39;wf4&#39;: &#39;wf4 | Tile D&#39;,
+                                    &#39;wf5&#39;: &#39;wf5 | Tile E&#39;,
+                                    &#39;wf6&#39;: &#39;wf6 | Tile F&#39;,
+                                    &#39;wf7&#39;: &#39;wf7 | Tile G&#39;}
+                           }
+        labels_tiles = {&#39;mod0&#39;: {&#39;wf1&#39;: &#39;H&#39;, &#39;wf2&#39;: &#39;J&#39;, &#39;wf3&#39;: &#39;K&#39;,
+                                 &#39;wf4&#39;: &#39;L&#39;, &#39;wf5&#39;: &#39;M&#39;,
+                                 &#39;wf6&#39;: &#39;Muon detector 1&#39;,
+                                 &#39;wf7&#39;: &#39;Muon detector 2&#39;},
+                        &#39;mod1&#39;: {&#39;wf1&#39;: &#39;A&#39;, &#39;wf2&#39;: &#39;B&#39;, &#39;wf3&#39;: &#39;C&#39;,
+                                 &#39;wf4&#39;: &#39;D&#39;, &#39;wf5&#39;: &#39;E&#39;, &#39;wf6&#39;: &#39;F&#39;,
+                                 &#39;wf7&#39;: &#39;G&#39;}
+                        }
+
+        self.labels_complete = labels_complete
+        self.labels_tiles = labels_tiles</code></pre>
+</details>
+<h3>Methods</h3>
+<dl>
+<dt id="pylars.utils.input.xenoscope_run.define_ADC_config"><code class="name flex">
+<span>def <span class="ident">define_ADC_config</span></span>(<span>self, F_amp: float, model: str = 'v1724') ‑> NoneType</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Load the ADC related quantities for the run.</p>
+<p>Args:
+model (str): model of the digitizer
+F_amp (float): signal amplification from the sensor (pre-amp *
+external amplification on rack).</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def define_ADC_config(self, F_amp: float, model: str = &#39;v1724&#39;) -&gt; None:
+    &#34;&#34;&#34;Load the ADC related quantities for the run.
+
+    Args:
+    model (str): model of the digitizer
+    F_amp (float): signal amplification from the sensor (pre-amp *
+        external amplification on rack).
+    &#34;&#34;&#34;
+
+    self.ADC_config = load_ADC_config(model, F_amp)</code></pre>
+</details>
+</dd>
+<dt id="pylars.utils.input.xenoscope_run.get_all_datasets"><code class="name flex">
+<span>def <span class="ident">get_all_datasets</span></span>(<span>self) ‑> Union[pandas.core.frame.DataFrame, Tuple]</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_all_datasets(self) -&gt; Union[pd.DataFrame, Tuple]:
+    files_df = pd.DataFrame(columns=[&#39;start&#39;, &#39;end&#39;, &#39;duration&#39;,
+                                     &#39;run_type&#39;, &#39;n_events&#39;,
+                                     &#39;module&#39;, &#39;path&#39;])
+    files_fail = []
+    for file in self.root_files:
+        try:
+            files_df = files_df.append(self.get_run_info(file),
+                                       ignore_index=True)  # type: ignore
+        except FileNotFoundError:
+            files_fail.append(file)
+
+    files_df.sort_values(by=[&#39;start&#39;, &#39;module&#39;], inplace=True,
+                         ignore_index=True)
+    return files_df, files_fail</code></pre>
+</details>
+</dd>
+<dt id="pylars.utils.input.xenoscope_run.get_all_files_of_run"><code class="name flex">
+<span>def <span class="ident">get_all_files_of_run</span></span>(<span>self) ‑> list</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Look for all the raw files stored for a given run.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>list</code></dt>
+<dd>list of all ROOT files in the run.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_all_files_of_run(self) -&gt; list:
+    &#34;&#34;&#34;Look for all the raw files stored for a given run.
+
+    Returns:
+        list: list of all ROOT files in the run.
+    &#34;&#34;&#34;
+
+    all_root_files = glob(
+        self.main_data_path + &#39;/**/*.root&#39;, recursive=True)
+    return all_root_files</code></pre>
+</details>
+</dd>
+<dt id="pylars.utils.input.xenoscope_run.get_run_info"><code class="name flex">
+<span>def <span class="ident">get_run_info</span></span>(<span>self, file)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_run_info(self, file):
+    file_name = file.split(&#39;/&#39;)[-1]
+    specific_name = file_name[:-16]
+    run_type = specific_name.split(&#39;_&#39;)[0]
+    summary_file = f&#39;{self.main_data_path}/{specific_name}/Summary_{specific_name}.txt&#39;
+
+    end, duration, n_events = get_summary_info(summary_file)
+
+    start = end - duration
+
+    module = file_name[-8]
+
+    info_dict = {&#39;start&#39;: start, &#39;end&#39;: end,
+                 &#39;duration&#39;: duration,
+                 &#39;run_type&#39;: run_type,
+                 &#39;n_events&#39;: int(n_events),
+                 &#39;module&#39;: int(module), &#39;path&#39;: file}
+
+    return info_dict</code></pre>
+</details>
+</dd>
+<dt id="pylars.utils.input.xenoscope_run.load_labels"><code class="name flex">
+<span>def <span class="ident">load_labels</span></span>(<span>self) ‑> NoneType</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Define the labeling of all the channels and corresponding tiles.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def load_labels(self) -&gt; None:
+    &#34;&#34;&#34;Define the labeling of all the channels and corresponding tiles.
+    &#34;&#34;&#34;
+    labels_complete = {&#39;mod0&#39;: {&#39;wf1&#39;: &#39;wf1 | Tile H&#39;,
+                                &#39;wf2&#39;: &#39;wf2 | Tile J&#39;,
+                                &#39;wf3&#39;: &#39;wf3 | Tile K&#39;,
+                                &#39;wf4&#39;: &#39;wf4 | Tile L&#39;,
+                                &#39;wf5&#39;: &#39;wf5 | Tile M&#39;,
+                                &#39;wf6&#39;: &#39;wf6 | Muon detector 1&#39;,
+                                &#39;wf7&#39;: &#39;wf7 | Muon detector 2&#39;},
+                       &#39;mod1&#39;: {&#39;wf1&#39;: &#39;wf1 | Tile A&#39;,
+                                &#39;wf2&#39;: &#39; wf2 | Tile B&#39;,
+                                &#39;wf3&#39;: &#39;wf3 | Tile C&#39;,
+                                &#39;wf4&#39;: &#39;wf4 | Tile D&#39;,
+                                &#39;wf5&#39;: &#39;wf5 | Tile E&#39;,
+                                &#39;wf6&#39;: &#39;wf6 | Tile F&#39;,
+                                &#39;wf7&#39;: &#39;wf7 | Tile G&#39;}
+                       }
+    labels_tiles = {&#39;mod0&#39;: {&#39;wf1&#39;: &#39;H&#39;, &#39;wf2&#39;: &#39;J&#39;, &#39;wf3&#39;: &#39;K&#39;,
+                             &#39;wf4&#39;: &#39;L&#39;, &#39;wf5&#39;: &#39;M&#39;,
+                             &#39;wf6&#39;: &#39;Muon detector 1&#39;,
+                             &#39;wf7&#39;: &#39;Muon detector 2&#39;},
+                    &#39;mod1&#39;: {&#39;wf1&#39;: &#39;A&#39;, &#39;wf2&#39;: &#39;B&#39;, &#39;wf3&#39;: &#39;C&#39;,
+                             &#39;wf4&#39;: &#39;D&#39;, &#39;wf5&#39;: &#39;E&#39;, &#39;wf6&#39;: &#39;F&#39;,
+                             &#39;wf7&#39;: &#39;G&#39;}
+                    }
+
+    self.labels_complete = labels_complete
+    self.labels_tiles = labels_tiles</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
 </dl>
 </section>
 </article>
@@ -1494,6 +2097,14 @@ which mppc(s): layout[<module>][<channel>]['mppc'] -&gt; list of ints</p></div>
 </ul>
 </li>
 <li>
+<h4><code><a title="pylars.utils.input.db_dataset" href="#pylars.utils.input.db_dataset">db_dataset</a></code></h4>
+<ul class="">
+<li><code><a title="pylars.utils.input.db_dataset.get_files" href="#pylars.utils.input.db_dataset.get_files">get_files</a></code></li>
+<li><code><a title="pylars.utils.input.db_dataset.print_config" href="#pylars.utils.input.db_dataset.print_config">print_config</a></code></li>
+<li><code><a title="pylars.utils.input.db_dataset.read_sizes" href="#pylars.utils.input.db_dataset.read_sizes">read_sizes</a></code></li>
+</ul>
+</li>
+<li>
 <h4><code><a title="pylars.utils.input.raw_data" href="#pylars.utils.input.raw_data">raw_data</a></code></h4>
 <ul class="">
 <li><code><a title="pylars.utils.input.raw_data.get_available_channels" href="#pylars.utils.input.raw_data.get_available_channels">get_available_channels</a></code></li>
@@ -1514,6 +2125,16 @@ which mppc(s): layout[<module>][<channel>]['mppc'] -&gt; list of ints</p></div>
 <li><code><a title="pylars.utils.input.run.get_run_df" href="#pylars.utils.input.run.get_run_df">get_run_df</a></code></li>
 <li><code><a title="pylars.utils.input.run.get_run_path" href="#pylars.utils.input.run.get_run_path">get_run_path</a></code></li>
 <li><code><a title="pylars.utils.input.run.read_layout" href="#pylars.utils.input.run.read_layout">read_layout</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="pylars.utils.input.xenoscope_run" href="#pylars.utils.input.xenoscope_run">xenoscope_run</a></code></h4>
+<ul class="">
+<li><code><a title="pylars.utils.input.xenoscope_run.define_ADC_config" href="#pylars.utils.input.xenoscope_run.define_ADC_config">define_ADC_config</a></code></li>
+<li><code><a title="pylars.utils.input.xenoscope_run.get_all_datasets" href="#pylars.utils.input.xenoscope_run.get_all_datasets">get_all_datasets</a></code></li>
+<li><code><a title="pylars.utils.input.xenoscope_run.get_all_files_of_run" href="#pylars.utils.input.xenoscope_run.get_all_files_of_run">get_all_files_of_run</a></code></li>
+<li><code><a title="pylars.utils.input.xenoscope_run.get_run_info" href="#pylars.utils.input.xenoscope_run.get_run_info">get_run_info</a></code></li>
+<li><code><a title="pylars.utils.input.xenoscope_run.load_labels" href="#pylars.utils.input.xenoscope_run.load_labels">load_labels</a></code></li>
 </ul>
 </li>
 </ul>

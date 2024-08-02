@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from pylars.utils.common import get_deterministic_hash
 from pylars.utils.input import raw_data, run
-from tqdm.autonotebook import tqdm
+from tqdm import tqdm
 from typing import Tuple, Union
 
 from .fixwindow import fixed_window_processing
@@ -13,9 +13,9 @@ class window_processor():
     """
 
     version = '0.0.1'
-    
-    def __init__(self, 
-                 led_window: Tuple[int, int], 
+
+    def __init__(self,
+                 led_window: Tuple[int, int],
                  baseline_samples: int) -> None:
         self.baseline_samples = baseline_samples
         self.led_window = led_window
@@ -28,7 +28,7 @@ class window_processor():
 
     def __hash__(self) -> str:
         return self.hash
-    
+
     def set_tqdm_config(self, bar: bool, show: bool):
         """Change the tqdm config
 
@@ -49,8 +49,8 @@ class window_processor():
         Returns:
             raw_data: the raw data object
         """
-        raw = raw_data(raw_path = path_to_raw, V = -1, 
-                       T = -1, module = module)
+        raw = raw_data(raw_path=path_to_raw, V=-1,
+                       T=-1, module=module)
         raw.load_root()
         raw.get_available_channels()
 
@@ -58,7 +58,7 @@ class window_processor():
 
     # Processing functions
     def process_channel(self, ch: str) -> dict:
-        """Process a channel by iterating over all its waveforms and 
+        """Process a channel by iterating over all its waveforms and
         calculating the following:
             - baseline
             - integral in the LED window
@@ -70,7 +70,7 @@ class window_processor():
                 the number of the channel [0,7]
 
         Returns:
-            dict: Dictionary of keys module, channel, wf_number, led_amplitude, 
+            dict: Dictionary of keys module, channel, wf_number, led_amplitude,
             led_area, led_ADCcounts in led window of the processed waveforms.
         """
         if ch not in self.raw_data.channels:
@@ -83,21 +83,21 @@ class window_processor():
 
         amplitudes, areas, ADCcounts = fixed_window_processing.process_all_waveforms(
             channel_data, self.baseline_samples, self.led_window)
-        
+
         module_number = [module] * len(areas)
         ch_name = [ch] * len(areas)
         wf_number = np.arange(len(areas))
-            
+
         results = {'module': module_number,
                    'channel': ch_name,
-                   'wf_number':wf_number,
+                   'wf_number': wf_number,
                    'led_amplitude': amplitudes,
                    'led_area': areas,
                    'led_ADCcounts': ADCcounts,
                    }
 
         return results
-    
+
     def process_all_channels(self) -> pd.DataFrame:
         """Calls the process_channel method of each of
         the available channels in the dataset.
@@ -111,4 +111,3 @@ class window_processor():
         results_df = pd.concat(results_list, ignore_index=True)
 
         return results_df
-    

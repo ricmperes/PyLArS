@@ -29,6 +29,7 @@
 <pre><code class="python">from typing import List, Tuple
 
 import numpy as np
+from .waveforms import waveform_processing
 
 
 class peak_processing():
@@ -128,7 +129,8 @@ class peak_processing():
         assert len(baselines) == np.shape(waveforms)[0], (&#39;&#39;&#39;Size of
         baseines and channels in waveforms array do not match.&#39;&#39;&#39;)
 
-        waveforms_subtracted = (baselines - waveforms.T).T  # type: ignore
+        baselines_expanded = baselines[:, :, np.newaxis]
+        waveforms_subtracted = baselines_expanded - waveforms
 
         return waveforms_subtracted
 
@@ -160,6 +162,66 @@ class peak_processing():
         waveforms_pe = cls.apply_e_to_pe(waveforms_charge, gains)
 
         return waveforms_pe
+
+    @classmethod
+    def flip_and_apply_gains(cls,
+                             waveforms: np.ndarray,
+                             gains: np.ndarray,
+                             ADC_config: dict,
+                             baseline_samples: int = 50,
+                             ) -&gt; Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        &#34;&#34;&#34;Prepare a set of waveforms for processing by:
+          - determining and subtracting baseline;
+          - inverting polarity to positive peak
+          - applying gains, converting to PE/s
+          - computing the std of the waveform
+          - computing the sum waveform
+
+
+        Args:
+            waveforms (np.ndarray): all the waveforms of a file, from all the channels
+            gains (np.ndarray): gains for each channel **in alphabetical order**
+            ADC_config (dict): ADCconfig dictionary
+            baseline_samples (int, optional): How many samples used to
+                calculate the baseline. Defaults to 50.
+
+        Returns:
+            Tuple[np.ndarray, np.ndarray, np.ndarray]: waveforms_pe, stds_pe,
+                sum_waveform
+        &#34;&#34;&#34;
+
+        baselines = np.apply_along_axis(
+            func1d=waveform_processing.get_baseline_rough,
+            axis=2,
+            arr=waveforms,
+            baseline_samples=baseline_samples)
+
+        waveforms_pe = cls.apply_waveforms_transform(
+            waveforms, baselines, gains, ADC_config)
+
+        stds_pe = np.apply_along_axis(
+            func1d=waveform_processing.get_std_rough,
+            axis=2,
+            arr=waveforms_pe,
+            baseline_samples=baseline_samples)
+
+        sum_waveform = peak_processing.get_sum_waveform(waveforms_pe)
+
+        return waveforms_pe, stds_pe, sum_waveform
+
+    @classmethod
+    def get_area_of_single_waveform_each_channel(cls,
+                                                 single_waveforms_pe: np.ndarray,
+                                                 peak_start: int,
+                                                 peak_end: int,
+                                                 dt: int = 10) -&gt; np.ndarray:
+        &#34;&#34;&#34;Get the area of identified peak in each channel.
+        &#34;&#34;&#34;
+
+        area_individual_channels = np.sum(
+            single_waveforms_pe[:, peak_start:peak_end], axis=1) * dt
+
+        return area_individual_channels
 
     @classmethod
     def reorder_channel(cls, data_array: np.ndarray,
@@ -284,6 +346,7 @@ class peak_processing():
 
 class peak():
     &#34;&#34;&#34;This is a peak (gipfel).
+    #TODO, NOT IN USE
     &#34;&#34;&#34;
 
     def __init__(self, timestamp: int,
@@ -317,13 +380,15 @@ class peak():
 <span>(</span><span>timestamp: int, wf_number: int, area: float, length: int, position: int, amplitude: float, area_per_sensor: numpy.ndarray)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>This is a peak (gipfel).</p></div>
+<div class="desc"><p>This is a peak (gipfel).</p>
+<h1 id="todo-not-in-use">TODO, NOT IN USE</h1></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class peak():
     &#34;&#34;&#34;This is a peak (gipfel).
+    #TODO, NOT IN USE
     &#34;&#34;&#34;
 
     def __init__(self, timestamp: int,
@@ -452,7 +517,8 @@ object is then constructed.</p></div>
         assert len(baselines) == np.shape(waveforms)[0], (&#39;&#39;&#39;Size of
         baseines and channels in waveforms array do not match.&#39;&#39;&#39;)
 
-        waveforms_subtracted = (baselines - waveforms.T).T  # type: ignore
+        baselines_expanded = baselines[:, :, np.newaxis]
+        waveforms_subtracted = baselines_expanded - waveforms
 
         return waveforms_subtracted
 
@@ -484,6 +550,66 @@ object is then constructed.</p></div>
         waveforms_pe = cls.apply_e_to_pe(waveforms_charge, gains)
 
         return waveforms_pe
+
+    @classmethod
+    def flip_and_apply_gains(cls,
+                             waveforms: np.ndarray,
+                             gains: np.ndarray,
+                             ADC_config: dict,
+                             baseline_samples: int = 50,
+                             ) -&gt; Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        &#34;&#34;&#34;Prepare a set of waveforms for processing by:
+          - determining and subtracting baseline;
+          - inverting polarity to positive peak
+          - applying gains, converting to PE/s
+          - computing the std of the waveform
+          - computing the sum waveform
+
+
+        Args:
+            waveforms (np.ndarray): all the waveforms of a file, from all the channels
+            gains (np.ndarray): gains for each channel **in alphabetical order**
+            ADC_config (dict): ADCconfig dictionary
+            baseline_samples (int, optional): How many samples used to
+                calculate the baseline. Defaults to 50.
+
+        Returns:
+            Tuple[np.ndarray, np.ndarray, np.ndarray]: waveforms_pe, stds_pe,
+                sum_waveform
+        &#34;&#34;&#34;
+
+        baselines = np.apply_along_axis(
+            func1d=waveform_processing.get_baseline_rough,
+            axis=2,
+            arr=waveforms,
+            baseline_samples=baseline_samples)
+
+        waveforms_pe = cls.apply_waveforms_transform(
+            waveforms, baselines, gains, ADC_config)
+
+        stds_pe = np.apply_along_axis(
+            func1d=waveform_processing.get_std_rough,
+            axis=2,
+            arr=waveforms_pe,
+            baseline_samples=baseline_samples)
+
+        sum_waveform = peak_processing.get_sum_waveform(waveforms_pe)
+
+        return waveforms_pe, stds_pe, sum_waveform
+
+    @classmethod
+    def get_area_of_single_waveform_each_channel(cls,
+                                                 single_waveforms_pe: np.ndarray,
+                                                 peak_start: int,
+                                                 peak_end: int,
+                                                 dt: int = 10) -&gt; np.ndarray:
+        &#34;&#34;&#34;Get the area of identified peak in each channel.
+        &#34;&#34;&#34;
+
+        area_individual_channels = np.sum(
+            single_waveforms_pe[:, peak_start:peak_end], axis=1) * dt
+
+        return area_individual_channels
 
     @classmethod
     def reorder_channel(cls, data_array: np.ndarray,
@@ -726,7 +852,8 @@ def apply_baseline_subtract(cls, waveforms: np.ndarray,
     assert len(baselines) == np.shape(waveforms)[0], (&#39;&#39;&#39;Size of
     baseines and channels in waveforms array do not match.&#39;&#39;&#39;)
 
-    waveforms_subtracted = (baselines - waveforms.T).T  # type: ignore
+    baselines_expanded = baselines[:, :, np.newaxis]
+    waveforms_subtracted = baselines_expanded - waveforms
 
     return waveforms_subtracted</code></pre>
 </details>
@@ -840,6 +967,109 @@ def apply_waveforms_transform(cls, waveforms: np.ndarray,
     waveforms_pe = cls.apply_e_to_pe(waveforms_charge, gains)
 
     return waveforms_pe</code></pre>
+</details>
+</dd>
+<dt id="pylars.processing.peaks.peak_processing.flip_and_apply_gains"><code class="name flex">
+<span>def <span class="ident">flip_and_apply_gains</span></span>(<span>waveforms: numpy.ndarray, gains: numpy.ndarray, ADC_config: dict, baseline_samples: int = 50) ‑> Tuple[numpy.ndarray, numpy.ndarray, numpy.ndarray]</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Prepare a set of waveforms for processing by:
+- determining and subtracting baseline;
+- inverting polarity to positive peak
+- applying gains, converting to PE/s
+- computing the std of the waveform
+- computing the sum waveform</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>waveforms</code></strong> :&ensp;<code>np.ndarray</code></dt>
+<dd>all the waveforms of a file, from all the channels</dd>
+<dt><strong><code>gains</code></strong> :&ensp;<code>np.ndarray</code></dt>
+<dd>gains for each channel <strong>in alphabetical order</strong></dd>
+<dt><strong><code>ADC_config</code></strong> :&ensp;<code>dict</code></dt>
+<dd>ADCconfig dictionary</dd>
+<dt><strong><code>baseline_samples</code></strong> :&ensp;<code>int</code>, optional</dt>
+<dd>How many samples used to
+calculate the baseline. Defaults to 50.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Tuple[np.ndarray, np.ndarray, np.ndarray]</code></dt>
+<dd>waveforms_pe, stds_pe,
+sum_waveform</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@classmethod
+def flip_and_apply_gains(cls,
+                         waveforms: np.ndarray,
+                         gains: np.ndarray,
+                         ADC_config: dict,
+                         baseline_samples: int = 50,
+                         ) -&gt; Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    &#34;&#34;&#34;Prepare a set of waveforms for processing by:
+      - determining and subtracting baseline;
+      - inverting polarity to positive peak
+      - applying gains, converting to PE/s
+      - computing the std of the waveform
+      - computing the sum waveform
+
+
+    Args:
+        waveforms (np.ndarray): all the waveforms of a file, from all the channels
+        gains (np.ndarray): gains for each channel **in alphabetical order**
+        ADC_config (dict): ADCconfig dictionary
+        baseline_samples (int, optional): How many samples used to
+            calculate the baseline. Defaults to 50.
+
+    Returns:
+        Tuple[np.ndarray, np.ndarray, np.ndarray]: waveforms_pe, stds_pe,
+            sum_waveform
+    &#34;&#34;&#34;
+
+    baselines = np.apply_along_axis(
+        func1d=waveform_processing.get_baseline_rough,
+        axis=2,
+        arr=waveforms,
+        baseline_samples=baseline_samples)
+
+    waveforms_pe = cls.apply_waveforms_transform(
+        waveforms, baselines, gains, ADC_config)
+
+    stds_pe = np.apply_along_axis(
+        func1d=waveform_processing.get_std_rough,
+        axis=2,
+        arr=waveforms_pe,
+        baseline_samples=baseline_samples)
+
+    sum_waveform = peak_processing.get_sum_waveform(waveforms_pe)
+
+    return waveforms_pe, stds_pe, sum_waveform</code></pre>
+</details>
+</dd>
+<dt id="pylars.processing.peaks.peak_processing.get_area_of_single_waveform_each_channel"><code class="name flex">
+<span>def <span class="ident">get_area_of_single_waveform_each_channel</span></span>(<span>single_waveforms_pe: numpy.ndarray, peak_start: int, peak_end: int, dt: int = 10) ‑> numpy.ndarray</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Get the area of identified peak in each channel.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@classmethod
+def get_area_of_single_waveform_each_channel(cls,
+                                             single_waveforms_pe: np.ndarray,
+                                             peak_start: int,
+                                             peak_end: int,
+                                             dt: int = 10) -&gt; np.ndarray:
+    &#34;&#34;&#34;Get the area of identified peak in each channel.
+    &#34;&#34;&#34;
+
+    area_individual_channels = np.sum(
+        single_waveforms_pe[:, peak_start:peak_end], axis=1) * dt
+
+    return area_individual_channels</code></pre>
 </details>
 </dd>
 <dt id="pylars.processing.peaks.peak_processing.get_area_per_sensor"><code class="name flex">
@@ -1109,6 +1339,8 @@ def reorder_channel(cls, data_array: np.ndarray,
 <li><code><a title="pylars.processing.peaks.peak_processing.apply_e_to_pe" href="#pylars.processing.peaks.peak_processing.apply_e_to_pe">apply_e_to_pe</a></code></li>
 <li><code><a title="pylars.processing.peaks.peak_processing.apply_waveforms_transform" href="#pylars.processing.peaks.peak_processing.apply_waveforms_transform">apply_waveforms_transform</a></code></li>
 <li><code><a title="pylars.processing.peaks.peak_processing.available_posrec_algos" href="#pylars.processing.peaks.peak_processing.available_posrec_algos">available_posrec_algos</a></code></li>
+<li><code><a title="pylars.processing.peaks.peak_processing.flip_and_apply_gains" href="#pylars.processing.peaks.peak_processing.flip_and_apply_gains">flip_and_apply_gains</a></code></li>
+<li><code><a title="pylars.processing.peaks.peak_processing.get_area_of_single_waveform_each_channel" href="#pylars.processing.peaks.peak_processing.get_area_of_single_waveform_each_channel">get_area_of_single_waveform_each_channel</a></code></li>
 <li><code><a title="pylars.processing.peaks.peak_processing.get_area_per_sensor" href="#pylars.processing.peaks.peak_processing.get_area_per_sensor">get_area_per_sensor</a></code></li>
 <li><code><a title="pylars.processing.peaks.peak_processing.get_sum_peak_start_end_above_min_area" href="#pylars.processing.peaks.peak_processing.get_sum_peak_start_end_above_min_area">get_sum_peak_start_end_above_min_area</a></code></li>
 <li><code><a title="pylars.processing.peaks.peak_processing.get_sum_waveform" href="#pylars.processing.peaks.peak_processing.get_sum_waveform">get_sum_waveform</a></code></li>

@@ -5,7 +5,8 @@ import json
 from typing import Dict, List, Union, Tuple
 
 import numpy as np
-import pylars.utils.input
+import pandas as pd
+import pylars
 from scipy.signal import find_peaks
 import scipy.ndimage
 
@@ -213,3 +214,32 @@ def get_peak_rough_positions(area_array: np.ndarray,
             area_x, area_y, area_filt, area_peaks_x)
 
     return area_x[area_peaks_x], peak_properties
+
+
+def apply_tile_labels(df: pd.DataFrame, label_map: dict):
+    """Adds a column with the tile. Requires a label map of the form:
+    {'mod#' : {'wf#' : [tile]}.
+
+    Args:
+        label_map (dict): tile label map
+
+    Returns:
+        pd.dataframe: the dataframe with a column for the tile
+    """
+
+    def map_label(row, label_map=label_map):
+        return label_map[f"mod{row['module']}"][row['channel']]
+
+    df['tile'] = df.apply(map_label, axis=1)
+    df = df.sort_values('tile', ignore_index=True)
+    return df
+
+
+def get_summary_info(summary_path):
+    with open(summary_path, 'r') as _summ_file:
+        _summary = _summ_file.readlines()
+    _t_stop = np.datetime64(int(_summary[0].strip().split(' ')[-1]), 's')
+    _duration = np.timedelta64(int(_summary[1].strip().split(' ')[3]), 's')
+    _n_events = int(_summary[2].strip().split(' ')[-1])
+
+    return _t_stop, _duration, _n_events

@@ -1,0 +1,80 @@
+#!/usr/bin/env python3
+
+import argparse
+import glob
+
+import matplotlib.pyplot as plt
+import pandas as pd
+
+import pylars
+
+plt.style.use('~/notebooks/thesis_plots/thesis_style.mplstyle')
+
+parser = argparse.ArgumentParser(
+    description=('Script to process an LED dataset.'))
+
+parser.add_argument('-t', '--tag',
+                    help=('Choose the tag LED calibration you '
+                          'want to process. By default the format is '
+                          'YYYYMMDD_N.'),
+                    type = str,
+                    required=True)
+
+parser.add_argument('-m', '--main_path',
+                    help='Path to the main data path.',
+                    default = '/disk/gfs_atp/xenoscope/tpc/filling/LED/',
+                    type = str,
+                    required=False)
+
+parser.add_argument('-l', '--led_window',
+                    help='Led window.',
+                    default = (105,150),
+                    type = tuple,
+                    required=False)
+
+
+def get_files(args):
+    
+    files = glob.glob(f'{args.main_path}/*{args.tag}*/**/*.root', 
+                      recursive = True)
+
+    _dfs = []
+    for _f in files:
+        _fname = _f.split('/')[-1].split('_')
+        _vled = _fname[1]
+        if _vled[-1] == 'p':
+            _vled = float(_vled[:-3])
+        else:
+            _vled = float(_vled[:-1])
+        _dfs.append({'Vbias': float(_fname[0][:-1]),
+                    'LEDvoltage': _vled,
+                    'LEDwidth': 100,
+                    'module' : int(_fname[5]),
+                    'path' : _f})
+    files_df = pd.DataFrame(_dfs)
+    files_df.sort_values(by=['LEDwidth', 'LEDvoltage', 'module'], 
+                        ignore_index = True, inplace=True)
+    
+    return files_df
+
+def load_and_process_LED(args):
+    files_df = get_files(args)
+
+    LED_calib = pylars.analysis.LED_window(led_window=(105,150),
+                                       led_data_path=args.main_path)
+    LED_calib.files_df = files_df
+    LED_calib.process_all_datasets()
+    
+    return LED_calib
+
+def calculate_gains(LED_calib):
+    LED_calib.calculate_all_gains_occ()
+    LED_calib.save_gain_results()
+
+if __name__ == '__main__':
+    print('Starting LED calibration processing.')
+    args = parser.parse_args()
+
+    LED_calib = load_and_process_LED(args)
+    calculate_gains(LED_calib)
+    print('LED processing finished.')

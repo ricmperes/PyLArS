@@ -31,6 +31,7 @@
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.gridspec import GridSpec
 from matplotlib.patches import Circle, Rectangle
 
 
@@ -129,7 +130,406 @@ def plot_hitpattern(hitpattern: Union[np.ndarray, List[float]],
     mappable = matplotlib.cm.ScalarMappable(  # type: ignore
         norm=norm, cmap=cmap)
 
-    return (ax, mappable)</code></pre>
+    return (ax, mappable)
+
+
+def plot_identified_peaks_individual_single(_area: float,
+                                            _length: int,
+                                            _position: int,
+                                            _amplitude: float,
+                                            sum_waveform: np.ndarray,
+                                            x_unit: str = &#39;sample&#39;,
+                                            detail_text: bool = True,
+                                            figax: Optional[tuple] = None) -&gt; Optional[tuple]:
+    &#34;&#34;&#34;Make a plot of an identified peak in a waveform.
+
+    Args:
+        _area (float): area of the peak in PE
+        _length (int): length of the peak in samples
+        _position (int): position of the peak in samples
+        _amplitude (float): amplitude of the peak in PE/ns
+        sum_waveform (np.ndarray): array with the sum waveform PEs
+            over samples
+        x_unit (str, optional): units to use on the x axis: sample or time.
+            Defaults to &#39;sample&#39;.
+    &#34;&#34;&#34;
+
+    if figax is None:
+        fig, ax = plt.subplots(figsize=(8, 4))
+    else:
+        fig, ax = figax
+
+    _start = _position - 200 if _position - 200 &gt; 0 else 0
+    _end = _position + _length + 200 if _position + _length + \
+        200 &lt; len(sum_waveform) else len(sum_waveform)
+
+    ax.plot(np.arange(_start, _end),
+            sum_waveform[_start: _end], label=&#39;Sum waveform&#39;)
+
+    ax.plot(sum_waveform, color=&#39;C0&#39;)
+    # ax.fill_between(y1 = 0,
+    #                 y2 = sum_waveform[_position: _position+_length],
+    #                 x=np.arange(_position, _position+_length),
+    #                 color=&#39;C4&#39;,
+    #                 alpha = 0.3,
+    #                 linestyle=&#39;--&#39;)
+    ax.axvline(x=_position, color=&#39;C1&#39;, linestyle=&#39;--&#39;)
+    ax.axvline(x=_position + _length, color=&#39;C1&#39;, linestyle=&#39;--&#39;)
+
+    ax.set_ylabel(&#39;PE/ns&#39;)
+    ax.set_xlabel(&#39;# Sample&#39;)
+    if x_unit == &#39;time&#39;:
+        ax.set_xticks(ax.get_xticks(), ax.get_xticks() * 10 / 1000)
+        ax.set_xlabel(&#39;Time [us]&#39;)
+        ax.set_xlim(_start, _end)
+
+    if detail_text:
+        text_for_box = (f&#39;Area: {_area:.2f} PE\nLength: {_length:d} samples\n&#39;
+                        f&#39;Position: {_position:d} samples\n&#39;
+                        f&#39;Amplitude: {_amplitude:.2f} PE/ns&#39;)
+        ax.text(0.95, 0.95, text_for_box, transform=ax.transAxes, fontsize=10,
+                verticalalignment=&#39;top&#39;,
+                horizontalalignment=&#39;right&#39;,
+                bbox=dict(boxstyle=&#39;round&#39;, facecolor=&#39;gray&#39;, alpha=0.1))
+
+    if figax is None:
+        plt.show()
+    else:
+        return fig, ax
+
+
+def plot_identified_peaks_individual_all(lengths: list,
+                                         positions: list,
+                                         amplitudes: list,
+                                         sum_waveform: np.ndarray,
+                                         x_unit: str = &#39;sample&#39;,
+                                         figax: Optional[tuple] = None):
+    &#34;&#34;&#34;Highlight all the identified peaks in a waveform.
+
+    Args:
+        lengths (list): list of lengths resulting from wf processing
+        positions (list): list of positions resulting from wf processing
+        amplitudes (list): list of amplitudes resulting from wf processing
+        sum_waveform (np.ndarray): array with the sum waveform PEs
+            over samples
+    &#34;&#34;&#34;
+
+    if figax is None:
+        fig, ax = plt.subplots(figsize=(8, 4))
+    else:
+        fig, ax = figax
+
+    ax.plot(sum_waveform, label=&#39;Sum waveform&#39;)
+
+    for _lenght, _position in zip(lengths, positions):
+        ax.fill_betweenx(y=[0, max(amplitudes)], x1=_position, x2=_position + _lenght,
+                         color=&#39;C4&#39;, alpha=0.3, linestyle=&#39;--&#39;)
+
+    ax.set_ylabel(&#39;PE/ns&#39;)
+    ax.set_xlabel(&#39;# Sample&#39;)
+    if x_unit == &#39;time&#39;:
+        ax.set_xticks(ax.get_xticks(), ax.get_xticks() * 10 / 1000)
+        ax.set_xlabel(&#39;Time [us]&#39;)
+        ax.set_xlim(sum_waveform[0], sum_waveform[-1])
+
+    if figax is None:
+        plt.show()
+    else:
+        return fig, ax
+
+
+def plot_identified_peaks_each_channel(areas_individual_channels: list,
+                                       positions: list,
+                                       lengths: list,
+                                       marker: str = &#39;.&#39;,
+                                       x_unit: str = &#39;sample&#39;,
+                                       figax: Optional[tuple] = None):
+    &#34;&#34;&#34;Plot the identified peaks in each channel by balls.
+
+    Args:
+        areas_individual_channels (list): _description_
+        positions (list): _description_
+        lengths (list): _description_
+        figax (Optional[tuple], optional): _description_. Defaults to None.
+
+    Returns:
+        _type_: _description_
+    &#34;&#34;&#34;
+    chn_colors = {0: &#39;C0&#39;, 1: &#39;C1&#39;, 2: &#39;C2&#39;, 3: &#39;C3&#39;, 4: &#39;C4&#39;, 5: &#39;C5&#39;, 6: &#39;C6&#39;,
+                  7: &#39;C0&#39;, 8: &#39;C1&#39;, 9: &#39;C2&#39;, 10: &#39;C3&#39;, 11: &#39;C4&#39;}
+
+    if figax is None:
+        fig, ax = plt.subplots(figsize=(10, 3))
+    else:
+        fig, ax = figax
+
+    for _peak_id, areas_individual_channels_peak in enumerate(
+            areas_individual_channels):
+        _middle_of_peak = positions[_peak_id] + lengths[_peak_id] // 2
+        for _ch_n in range(areas_individual_channels_peak.shape[0]):
+            _ch_ycoord = areas_individual_channels_peak.shape[0] - _ch_n
+            _area_of_peak = areas_individual_channels_peak[_ch_n]
+            if _area_of_peak &gt; 0:
+                ax.scatter(x=_middle_of_peak,
+                           y=_ch_ycoord,
+                           s=_area_of_peak**0.7,
+                           color=chn_colors[_ch_n],
+                           alpha=0.8,
+                           marker=marker)  # type: ignore
+    ax.set_yticks(range(1, 13),
+                  [&#39;M&#39;, &#39;L&#39;, &#39;K&#39;, &#39;J&#39;, &#39;H&#39;, &#39;G&#39;, &#39;F&#39;, &#39;E&#39;, &#39;D&#39;, &#39;C&#39;, &#39;B&#39;, &#39;A&#39;])
+
+    if x_unit == &#39;time&#39;:
+        ax.set_xticks(ax.get_xticks(), ax.get_xticks() * 10 / 1000)
+        ax.set_xlabel(&#39;Time [µs]&#39;)
+        #ax.set_xlim(_start, _end)
+    if figax is None:
+        plt.show()
+    else:
+        return fig, ax
+
+
+def plot_identified_peaks_each_channel_waveforms(
+        waveforms_pe_single_event: np.ndarray,
+        x_unit: str = &#39;sample&#39;,
+        figax: Optional[tuple] = None):
+    &#34;&#34;&#34;Plot the identified peaks in each channel by waveforms.
+
+    Args:
+        areas_individual_channels (list): _description_
+        positions (list): _description_
+        lengths (list): _description_
+        figax (Optional[tuple], optional): _description_. Defaults to None.
+
+    Returns:
+        _type_: _description_
+    &#34;&#34;&#34;
+    chn_colors = {0: &#39;C0&#39;, 1: &#39;C1&#39;, 2: &#39;C2&#39;, 3: &#39;C3&#39;, 4: &#39;C4&#39;, 5: &#39;C5&#39;, 6: &#39;C6&#39;,
+                  7: &#39;C0&#39;, 8: &#39;C1&#39;, 9: &#39;C2&#39;, 10: &#39;C3&#39;, 11: &#39;C4&#39;}
+
+    if figax is None:
+        fig, ax = plt.subplots(figsize=(10, 3))
+    else:
+        fig, ax = figax
+
+    max_value_y = np.max(waveforms_pe_single_event)
+    for _ch_i in range(waveforms_pe_single_event.shape[0]):
+        _ch_ycoord = waveforms_pe_single_event.shape[0] - _ch_i
+
+        ax.fill_between(x=np.arange(waveforms_pe_single_event.shape[1]),
+                        y1=_ch_ycoord,
+                        y2=waveforms_pe_single_event[_ch_i,
+                                                     :] / max_value_y * 1.5 + _ch_ycoord,
+                        color=chn_colors[_ch_i],
+                        alpha=0.6)
+
+    ax.set_yticks(range(1, 13),
+                  [&#39;M&#39;, &#39;L&#39;, &#39;K&#39;, &#39;J&#39;, &#39;H&#39;, &#39;G&#39;, &#39;F&#39;, &#39;E&#39;, &#39;D&#39;, &#39;C&#39;, &#39;B&#39;, &#39;A&#39;])
+
+    if x_unit == &#39;time&#39;:
+        ax.set_xticks(ax.get_xticks(), ax.get_xticks() * 10 / 1000)
+        ax.set_xlabel(&#39;Time [µs]&#39;)
+        #ax.set_xlim(_start, _end)
+    if figax is None:
+        plt.show()
+    else:
+        return fig, ax
+
+
+def plot_full_waveform_peaks(areas: list,
+                             lengths: list,
+                             positions: list,
+                             amplitudes: list,
+                             sum_waveform_single: np.ndarray,
+                             areas_individual_channels: list,
+                             array_layout: np.ndarray,
+                             array_labels: list,):
+    &#34;&#34;&#34;Make plot of the full waveform with the identified peaks.
+
+    Args:
+        areas (list): area of the identified peaks in the waveform
+        lengths (list): length of the identified peaks in the waveform
+        positions (list): position of the identified peaks in the waveform
+        amplitudes (list): amplitude of the identified peaks in the waveform
+        sum_waveform_single (np.ndarray): sum waveform of the event
+        areas_individual_channels (list): areas of the peak seen in
+            each channel
+        array_layout (np.ndarray): layout of the array
+        array_labels (list): labels of the array
+    &#34;&#34;&#34;
+
+    fig = plt.figure(figsize=(14, 6))
+    gs = GridSpec(2, 2, width_ratios=[1, 0.5], height_ratios=[1, 1])
+
+    ax_sumwf = fig.add_subplot(gs[0, 0])
+    ax_individual_ch = fig.add_subplot(gs[1, 0], sharex=ax_sumwf)
+    ax_hitp = fig.add_subplot(gs[0, 1])
+    ax_text = fig.add_subplot(gs[1, 1])
+    fig.subplots_adjust(hspace=0, wspace=0.1)
+
+    ax_sumwf = plot_identified_peaks_individual_all(
+        lengths,
+        positions,
+        amplitudes,
+        sum_waveform_single,
+        x_unit=&#39;time&#39;,
+        figax=(fig, ax_sumwf))
+
+    ax_individual_ch = plot_identified_peaks_each_channel(
+        areas_individual_channels,
+        positions,
+        lengths,
+        x_unit=&#39;time&#39;,
+        figax=(fig, ax_individual_ch))
+
+    biggest_peak_id = np.where(areas == max(areas))[0][0]
+    ax_hitp, _map = plot_hitpattern(
+        hitpattern=areas_individual_channels[biggest_peak_id],
+        layout=array_layout,
+        labels=array_labels,
+        r_tpc=160 / 2,
+        cmap=&#39;coolwarm&#39;,
+        log=False,
+        ax=ax_hitp,)
+    ax_hitp.set_xlim(-100, 100)
+    ax_hitp.set_ylim(-100, 100)
+    ax_hitp.set_aspect(&#39;equal&#39;)
+    ax_hitp.set_xlabel(&#39;x [mm]&#39;)
+    ax_hitp.set_ylabel(&#39;y [mm]&#39;)
+
+    fig.colorbar(_map, label=&#39;Peak Area [PE]&#39;, ax=ax_hitp)
+
+    text_for_box = (f&#39;Area: {areas[biggest_peak_id]:.2f} PE\n&#39;
+                    # type: ignore
+                    f&#39;Length: {lengths[biggest_peak_id]/100:.2f} µs\n&#39;
+                    # type: ignore
+                    f&#39;Position: {positions[biggest_peak_id]/100:.2f} µs\n&#39;
+                    f&#39;Amplitude: {amplitudes[biggest_peak_id]:.2f} PE/ns&#39;)
+
+    ax_text.text(
+        0.5,
+        0.4,
+        s=text_for_box,
+        ha=&#39;center&#39;,
+        va=&#39;center&#39;,
+        fontsize=12)
+    ax_text.axis(&#39;off&#39;)
+
+    plt.show()
+
+
+def plot_peak_info(peak_id: int, areas: list, lengths: list,
+                   positions: list, amplitudes: list,
+                   sum_waveform_single: np.ndarray,
+                   areas_individual_channels: list,
+                   array_layout: np.ndarray, array_labels: list,
+                   waveforms_pe_single_event: Optional[np.ndarray] = None,
+                   save_fig: Optional[str] = None):
+    &#34;&#34;&#34;Fancy plot of the peak information, i.e., the sum waveform, the
+    hitpattern, the individual channel waveforms and the peak information.
+
+    Args:
+        peak_id (int): number of the peak in the waveform
+        areas (list): area of the identified peaks in the waveform
+        lengths (list): length of the identified peaks in the waveform
+        positions (list): position of the identified peaks in the waveform
+        amplitudes (list): amplitude of the identified peaks in the waveform
+        sum_waveform_single (np.ndarray): sum waveform of the event
+        areas_individual_channels (list): areas of the peak seen in
+            each channel
+        array_layout (np.ndarray): layout of the array
+        array_labels (list): labels of the array
+        waveforms_pe_single_event (Optional[np.ndarray], optional): waveforms
+            of each channel to make an even fancier plot. Defaults to None.
+        save_fig (Optional[str], optional): path to save the figure (include
+            extension). Defaults to None.
+    &#34;&#34;&#34;
+
+    fig = plt.figure(figsize=(14, 6), dpi=100)
+    gs = GridSpec(2, 2, width_ratios=[1, 0.5], height_ratios=[1, 0.8])
+
+    ax_sumwf = fig.add_subplot(gs[0, 0])
+    ax_individual_ch = fig.add_subplot(gs[1, 0], sharex=ax_sumwf)
+    ax_hitp = fig.add_subplot(gs[0, 1])
+    ax_text = fig.add_subplot(gs[1, 1])
+    fig.subplots_adjust(hspace=0, wspace=0.1)
+
+    _area = areas[peak_id]
+    _length = lengths[peak_id]
+    _position = positions[peak_id]
+    _amplitude = amplitudes[peak_id]
+    fig, ax_sumwf = plot_identified_peaks_individual_single(_area,  # type: ignore
+                                                            _length,
+                                                            _position,
+                                                            _amplitude,
+                                                            sum_waveform_single,
+                                                            x_unit=&#39;time&#39;,
+                                                            detail_text=False,
+                                                            figax=(fig, ax_sumwf))
+
+    _start = _position - 200 if _position - 200 &gt; 0 else 0
+    _end = _position + _length + 200 if _position + _length + \
+        200 &lt; len(sum_waveform_single) else len(sum_waveform_single)
+
+    if waveforms_pe_single_event is not None:
+        fig, ax_individual_ch = plot_identified_peaks_each_channel_waveforms(
+            waveforms_pe_single_event,
+            x_unit=&#39;time&#39;,
+            figax=(fig, ax_individual_ch))  # type: ignore
+
+    else:
+        fig, ax_individual_ch = plot_identified_peaks_each_channel(  # type: ignore
+            areas_individual_channels,
+            positions,
+            lengths,
+            x_unit=&#39;time&#39;,
+            figax=(fig, ax_individual_ch))
+
+    ax_sumwf.set_xlim(_start, _end)
+    ax_individual_ch.set_xlim(_start, _end)
+
+    # ax_sumwf.set_xticklabels([])
+
+    ax_hitp, _map = plot_hitpattern(
+        hitpattern=np.log10(areas_individual_channels[peak_id]),  # /1e5,
+        layout=array_layout,
+        labels=array_labels,
+        r_tpc=160 / 2,
+        cmap=&#39;coolwarm&#39;,
+        log=False,
+        ax=ax_hitp,)
+    ax_hitp.set_xlim(-100, 100)
+    ax_hitp.set_ylim(-100, 100)
+    ax_hitp.set_aspect(&#39;equal&#39;)
+    ax_hitp.set_xlabel(&#39;x [mm]&#39;)
+    ax_hitp.set_ylabel(&#39;y [mm]&#39;)
+
+    cbar = fig.colorbar(_map,
+                        label=&#39;Peak Area log10 [PE]&#39;,
+                        ax=ax_hitp)
+
+    #new_ticks = [3.5, 4 , 4.5, 5 ]
+    #new_ticklabels = [&#39;$10^{3.5}$&#39;, &#39;$10^4$&#39;, &#39;$10^{4.5}$&#39;, &#39;$10^5$&#39;]
+
+    # cbar.set_ticks(new_ticks)
+    # cbar.set_ticklabels(new_ticklabels) # type: ignore
+
+    text_for_box = (f&#39;Area: {areas[peak_id]:.2f} PE\n&#39;
+                    f&#39;Length: {lengths[peak_id]/100:.2f} µs\n&#39;
+                    f&#39;Position: {positions[peak_id]/100:.2f} µs\n&#39;
+                    f&#39;Amplitude: {amplitudes[peak_id]:.2f} PE/ns&#39;)
+
+    ax_text.text(
+        0.5,
+        0.4,
+        s=text_for_box,
+        ha=&#39;center&#39;,
+        va=&#39;center&#39;,
+        fontsize=12)
+    ax_text.axis(&#39;off&#39;)
+    if save_fig:
+        plt.savefig(save_fig)
+    plt.show()</code></pre>
 </details>
 </section>
 <section>
@@ -139,6 +539,117 @@ def plot_hitpattern(hitpattern: Union[np.ndarray, List[float]],
 <section>
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
+<dt id="pylars.plotting.plotpeaks.plot_full_waveform_peaks"><code class="name flex">
+<span>def <span class="ident">plot_full_waveform_peaks</span></span>(<span>areas: list, lengths: list, positions: list, amplitudes: list, sum_waveform_single: numpy.ndarray, areas_individual_channels: list, array_layout: numpy.ndarray, array_labels: list)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Make plot of the full waveform with the identified peaks.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>areas</code></strong> :&ensp;<code>list</code></dt>
+<dd>area of the identified peaks in the waveform</dd>
+<dt><strong><code>lengths</code></strong> :&ensp;<code>list</code></dt>
+<dd>length of the identified peaks in the waveform</dd>
+<dt><strong><code>positions</code></strong> :&ensp;<code>list</code></dt>
+<dd>position of the identified peaks in the waveform</dd>
+<dt><strong><code>amplitudes</code></strong> :&ensp;<code>list</code></dt>
+<dd>amplitude of the identified peaks in the waveform</dd>
+<dt><strong><code>sum_waveform_single</code></strong> :&ensp;<code>np.ndarray</code></dt>
+<dd>sum waveform of the event</dd>
+<dt><strong><code>areas_individual_channels</code></strong> :&ensp;<code>list</code></dt>
+<dd>areas of the peak seen in
+each channel</dd>
+<dt><strong><code>array_layout</code></strong> :&ensp;<code>np.ndarray</code></dt>
+<dd>layout of the array</dd>
+<dt><strong><code>array_labels</code></strong> :&ensp;<code>list</code></dt>
+<dd>labels of the array</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plot_full_waveform_peaks(areas: list,
+                             lengths: list,
+                             positions: list,
+                             amplitudes: list,
+                             sum_waveform_single: np.ndarray,
+                             areas_individual_channels: list,
+                             array_layout: np.ndarray,
+                             array_labels: list,):
+    &#34;&#34;&#34;Make plot of the full waveform with the identified peaks.
+
+    Args:
+        areas (list): area of the identified peaks in the waveform
+        lengths (list): length of the identified peaks in the waveform
+        positions (list): position of the identified peaks in the waveform
+        amplitudes (list): amplitude of the identified peaks in the waveform
+        sum_waveform_single (np.ndarray): sum waveform of the event
+        areas_individual_channels (list): areas of the peak seen in
+            each channel
+        array_layout (np.ndarray): layout of the array
+        array_labels (list): labels of the array
+    &#34;&#34;&#34;
+
+    fig = plt.figure(figsize=(14, 6))
+    gs = GridSpec(2, 2, width_ratios=[1, 0.5], height_ratios=[1, 1])
+
+    ax_sumwf = fig.add_subplot(gs[0, 0])
+    ax_individual_ch = fig.add_subplot(gs[1, 0], sharex=ax_sumwf)
+    ax_hitp = fig.add_subplot(gs[0, 1])
+    ax_text = fig.add_subplot(gs[1, 1])
+    fig.subplots_adjust(hspace=0, wspace=0.1)
+
+    ax_sumwf = plot_identified_peaks_individual_all(
+        lengths,
+        positions,
+        amplitudes,
+        sum_waveform_single,
+        x_unit=&#39;time&#39;,
+        figax=(fig, ax_sumwf))
+
+    ax_individual_ch = plot_identified_peaks_each_channel(
+        areas_individual_channels,
+        positions,
+        lengths,
+        x_unit=&#39;time&#39;,
+        figax=(fig, ax_individual_ch))
+
+    biggest_peak_id = np.where(areas == max(areas))[0][0]
+    ax_hitp, _map = plot_hitpattern(
+        hitpattern=areas_individual_channels[biggest_peak_id],
+        layout=array_layout,
+        labels=array_labels,
+        r_tpc=160 / 2,
+        cmap=&#39;coolwarm&#39;,
+        log=False,
+        ax=ax_hitp,)
+    ax_hitp.set_xlim(-100, 100)
+    ax_hitp.set_ylim(-100, 100)
+    ax_hitp.set_aspect(&#39;equal&#39;)
+    ax_hitp.set_xlabel(&#39;x [mm]&#39;)
+    ax_hitp.set_ylabel(&#39;y [mm]&#39;)
+
+    fig.colorbar(_map, label=&#39;Peak Area [PE]&#39;, ax=ax_hitp)
+
+    text_for_box = (f&#39;Area: {areas[biggest_peak_id]:.2f} PE\n&#39;
+                    # type: ignore
+                    f&#39;Length: {lengths[biggest_peak_id]/100:.2f} µs\n&#39;
+                    # type: ignore
+                    f&#39;Position: {positions[biggest_peak_id]/100:.2f} µs\n&#39;
+                    f&#39;Amplitude: {amplitudes[biggest_peak_id]:.2f} PE/ns&#39;)
+
+    ax_text.text(
+        0.5,
+        0.4,
+        s=text_for_box,
+        ha=&#39;center&#39;,
+        va=&#39;center&#39;,
+        fontsize=12)
+    ax_text.axis(&#39;off&#39;)
+
+    plt.show()</code></pre>
+</details>
+</dd>
 <dt id="pylars.plotting.plotpeaks.plot_hitpattern"><code class="name flex">
 <span>def <span class="ident">plot_hitpattern</span></span>(<span>hitpattern: Union[numpy.ndarray, List[float]], layout: numpy.ndarray, labels: Union[List[str], NoneType] = None, r_tpc: Union[float, NoneType] = None, cmap: str = 'gnuplot', log: bool = False, ax=None)</span>
 </code></dt>
@@ -238,6 +749,458 @@ for a colorbar.</p></div>
     return (ax, mappable)</code></pre>
 </details>
 </dd>
+<dt id="pylars.plotting.plotpeaks.plot_identified_peaks_each_channel"><code class="name flex">
+<span>def <span class="ident">plot_identified_peaks_each_channel</span></span>(<span>areas_individual_channels: list, positions: list, lengths: list, marker: str = '.', x_unit: str = 'sample', figax: Union[tuple, NoneType] = None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Plot the identified peaks in each channel by balls.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>areas_individual_channels</code></strong> :&ensp;<code>list</code></dt>
+<dd><em>description</em></dd>
+<dt><strong><code>positions</code></strong> :&ensp;<code>list</code></dt>
+<dd><em>description</em></dd>
+<dt><strong><code>lengths</code></strong> :&ensp;<code>list</code></dt>
+<dd><em>description</em></dd>
+<dt><strong><code>figax</code></strong> :&ensp;<code>Optional[tuple]</code>, optional</dt>
+<dd><em>description</em>. Defaults to None.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>_type_</code></dt>
+<dd><em>description</em></dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plot_identified_peaks_each_channel(areas_individual_channels: list,
+                                       positions: list,
+                                       lengths: list,
+                                       marker: str = &#39;.&#39;,
+                                       x_unit: str = &#39;sample&#39;,
+                                       figax: Optional[tuple] = None):
+    &#34;&#34;&#34;Plot the identified peaks in each channel by balls.
+
+    Args:
+        areas_individual_channels (list): _description_
+        positions (list): _description_
+        lengths (list): _description_
+        figax (Optional[tuple], optional): _description_. Defaults to None.
+
+    Returns:
+        _type_: _description_
+    &#34;&#34;&#34;
+    chn_colors = {0: &#39;C0&#39;, 1: &#39;C1&#39;, 2: &#39;C2&#39;, 3: &#39;C3&#39;, 4: &#39;C4&#39;, 5: &#39;C5&#39;, 6: &#39;C6&#39;,
+                  7: &#39;C0&#39;, 8: &#39;C1&#39;, 9: &#39;C2&#39;, 10: &#39;C3&#39;, 11: &#39;C4&#39;}
+
+    if figax is None:
+        fig, ax = plt.subplots(figsize=(10, 3))
+    else:
+        fig, ax = figax
+
+    for _peak_id, areas_individual_channels_peak in enumerate(
+            areas_individual_channels):
+        _middle_of_peak = positions[_peak_id] + lengths[_peak_id] // 2
+        for _ch_n in range(areas_individual_channels_peak.shape[0]):
+            _ch_ycoord = areas_individual_channels_peak.shape[0] - _ch_n
+            _area_of_peak = areas_individual_channels_peak[_ch_n]
+            if _area_of_peak &gt; 0:
+                ax.scatter(x=_middle_of_peak,
+                           y=_ch_ycoord,
+                           s=_area_of_peak**0.7,
+                           color=chn_colors[_ch_n],
+                           alpha=0.8,
+                           marker=marker)  # type: ignore
+    ax.set_yticks(range(1, 13),
+                  [&#39;M&#39;, &#39;L&#39;, &#39;K&#39;, &#39;J&#39;, &#39;H&#39;, &#39;G&#39;, &#39;F&#39;, &#39;E&#39;, &#39;D&#39;, &#39;C&#39;, &#39;B&#39;, &#39;A&#39;])
+
+    if x_unit == &#39;time&#39;:
+        ax.set_xticks(ax.get_xticks(), ax.get_xticks() * 10 / 1000)
+        ax.set_xlabel(&#39;Time [µs]&#39;)
+        #ax.set_xlim(_start, _end)
+    if figax is None:
+        plt.show()
+    else:
+        return fig, ax</code></pre>
+</details>
+</dd>
+<dt id="pylars.plotting.plotpeaks.plot_identified_peaks_each_channel_waveforms"><code class="name flex">
+<span>def <span class="ident">plot_identified_peaks_each_channel_waveforms</span></span>(<span>waveforms_pe_single_event: numpy.ndarray, x_unit: str = 'sample', figax: Union[tuple, NoneType] = None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Plot the identified peaks in each channel by waveforms.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>areas_individual_channels</code></strong> :&ensp;<code>list</code></dt>
+<dd><em>description</em></dd>
+<dt><strong><code>positions</code></strong> :&ensp;<code>list</code></dt>
+<dd><em>description</em></dd>
+<dt><strong><code>lengths</code></strong> :&ensp;<code>list</code></dt>
+<dd><em>description</em></dd>
+<dt><strong><code>figax</code></strong> :&ensp;<code>Optional[tuple]</code>, optional</dt>
+<dd><em>description</em>. Defaults to None.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>_type_</code></dt>
+<dd><em>description</em></dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plot_identified_peaks_each_channel_waveforms(
+        waveforms_pe_single_event: np.ndarray,
+        x_unit: str = &#39;sample&#39;,
+        figax: Optional[tuple] = None):
+    &#34;&#34;&#34;Plot the identified peaks in each channel by waveforms.
+
+    Args:
+        areas_individual_channels (list): _description_
+        positions (list): _description_
+        lengths (list): _description_
+        figax (Optional[tuple], optional): _description_. Defaults to None.
+
+    Returns:
+        _type_: _description_
+    &#34;&#34;&#34;
+    chn_colors = {0: &#39;C0&#39;, 1: &#39;C1&#39;, 2: &#39;C2&#39;, 3: &#39;C3&#39;, 4: &#39;C4&#39;, 5: &#39;C5&#39;, 6: &#39;C6&#39;,
+                  7: &#39;C0&#39;, 8: &#39;C1&#39;, 9: &#39;C2&#39;, 10: &#39;C3&#39;, 11: &#39;C4&#39;}
+
+    if figax is None:
+        fig, ax = plt.subplots(figsize=(10, 3))
+    else:
+        fig, ax = figax
+
+    max_value_y = np.max(waveforms_pe_single_event)
+    for _ch_i in range(waveforms_pe_single_event.shape[0]):
+        _ch_ycoord = waveforms_pe_single_event.shape[0] - _ch_i
+
+        ax.fill_between(x=np.arange(waveforms_pe_single_event.shape[1]),
+                        y1=_ch_ycoord,
+                        y2=waveforms_pe_single_event[_ch_i,
+                                                     :] / max_value_y * 1.5 + _ch_ycoord,
+                        color=chn_colors[_ch_i],
+                        alpha=0.6)
+
+    ax.set_yticks(range(1, 13),
+                  [&#39;M&#39;, &#39;L&#39;, &#39;K&#39;, &#39;J&#39;, &#39;H&#39;, &#39;G&#39;, &#39;F&#39;, &#39;E&#39;, &#39;D&#39;, &#39;C&#39;, &#39;B&#39;, &#39;A&#39;])
+
+    if x_unit == &#39;time&#39;:
+        ax.set_xticks(ax.get_xticks(), ax.get_xticks() * 10 / 1000)
+        ax.set_xlabel(&#39;Time [µs]&#39;)
+        #ax.set_xlim(_start, _end)
+    if figax is None:
+        plt.show()
+    else:
+        return fig, ax</code></pre>
+</details>
+</dd>
+<dt id="pylars.plotting.plotpeaks.plot_identified_peaks_individual_all"><code class="name flex">
+<span>def <span class="ident">plot_identified_peaks_individual_all</span></span>(<span>lengths: list, positions: list, amplitudes: list, sum_waveform: numpy.ndarray, x_unit: str = 'sample', figax: Union[tuple, NoneType] = None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Highlight all the identified peaks in a waveform.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>lengths</code></strong> :&ensp;<code>list</code></dt>
+<dd>list of lengths resulting from wf processing</dd>
+<dt><strong><code>positions</code></strong> :&ensp;<code>list</code></dt>
+<dd>list of positions resulting from wf processing</dd>
+<dt><strong><code>amplitudes</code></strong> :&ensp;<code>list</code></dt>
+<dd>list of amplitudes resulting from wf processing</dd>
+<dt><strong><code>sum_waveform</code></strong> :&ensp;<code>np.ndarray</code></dt>
+<dd>array with the sum waveform PEs
+over samples</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plot_identified_peaks_individual_all(lengths: list,
+                                         positions: list,
+                                         amplitudes: list,
+                                         sum_waveform: np.ndarray,
+                                         x_unit: str = &#39;sample&#39;,
+                                         figax: Optional[tuple] = None):
+    &#34;&#34;&#34;Highlight all the identified peaks in a waveform.
+
+    Args:
+        lengths (list): list of lengths resulting from wf processing
+        positions (list): list of positions resulting from wf processing
+        amplitudes (list): list of amplitudes resulting from wf processing
+        sum_waveform (np.ndarray): array with the sum waveform PEs
+            over samples
+    &#34;&#34;&#34;
+
+    if figax is None:
+        fig, ax = plt.subplots(figsize=(8, 4))
+    else:
+        fig, ax = figax
+
+    ax.plot(sum_waveform, label=&#39;Sum waveform&#39;)
+
+    for _lenght, _position in zip(lengths, positions):
+        ax.fill_betweenx(y=[0, max(amplitudes)], x1=_position, x2=_position + _lenght,
+                         color=&#39;C4&#39;, alpha=0.3, linestyle=&#39;--&#39;)
+
+    ax.set_ylabel(&#39;PE/ns&#39;)
+    ax.set_xlabel(&#39;# Sample&#39;)
+    if x_unit == &#39;time&#39;:
+        ax.set_xticks(ax.get_xticks(), ax.get_xticks() * 10 / 1000)
+        ax.set_xlabel(&#39;Time [us]&#39;)
+        ax.set_xlim(sum_waveform[0], sum_waveform[-1])
+
+    if figax is None:
+        plt.show()
+    else:
+        return fig, ax</code></pre>
+</details>
+</dd>
+<dt id="pylars.plotting.plotpeaks.plot_identified_peaks_individual_single"><code class="name flex">
+<span>def <span class="ident">plot_identified_peaks_individual_single</span></span>(<span>_area: float, _length: int, _position: int, _amplitude: float, sum_waveform: numpy.ndarray, x_unit: str = 'sample', detail_text: bool = True, figax: Union[tuple, NoneType] = None) ‑> Union[tuple, NoneType]</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Make a plot of an identified peak in a waveform.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>_area</code></strong> :&ensp;<code>float</code></dt>
+<dd>area of the peak in PE</dd>
+<dt><strong><code>_length</code></strong> :&ensp;<code>int</code></dt>
+<dd>length of the peak in samples</dd>
+<dt><strong><code>_position</code></strong> :&ensp;<code>int</code></dt>
+<dd>position of the peak in samples</dd>
+<dt><strong><code>_amplitude</code></strong> :&ensp;<code>float</code></dt>
+<dd>amplitude of the peak in PE/ns</dd>
+<dt><strong><code>sum_waveform</code></strong> :&ensp;<code>np.ndarray</code></dt>
+<dd>array with the sum waveform PEs
+over samples</dd>
+<dt><strong><code>x_unit</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>units to use on the x axis: sample or time.
+Defaults to 'sample'.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plot_identified_peaks_individual_single(_area: float,
+                                            _length: int,
+                                            _position: int,
+                                            _amplitude: float,
+                                            sum_waveform: np.ndarray,
+                                            x_unit: str = &#39;sample&#39;,
+                                            detail_text: bool = True,
+                                            figax: Optional[tuple] = None) -&gt; Optional[tuple]:
+    &#34;&#34;&#34;Make a plot of an identified peak in a waveform.
+
+    Args:
+        _area (float): area of the peak in PE
+        _length (int): length of the peak in samples
+        _position (int): position of the peak in samples
+        _amplitude (float): amplitude of the peak in PE/ns
+        sum_waveform (np.ndarray): array with the sum waveform PEs
+            over samples
+        x_unit (str, optional): units to use on the x axis: sample or time.
+            Defaults to &#39;sample&#39;.
+    &#34;&#34;&#34;
+
+    if figax is None:
+        fig, ax = plt.subplots(figsize=(8, 4))
+    else:
+        fig, ax = figax
+
+    _start = _position - 200 if _position - 200 &gt; 0 else 0
+    _end = _position + _length + 200 if _position + _length + \
+        200 &lt; len(sum_waveform) else len(sum_waveform)
+
+    ax.plot(np.arange(_start, _end),
+            sum_waveform[_start: _end], label=&#39;Sum waveform&#39;)
+
+    ax.plot(sum_waveform, color=&#39;C0&#39;)
+    # ax.fill_between(y1 = 0,
+    #                 y2 = sum_waveform[_position: _position+_length],
+    #                 x=np.arange(_position, _position+_length),
+    #                 color=&#39;C4&#39;,
+    #                 alpha = 0.3,
+    #                 linestyle=&#39;--&#39;)
+    ax.axvline(x=_position, color=&#39;C1&#39;, linestyle=&#39;--&#39;)
+    ax.axvline(x=_position + _length, color=&#39;C1&#39;, linestyle=&#39;--&#39;)
+
+    ax.set_ylabel(&#39;PE/ns&#39;)
+    ax.set_xlabel(&#39;# Sample&#39;)
+    if x_unit == &#39;time&#39;:
+        ax.set_xticks(ax.get_xticks(), ax.get_xticks() * 10 / 1000)
+        ax.set_xlabel(&#39;Time [us]&#39;)
+        ax.set_xlim(_start, _end)
+
+    if detail_text:
+        text_for_box = (f&#39;Area: {_area:.2f} PE\nLength: {_length:d} samples\n&#39;
+                        f&#39;Position: {_position:d} samples\n&#39;
+                        f&#39;Amplitude: {_amplitude:.2f} PE/ns&#39;)
+        ax.text(0.95, 0.95, text_for_box, transform=ax.transAxes, fontsize=10,
+                verticalalignment=&#39;top&#39;,
+                horizontalalignment=&#39;right&#39;,
+                bbox=dict(boxstyle=&#39;round&#39;, facecolor=&#39;gray&#39;, alpha=0.1))
+
+    if figax is None:
+        plt.show()
+    else:
+        return fig, ax</code></pre>
+</details>
+</dd>
+<dt id="pylars.plotting.plotpeaks.plot_peak_info"><code class="name flex">
+<span>def <span class="ident">plot_peak_info</span></span>(<span>peak_id: int, areas: list, lengths: list, positions: list, amplitudes: list, sum_waveform_single: numpy.ndarray, areas_individual_channels: list, array_layout: numpy.ndarray, array_labels: list, waveforms_pe_single_event: Union[numpy.ndarray, NoneType] = None, save_fig: Union[str, NoneType] = None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Fancy plot of the peak information, i.e., the sum waveform, the
+hitpattern, the individual channel waveforms and the peak information.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>peak_id</code></strong> :&ensp;<code>int</code></dt>
+<dd>number of the peak in the waveform</dd>
+<dt><strong><code>areas</code></strong> :&ensp;<code>list</code></dt>
+<dd>area of the identified peaks in the waveform</dd>
+<dt><strong><code>lengths</code></strong> :&ensp;<code>list</code></dt>
+<dd>length of the identified peaks in the waveform</dd>
+<dt><strong><code>positions</code></strong> :&ensp;<code>list</code></dt>
+<dd>position of the identified peaks in the waveform</dd>
+<dt><strong><code>amplitudes</code></strong> :&ensp;<code>list</code></dt>
+<dd>amplitude of the identified peaks in the waveform</dd>
+<dt><strong><code>sum_waveform_single</code></strong> :&ensp;<code>np.ndarray</code></dt>
+<dd>sum waveform of the event</dd>
+<dt><strong><code>areas_individual_channels</code></strong> :&ensp;<code>list</code></dt>
+<dd>areas of the peak seen in
+each channel</dd>
+<dt><strong><code>array_layout</code></strong> :&ensp;<code>np.ndarray</code></dt>
+<dd>layout of the array</dd>
+<dt><strong><code>array_labels</code></strong> :&ensp;<code>list</code></dt>
+<dd>labels of the array</dd>
+<dt><strong><code>waveforms_pe_single_event</code></strong> :&ensp;<code>Optional[np.ndarray]</code>, optional</dt>
+<dd>waveforms
+of each channel to make an even fancier plot. Defaults to None.</dd>
+<dt><strong><code>save_fig</code></strong> :&ensp;<code>Optional[str]</code>, optional</dt>
+<dd>path to save the figure (include
+extension). Defaults to None.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plot_peak_info(peak_id: int, areas: list, lengths: list,
+                   positions: list, amplitudes: list,
+                   sum_waveform_single: np.ndarray,
+                   areas_individual_channels: list,
+                   array_layout: np.ndarray, array_labels: list,
+                   waveforms_pe_single_event: Optional[np.ndarray] = None,
+                   save_fig: Optional[str] = None):
+    &#34;&#34;&#34;Fancy plot of the peak information, i.e., the sum waveform, the
+    hitpattern, the individual channel waveforms and the peak information.
+
+    Args:
+        peak_id (int): number of the peak in the waveform
+        areas (list): area of the identified peaks in the waveform
+        lengths (list): length of the identified peaks in the waveform
+        positions (list): position of the identified peaks in the waveform
+        amplitudes (list): amplitude of the identified peaks in the waveform
+        sum_waveform_single (np.ndarray): sum waveform of the event
+        areas_individual_channels (list): areas of the peak seen in
+            each channel
+        array_layout (np.ndarray): layout of the array
+        array_labels (list): labels of the array
+        waveforms_pe_single_event (Optional[np.ndarray], optional): waveforms
+            of each channel to make an even fancier plot. Defaults to None.
+        save_fig (Optional[str], optional): path to save the figure (include
+            extension). Defaults to None.
+    &#34;&#34;&#34;
+
+    fig = plt.figure(figsize=(14, 6), dpi=100)
+    gs = GridSpec(2, 2, width_ratios=[1, 0.5], height_ratios=[1, 0.8])
+
+    ax_sumwf = fig.add_subplot(gs[0, 0])
+    ax_individual_ch = fig.add_subplot(gs[1, 0], sharex=ax_sumwf)
+    ax_hitp = fig.add_subplot(gs[0, 1])
+    ax_text = fig.add_subplot(gs[1, 1])
+    fig.subplots_adjust(hspace=0, wspace=0.1)
+
+    _area = areas[peak_id]
+    _length = lengths[peak_id]
+    _position = positions[peak_id]
+    _amplitude = amplitudes[peak_id]
+    fig, ax_sumwf = plot_identified_peaks_individual_single(_area,  # type: ignore
+                                                            _length,
+                                                            _position,
+                                                            _amplitude,
+                                                            sum_waveform_single,
+                                                            x_unit=&#39;time&#39;,
+                                                            detail_text=False,
+                                                            figax=(fig, ax_sumwf))
+
+    _start = _position - 200 if _position - 200 &gt; 0 else 0
+    _end = _position + _length + 200 if _position + _length + \
+        200 &lt; len(sum_waveform_single) else len(sum_waveform_single)
+
+    if waveforms_pe_single_event is not None:
+        fig, ax_individual_ch = plot_identified_peaks_each_channel_waveforms(
+            waveforms_pe_single_event,
+            x_unit=&#39;time&#39;,
+            figax=(fig, ax_individual_ch))  # type: ignore
+
+    else:
+        fig, ax_individual_ch = plot_identified_peaks_each_channel(  # type: ignore
+            areas_individual_channels,
+            positions,
+            lengths,
+            x_unit=&#39;time&#39;,
+            figax=(fig, ax_individual_ch))
+
+    ax_sumwf.set_xlim(_start, _end)
+    ax_individual_ch.set_xlim(_start, _end)
+
+    # ax_sumwf.set_xticklabels([])
+
+    ax_hitp, _map = plot_hitpattern(
+        hitpattern=np.log10(areas_individual_channels[peak_id]),  # /1e5,
+        layout=array_layout,
+        labels=array_labels,
+        r_tpc=160 / 2,
+        cmap=&#39;coolwarm&#39;,
+        log=False,
+        ax=ax_hitp,)
+    ax_hitp.set_xlim(-100, 100)
+    ax_hitp.set_ylim(-100, 100)
+    ax_hitp.set_aspect(&#39;equal&#39;)
+    ax_hitp.set_xlabel(&#39;x [mm]&#39;)
+    ax_hitp.set_ylabel(&#39;y [mm]&#39;)
+
+    cbar = fig.colorbar(_map,
+                        label=&#39;Peak Area log10 [PE]&#39;,
+                        ax=ax_hitp)
+
+    #new_ticks = [3.5, 4 , 4.5, 5 ]
+    #new_ticklabels = [&#39;$10^{3.5}$&#39;, &#39;$10^4$&#39;, &#39;$10^{4.5}$&#39;, &#39;$10^5$&#39;]
+
+    # cbar.set_ticks(new_ticks)
+    # cbar.set_ticklabels(new_ticklabels) # type: ignore
+
+    text_for_box = (f&#39;Area: {areas[peak_id]:.2f} PE\n&#39;
+                    f&#39;Length: {lengths[peak_id]/100:.2f} µs\n&#39;
+                    f&#39;Position: {positions[peak_id]/100:.2f} µs\n&#39;
+                    f&#39;Amplitude: {amplitudes[peak_id]:.2f} PE/ns&#39;)
+
+    ax_text.text(
+        0.5,
+        0.4,
+        s=text_for_box,
+        ha=&#39;center&#39;,
+        va=&#39;center&#39;,
+        fontsize=12)
+    ax_text.axis(&#39;off&#39;)
+    if save_fig:
+        plt.savefig(save_fig)
+    plt.show()</code></pre>
+</details>
+</dd>
 <dt id="pylars.plotting.plotpeaks.plot_sensor_layout"><code class="name flex">
 <span>def <span class="ident">plot_sensor_layout</span></span>(<span>layout: numpy.ndarray, r_tpc: Union[float, NoneType] = None, labels: Union[List[str], NoneType] = None, ax=None)</span>
 </code></dt>
@@ -308,7 +1271,13 @@ hitpattern.</p>
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
+<li><code><a title="pylars.plotting.plotpeaks.plot_full_waveform_peaks" href="#pylars.plotting.plotpeaks.plot_full_waveform_peaks">plot_full_waveform_peaks</a></code></li>
 <li><code><a title="pylars.plotting.plotpeaks.plot_hitpattern" href="#pylars.plotting.plotpeaks.plot_hitpattern">plot_hitpattern</a></code></li>
+<li><code><a title="pylars.plotting.plotpeaks.plot_identified_peaks_each_channel" href="#pylars.plotting.plotpeaks.plot_identified_peaks_each_channel">plot_identified_peaks_each_channel</a></code></li>
+<li><code><a title="pylars.plotting.plotpeaks.plot_identified_peaks_each_channel_waveforms" href="#pylars.plotting.plotpeaks.plot_identified_peaks_each_channel_waveforms">plot_identified_peaks_each_channel_waveforms</a></code></li>
+<li><code><a title="pylars.plotting.plotpeaks.plot_identified_peaks_individual_all" href="#pylars.plotting.plotpeaks.plot_identified_peaks_individual_all">plot_identified_peaks_individual_all</a></code></li>
+<li><code><a title="pylars.plotting.plotpeaks.plot_identified_peaks_individual_single" href="#pylars.plotting.plotpeaks.plot_identified_peaks_individual_single">plot_identified_peaks_individual_single</a></code></li>
+<li><code><a title="pylars.plotting.plotpeaks.plot_peak_info" href="#pylars.plotting.plotpeaks.plot_peak_info">plot_peak_info</a></code></li>
 <li><code><a title="pylars.plotting.plotpeaks.plot_sensor_layout" href="#pylars.plotting.plotpeaks.plot_sensor_layout">plot_sensor_layout</a></code></li>
 </ul>
 </li>

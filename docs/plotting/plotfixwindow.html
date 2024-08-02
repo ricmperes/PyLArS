@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.9.2" />
 <title>pylars.plotting.plotfixwindow API documentation</title>
-<meta name="description" content="" />
+<meta name="description" content="Collection of functions to plot and analyse the fixed window processing." />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
 <link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
@@ -22,32 +22,37 @@
 <h1 class="title">Module <code>pylars.plotting.plotfixwindow</code></h1>
 </header>
 <section id="section-intro">
+<p>Collection of functions to plot and analyse the fixed window processing.</p>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">from typing import Optional, Tuple
+<pre><code class="python">&#34;&#34;&#34;Collection of functions to plot and analyse the fixed window processing.
+&#34;&#34;&#34;
+
+from typing import Optional, Tuple
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import pylars
 
-def plot_LED_window(waveform: np.ndarray, led_window, figax = None):
+
+def plot_LED_window(waveform: np.ndarray, led_window, figax=None):
     &#34;&#34;&#34;Plot the LED window on top of the waveform.
     &#34;&#34;&#34;
     if figax is None:
-        fig, ax = plt.subplots(1,1,figsize = (6,4), dpi = 60)
+        fig, ax = plt.subplots(1, 1, figsize=(6, 4), dpi=60)
     else:
         fig, ax = figax
-    
-    ax = pylars.plotting.plot_waveform(waveform, ax = ax)
-    ax.fill_betweenx([0,16000], led_window[0],led_window[1], 
-                     alpha = 0.1, color = &#39;C1&#39;)
-    
+
+    ax = pylars.plotting.plot_waveform(waveform, ax=ax)
+    ax.fill_betweenx([0, 16000], led_window[0], led_window[1],
+                     alpha=0.1, color=&#39;C1&#39;)
+
     return fig, ax
 
 
-def plot_LED_window_from_file(filename: str, 
+def plot_LED_window_from_file(filename: str,
                               led_window: Tuple[int, int],
                               module: Optional[int] = None,
                               channel: Optional[str] = None,
@@ -57,7 +62,7 @@ def plot_LED_window_from_file(filename: str,
     &#34;&#34;&#34;
 
     process = pylars.processing.fixwindowprocessor.window_processor(
-    baseline_samples=50, led_window=(105,155))
+        baseline_samples=50, led_window=(105, 155))
     if module is None:
         module = 0
 
@@ -72,42 +77,42 @@ def plot_LED_window_from_file(filename: str,
         wf_number = int(np.random.choice(process.raw_data.n_waveforms))
         print(f&#34;No waveform number specified, choosing random waveform:&#34;
               f&#34;{wf_number}&#34;)
-        
+
     channel_data = process.raw_data.get_channel_data(channel)
 
     if figax is None:
-        fig, ax = plt.subplots(1,1,figsize = (6,4), dpi = 60)
+        fig, ax = plt.subplots(1, 1, figsize=(6, 4), dpi=60)
     else:
         fig, ax = figax
-    
-    fig, ax = plot_LED_window(channel_data[wf_number], 
-                              led_window=led_window, 
-                              figax = (fig, ax))
+
+    fig, ax = plot_LED_window(channel_data[wf_number],
+                              led_window=led_window,
+                              figax=(fig, ax))
 
     if figax is None:
         plt.show()
     else:
         return fig, ax
-    
 
-def plot_LED_all_channels(df_processed, figax = None):
+
+def plot_LED_all_channels(df_processed, figax=None):
     &#34;&#34;&#34;Plot max ADC counts, amplitude and area for all channels.
     &#34;&#34;&#34;
     if figax is None:
-        fig, axs = plt.subplots(1,3,figsize=(13,4), sharey=True,dpi = 60)
+        fig, axs = plt.subplots(1, 3, figsize=(13, 4), sharey=True, dpi=60)
     else:
         fig, axs = figax
 
     plt.subplots_adjust(wspace=0)
     for ch in np.unique(df_processed[&#39;channel&#39;]):
-        axs[0].hist(df_processed[df_processed[&#39;channel&#39;] == ch][&#39;led_ADCcounts&#39;], 
-                bins=100, histtype=&#39;step&#39;,label = f&#39;{ch}&#39;)
-    
-        axs[1].hist(df_processed[df_processed[&#39;channel&#39;] == ch][&#39;led_amplitude&#39;], 
-                bins=100, histtype=&#39;step&#39;,)
-    
-        axs[2].hist(df_processed[df_processed[&#39;channel&#39;] == ch][&#39;led_area&#39;], 
-                bins=100, histtype=&#39;step&#39;,)
+        axs[0].hist(df_processed[df_processed[&#39;channel&#39;] == ch][&#39;led_ADCcounts&#39;],
+                    bins=100, histtype=&#39;step&#39;, label=f&#39;{ch}&#39;)
+
+        axs[1].hist(df_processed[df_processed[&#39;channel&#39;] == ch][&#39;led_amplitude&#39;],
+                    bins=100, histtype=&#39;step&#39;,)
+
+        axs[2].hist(df_processed[df_processed[&#39;channel&#39;] == ch][&#39;led_area&#39;],
+                    bins=100, histtype=&#39;step&#39;,)
 
     axs[0].set_xlabel(&#39;max ADC counts&#39;)
     axs[0].set_ylabel(&#39;Counts&#39;)
@@ -122,21 +127,22 @@ def plot_LED_all_channels(df_processed, figax = None):
         plt.show()
     else:
         return fig, axs
-    
+
 
 def plot_light_levels(led_processed_df: pd.DataFrame,
                       led_width: int,
                       channel: Optional[str] = None,
                       module: Optional[int] = None,
                       figax: Optional[Tuple] = None):
+    &#34;&#34;&#34;Plot the LED area histogram for all the available light levels.&#34;&#34;&#34;
 
     select_mask = ((led_processed_df[&#39;LEDwidth&#39;] == led_width) &amp;
-                     (led_processed_df[&#39;channel&#39;] == channel) &amp;
-                     (led_processed_df[&#39;module&#39;] == module))
+                   (led_processed_df[&#39;channel&#39;] == channel) &amp;
+                   (led_processed_df[&#39;module&#39;] == module))
     _df = led_processed_df[select_mask]
 
     if figax is None:
-        fig, axs = plt.subplots(2,1,figsize = (6,8), dpi = 60)
+        fig, axs = plt.subplots(2, 1, figsize=(6, 8), dpi=60)
     else:
         fig, axs = figax
 
@@ -145,30 +151,147 @@ def plot_light_levels(led_processed_df: pd.DataFrame,
     _std_amplitudes = []
     for _v in _ledvoltages:
         _mask = _df[&#39;LEDvoltage&#39;] == _v
-        axs[0].hist(_df[_mask][&#39;led_amplitude&#39;], 
-                bins=100, histtype=&#39;step&#39;, label = f&#39;{_v} V&#39;)
-        _amp = np.median(_df[_mask][&#39;led_amplitude&#39;])
-        _std = np.std(_df[_mask][&#39;led_amplitude&#39;])
+        axs[0].hist(_df[_mask][&#39;led_area&#39;],
+                    bins=np.linspace(-1000, 25000, 500), histtype=&#39;step&#39;, label=f&#39;{_v} V&#39;)
+        _amp = np.median(_df[_mask][&#39;led_area&#39;])
+        _std = np.std(_df[_mask][&#39;led_area&#39;])
         _median_amplitudes.append(_amp)
         _std_amplitudes.append(_std)
-    
+    axs[0].set_yscale(&#39;log&#39;)
+
     axs[1].errorbar(_ledvoltages, _median_amplitudes,
-                    yerr = _std_amplitudes, marker = &#39;o&#39;,
-                    ls = &#39;-&#39;)
+                    yerr=_std_amplitudes, marker=&#39;o&#39;,
+                    ls=&#39;-&#39;)
     axs[1].set_xlabel(&#39;LED voltage [V]&#39;)
-    axs[1].set_ylabel(&#39;Median amplitude [ADC counts]&#39;)
+    axs[1].set_ylabel(&#39;Median Area [ADC counts]&#39;)
     axs[1].grid(color=&#39;lightgray&#39;, linestyle=&#39;--&#39;, linewidth=0.5)
 
-    axs[0].set_xlabel(&#39;Amplitude [ADC counts]&#39;)
+    axs[0].set_xlabel(&#39;Area [ADC counts]&#39;)
     axs[0].set_ylabel(&#39;Counts&#39;)
-    axs[0].legend(loc = &#39;center left&#39;, bbox_to_anchor=(1., 0.5), 
-              title = &#39;LED voltage&#39;)
+    axs[0].legend(loc=&#39;center left&#39;, bbox_to_anchor=(1., 0.5),
+                  title=&#39;LED voltage&#39;)
     axs[0].grid(color=&#39;lightgray&#39;, linestyle=&#39;--&#39;, linewidth=0.5)
 
     if figax is None:
         plt.show()
     else:
-        return fig, axs</code></pre>
+        return fig, axs
+
+
+def plot_1_pe_fit_led(df_processed, led_voltage, module,
+                      channel, A, mu, sigma, figax=None):
+    &#34;&#34;&#34;Plot the SPE Gaussean fit of the LED area histogram.&#34;&#34;&#34;
+    if figax is None:
+        fig, ax = plt.subplots(1, 1, figsize=(5, 3), dpi=120)
+    else:
+        fig, ax = figax
+
+    df_processed_mask = ((df_processed[&#39;module&#39;] == module) &amp;
+                         (df_processed[&#39;channel&#39;] == channel) &amp;
+                         (df_processed[&#39;LEDvoltage&#39;] == led_voltage))
+    hist = ax.hist(df_processed[df_processed_mask][&#39;led_area&#39;],
+                   bins=np.linspace(-2000, 20000, 300), histtype=&#39;step&#39;)
+
+    _x = np.linspace(mu * 0.5, mu * 1.5, 1000)
+    ax.fill_between(_x, pylars.utils.common.Gaussian(_x, A, mu, sigma),
+                    color=&#39;C1&#39;, alpha=1, zorder=-1)  # , ls = &#39;--&#39;, linewidth = &#39;2&#39;)
+    [ax.axvline(mu * n, color=&#39;C1&#39;, ls=&#39;--&#39;, alpha=1) for n in range(5)]
+
+    # ax.set_yscale(&#39;log&#39;)
+    # ax.set_ylabel(&#39;Counts&#39;)
+    #ax.set_xlabel(&#39;Area (window)&#39;)
+    ax.set_ylim(0, 6000)
+    if figax is None:
+        plt.show()
+    else:
+        return fig, ax
+
+
+def plot_gains_occ(df_gains, figaxs=None):
+    &#34;&#34;&#34;Plot the gains and occupancies for all the tiles.&#34;&#34;&#34;
+    if figaxs is None:
+        fig, axs = plt.subplots(2, 1, figsize=(4, 4),
+                                dpi=120, sharex=True,
+                                gridspec_kw={&#39;hspace&#39;: 0, &#39;wspace&#39;: 0},
+                                constrained_layout=False)
+        axs = axs.flatten()
+
+    _x = np.arange(len(df_gains))
+    axs[0].errorbar(_x, df_gains[&#39;gain&#39;], yerr=df_gains[&#39;gain_err&#39;],
+                    ls=&#39;&#39;, capsize=4, marker=&#39;.&#39;)
+
+    axs[1].errorbar(_x, df_gains[&#39;occ&#39;], yerr=df_gains[&#39;occ_err&#39;],
+                    ls=&#39;&#39;, capsize=4, marker=&#39;.&#39;)
+
+    axs[0].set_xticks(_x, df_gains[&#39;tile&#39;])
+    # axs[0].set_ylim(0,1.5)
+    axs[0].set_ylabel(&#39;Gain [$10^6$]&#39;)
+    axs[1].set_ylabel(&#39;Occupancy&#39;)
+    # axs[1].set_ylim(-0.1,3.9)
+    if figaxs is None:
+        plt.show()
+
+    else:
+        return (fig, axs)
+
+
+def plot_gain_evolution(gain_evolution: pd.DataFrame,
+                        tile_list: list, mod,
+                        figax=None):
+    &#34;&#34;&#34;Plot the gain evolution for a list of tiles.&#34;&#34;&#34;
+
+    if figax is None:
+        fig, ax = plt.subplots(1, 1, figsize=(6, 4), dpi=120)
+    else:
+        fig, ax = figax
+
+    for _tile in tile_list:
+        _df = gain_evolution[gain_evolution[&#39;tile&#39;] == _tile]
+        ax.errorbar(_df[&#39;start&#39;], _df[&#39;gain&#39;], yerr=_df[&#39;gain_err&#39;],
+                    ls=&#39;--&#39;,
+                    marker=&#39;.&#39;, label=_tile)
+    ax.legend(bbox_to_anchor=(1.05, 1), loc=&#39;upper left&#39;,
+              title=&#39;Tile&#39;,
+              labelspacing=1.0)
+    ax.set_ylim(0, None)  # type:ignore
+    ax.set_title(f&#39;Gain evolution - ADC #{mod}&#39;)
+    ax.tick_params(axis=&#39;x&#39;, rotation=45)
+    ax.set_ylabel(&#39;SiPM Gain [M]&#39;)
+    # plt.twinx()
+    # plt.plot(tt09[&#39;datetime&#39;], tt09[&#39;TT09&#39;], &#39;k--&#39;, alpha = 0.3,
+    #          zorder = -10,label=&#39;Gast temperature&#39;)
+
+    # plt.axvline(np.datetime64(&#39;2024-06-14T17:00:00&#39;),ls = &#39;--&#39;, color = &#39;gray&#39;, alpha = 0.8)
+    # plt.text(np.datetime64(&#39;2024-06-14T08:00:00&#39;), 0.78,
+    #          &#39;Filling complete&#39;, color = &#39;gray&#39;,rotation=90)
+
+    if figax is None:
+        fig.savefig(f&#39;21062024_mod{mod}.png&#39;)
+        plt.show()
+    else:
+        return fig, ax
+
+
+def plot_gains_occ_ledvoltage(LED_calib, module, channel, labels):
+    &#34;&#34;&#34;Plot the gains and occupancies for a given module and channel as a
+    function of the LED voltage.&#34;&#34;&#34;
+    fig, ax = plt.subplots(1, 1, figsize=(6, 3))
+    _df = LED_calib.results_df
+    _df = _df[(_df[&#39;module&#39;] == module) &amp;
+              (_df[&#39;channel&#39;] == channel) &amp;
+              (_df[&#39;LEDvoltage&#39;] &gt; 1)]
+    ax.errorbar(_df[&#39;LEDvoltage&#39;], _df[&#39;gain&#39;], yerr=_df[&#39;gain_err&#39;], fmt=&#39;o&#39;)
+    ax.set_xlabel(&#39;LED voltage [V]&#39;)
+    ax.set_ylabel(&#39;Gain [ADC/PE/10^6]&#39;)
+    ax.set_title(labels[f&#34;mod{module}&#34;][channel])
+
+    ax1 = ax.twinx()
+    ax1.errorbar(_df[&#39;LEDvoltage&#39;], _df[&#39;occ&#39;],
+                 yerr=_df[&#39;occ_err&#39;], fmt=&#39;o&#39;,
+                 color=&#39;C1&#39;)
+    ax1.set_ylabel(&#39;Occupancy [PE]&#39;, color=&#39;C1&#39;)
+    ax.grid()
+    plt.show()</code></pre>
 </details>
 </section>
 <section>
@@ -178,6 +301,44 @@ def plot_light_levels(led_processed_df: pd.DataFrame,
 <section>
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
+<dt id="pylars.plotting.plotfixwindow.plot_1_pe_fit_led"><code class="name flex">
+<span>def <span class="ident">plot_1_pe_fit_led</span></span>(<span>df_processed, led_voltage, module, channel, A, mu, sigma, figax=None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Plot the SPE Gaussean fit of the LED area histogram.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plot_1_pe_fit_led(df_processed, led_voltage, module,
+                      channel, A, mu, sigma, figax=None):
+    &#34;&#34;&#34;Plot the SPE Gaussean fit of the LED area histogram.&#34;&#34;&#34;
+    if figax is None:
+        fig, ax = plt.subplots(1, 1, figsize=(5, 3), dpi=120)
+    else:
+        fig, ax = figax
+
+    df_processed_mask = ((df_processed[&#39;module&#39;] == module) &amp;
+                         (df_processed[&#39;channel&#39;] == channel) &amp;
+                         (df_processed[&#39;LEDvoltage&#39;] == led_voltage))
+    hist = ax.hist(df_processed[df_processed_mask][&#39;led_area&#39;],
+                   bins=np.linspace(-2000, 20000, 300), histtype=&#39;step&#39;)
+
+    _x = np.linspace(mu * 0.5, mu * 1.5, 1000)
+    ax.fill_between(_x, pylars.utils.common.Gaussian(_x, A, mu, sigma),
+                    color=&#39;C1&#39;, alpha=1, zorder=-1)  # , ls = &#39;--&#39;, linewidth = &#39;2&#39;)
+    [ax.axvline(mu * n, color=&#39;C1&#39;, ls=&#39;--&#39;, alpha=1) for n in range(5)]
+
+    # ax.set_yscale(&#39;log&#39;)
+    # ax.set_ylabel(&#39;Counts&#39;)
+    #ax.set_xlabel(&#39;Area (window)&#39;)
+    ax.set_ylim(0, 6000)
+    if figax is None:
+        plt.show()
+    else:
+        return fig, ax</code></pre>
+</details>
+</dd>
 <dt id="pylars.plotting.plotfixwindow.plot_LED_all_channels"><code class="name flex">
 <span>def <span class="ident">plot_LED_all_channels</span></span>(<span>df_processed, figax=None)</span>
 </code></dt>
@@ -187,24 +348,24 @@ def plot_light_levels(led_processed_df: pd.DataFrame,
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def plot_LED_all_channels(df_processed, figax = None):
+<pre><code class="python">def plot_LED_all_channels(df_processed, figax=None):
     &#34;&#34;&#34;Plot max ADC counts, amplitude and area for all channels.
     &#34;&#34;&#34;
     if figax is None:
-        fig, axs = plt.subplots(1,3,figsize=(13,4), sharey=True,dpi = 60)
+        fig, axs = plt.subplots(1, 3, figsize=(13, 4), sharey=True, dpi=60)
     else:
         fig, axs = figax
 
     plt.subplots_adjust(wspace=0)
     for ch in np.unique(df_processed[&#39;channel&#39;]):
-        axs[0].hist(df_processed[df_processed[&#39;channel&#39;] == ch][&#39;led_ADCcounts&#39;], 
-                bins=100, histtype=&#39;step&#39;,label = f&#39;{ch}&#39;)
-    
-        axs[1].hist(df_processed[df_processed[&#39;channel&#39;] == ch][&#39;led_amplitude&#39;], 
-                bins=100, histtype=&#39;step&#39;,)
-    
-        axs[2].hist(df_processed[df_processed[&#39;channel&#39;] == ch][&#39;led_area&#39;], 
-                bins=100, histtype=&#39;step&#39;,)
+        axs[0].hist(df_processed[df_processed[&#39;channel&#39;] == ch][&#39;led_ADCcounts&#39;],
+                    bins=100, histtype=&#39;step&#39;, label=f&#39;{ch}&#39;)
+
+        axs[1].hist(df_processed[df_processed[&#39;channel&#39;] == ch][&#39;led_amplitude&#39;],
+                    bins=100, histtype=&#39;step&#39;,)
+
+        axs[2].hist(df_processed[df_processed[&#39;channel&#39;] == ch][&#39;led_area&#39;],
+                    bins=100, histtype=&#39;step&#39;,)
 
     axs[0].set_xlabel(&#39;max ADC counts&#39;)
     axs[0].set_ylabel(&#39;Counts&#39;)
@@ -230,18 +391,18 @@ def plot_light_levels(led_processed_df: pd.DataFrame,
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def plot_LED_window(waveform: np.ndarray, led_window, figax = None):
+<pre><code class="python">def plot_LED_window(waveform: np.ndarray, led_window, figax=None):
     &#34;&#34;&#34;Plot the LED window on top of the waveform.
     &#34;&#34;&#34;
     if figax is None:
-        fig, ax = plt.subplots(1,1,figsize = (6,4), dpi = 60)
+        fig, ax = plt.subplots(1, 1, figsize=(6, 4), dpi=60)
     else:
         fig, ax = figax
-    
-    ax = pylars.plotting.plot_waveform(waveform, ax = ax)
-    ax.fill_betweenx([0,16000], led_window[0],led_window[1], 
-                     alpha = 0.1, color = &#39;C1&#39;)
-    
+
+    ax = pylars.plotting.plot_waveform(waveform, ax=ax)
+    ax.fill_betweenx([0, 16000], led_window[0], led_window[1],
+                     alpha=0.1, color=&#39;C1&#39;)
+
     return fig, ax</code></pre>
 </details>
 </dd>
@@ -254,7 +415,7 @@ def plot_light_levels(led_processed_df: pd.DataFrame,
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def plot_LED_window_from_file(filename: str, 
+<pre><code class="python">def plot_LED_window_from_file(filename: str,
                               led_window: Tuple[int, int],
                               module: Optional[int] = None,
                               channel: Optional[str] = None,
@@ -264,7 +425,7 @@ def plot_light_levels(led_processed_df: pd.DataFrame,
     &#34;&#34;&#34;
 
     process = pylars.processing.fixwindowprocessor.window_processor(
-    baseline_samples=50, led_window=(105,155))
+        baseline_samples=50, led_window=(105, 155))
     if module is None:
         module = 0
 
@@ -279,17 +440,17 @@ def plot_light_levels(led_processed_df: pd.DataFrame,
         wf_number = int(np.random.choice(process.raw_data.n_waveforms))
         print(f&#34;No waveform number specified, choosing random waveform:&#34;
               f&#34;{wf_number}&#34;)
-        
+
     channel_data = process.raw_data.get_channel_data(channel)
 
     if figax is None:
-        fig, ax = plt.subplots(1,1,figsize = (6,4), dpi = 60)
+        fig, ax = plt.subplots(1, 1, figsize=(6, 4), dpi=60)
     else:
         fig, ax = figax
-    
-    fig, ax = plot_LED_window(channel_data[wf_number], 
-                              led_window=led_window, 
-                              figax = (fig, ax))
+
+    fig, ax = plot_LED_window(channel_data[wf_number],
+                              led_window=led_window,
+                              figax=(fig, ax))
 
     if figax is None:
         plt.show()
@@ -297,11 +458,126 @@ def plot_light_levels(led_processed_df: pd.DataFrame,
         return fig, ax</code></pre>
 </details>
 </dd>
+<dt id="pylars.plotting.plotfixwindow.plot_gain_evolution"><code class="name flex">
+<span>def <span class="ident">plot_gain_evolution</span></span>(<span>gain_evolution: pandas.core.frame.DataFrame, tile_list: list, mod, figax=None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Plot the gain evolution for a list of tiles.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plot_gain_evolution(gain_evolution: pd.DataFrame,
+                        tile_list: list, mod,
+                        figax=None):
+    &#34;&#34;&#34;Plot the gain evolution for a list of tiles.&#34;&#34;&#34;
+
+    if figax is None:
+        fig, ax = plt.subplots(1, 1, figsize=(6, 4), dpi=120)
+    else:
+        fig, ax = figax
+
+    for _tile in tile_list:
+        _df = gain_evolution[gain_evolution[&#39;tile&#39;] == _tile]
+        ax.errorbar(_df[&#39;start&#39;], _df[&#39;gain&#39;], yerr=_df[&#39;gain_err&#39;],
+                    ls=&#39;--&#39;,
+                    marker=&#39;.&#39;, label=_tile)
+    ax.legend(bbox_to_anchor=(1.05, 1), loc=&#39;upper left&#39;,
+              title=&#39;Tile&#39;,
+              labelspacing=1.0)
+    ax.set_ylim(0, None)  # type:ignore
+    ax.set_title(f&#39;Gain evolution - ADC #{mod}&#39;)
+    ax.tick_params(axis=&#39;x&#39;, rotation=45)
+    ax.set_ylabel(&#39;SiPM Gain [M]&#39;)
+    # plt.twinx()
+    # plt.plot(tt09[&#39;datetime&#39;], tt09[&#39;TT09&#39;], &#39;k--&#39;, alpha = 0.3,
+    #          zorder = -10,label=&#39;Gast temperature&#39;)
+
+    # plt.axvline(np.datetime64(&#39;2024-06-14T17:00:00&#39;),ls = &#39;--&#39;, color = &#39;gray&#39;, alpha = 0.8)
+    # plt.text(np.datetime64(&#39;2024-06-14T08:00:00&#39;), 0.78,
+    #          &#39;Filling complete&#39;, color = &#39;gray&#39;,rotation=90)
+
+    if figax is None:
+        fig.savefig(f&#39;21062024_mod{mod}.png&#39;)
+        plt.show()
+    else:
+        return fig, ax</code></pre>
+</details>
+</dd>
+<dt id="pylars.plotting.plotfixwindow.plot_gains_occ"><code class="name flex">
+<span>def <span class="ident">plot_gains_occ</span></span>(<span>df_gains, figaxs=None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Plot the gains and occupancies for all the tiles.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plot_gains_occ(df_gains, figaxs=None):
+    &#34;&#34;&#34;Plot the gains and occupancies for all the tiles.&#34;&#34;&#34;
+    if figaxs is None:
+        fig, axs = plt.subplots(2, 1, figsize=(4, 4),
+                                dpi=120, sharex=True,
+                                gridspec_kw={&#39;hspace&#39;: 0, &#39;wspace&#39;: 0},
+                                constrained_layout=False)
+        axs = axs.flatten()
+
+    _x = np.arange(len(df_gains))
+    axs[0].errorbar(_x, df_gains[&#39;gain&#39;], yerr=df_gains[&#39;gain_err&#39;],
+                    ls=&#39;&#39;, capsize=4, marker=&#39;.&#39;)
+
+    axs[1].errorbar(_x, df_gains[&#39;occ&#39;], yerr=df_gains[&#39;occ_err&#39;],
+                    ls=&#39;&#39;, capsize=4, marker=&#39;.&#39;)
+
+    axs[0].set_xticks(_x, df_gains[&#39;tile&#39;])
+    # axs[0].set_ylim(0,1.5)
+    axs[0].set_ylabel(&#39;Gain [$10^6$]&#39;)
+    axs[1].set_ylabel(&#39;Occupancy&#39;)
+    # axs[1].set_ylim(-0.1,3.9)
+    if figaxs is None:
+        plt.show()
+
+    else:
+        return (fig, axs)</code></pre>
+</details>
+</dd>
+<dt id="pylars.plotting.plotfixwindow.plot_gains_occ_ledvoltage"><code class="name flex">
+<span>def <span class="ident">plot_gains_occ_ledvoltage</span></span>(<span>LED_calib, module, channel, labels)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Plot the gains and occupancies for a given module and channel as a
+function of the LED voltage.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plot_gains_occ_ledvoltage(LED_calib, module, channel, labels):
+    &#34;&#34;&#34;Plot the gains and occupancies for a given module and channel as a
+    function of the LED voltage.&#34;&#34;&#34;
+    fig, ax = plt.subplots(1, 1, figsize=(6, 3))
+    _df = LED_calib.results_df
+    _df = _df[(_df[&#39;module&#39;] == module) &amp;
+              (_df[&#39;channel&#39;] == channel) &amp;
+              (_df[&#39;LEDvoltage&#39;] &gt; 1)]
+    ax.errorbar(_df[&#39;LEDvoltage&#39;], _df[&#39;gain&#39;], yerr=_df[&#39;gain_err&#39;], fmt=&#39;o&#39;)
+    ax.set_xlabel(&#39;LED voltage [V]&#39;)
+    ax.set_ylabel(&#39;Gain [ADC/PE/10^6]&#39;)
+    ax.set_title(labels[f&#34;mod{module}&#34;][channel])
+
+    ax1 = ax.twinx()
+    ax1.errorbar(_df[&#39;LEDvoltage&#39;], _df[&#39;occ&#39;],
+                 yerr=_df[&#39;occ_err&#39;], fmt=&#39;o&#39;,
+                 color=&#39;C1&#39;)
+    ax1.set_ylabel(&#39;Occupancy [PE]&#39;, color=&#39;C1&#39;)
+    ax.grid()
+    plt.show()</code></pre>
+</details>
+</dd>
 <dt id="pylars.plotting.plotfixwindow.plot_light_levels"><code class="name flex">
 <span>def <span class="ident">plot_light_levels</span></span>(<span>led_processed_df: pandas.core.frame.DataFrame, led_width: int, channel: Union[str, NoneType] = None, module: Union[int, NoneType] = None, figax: Union[Tuple, NoneType] = None)</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Plot the LED area histogram for all the available light levels.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
@@ -311,14 +587,15 @@ def plot_light_levels(led_processed_df: pd.DataFrame,
                       channel: Optional[str] = None,
                       module: Optional[int] = None,
                       figax: Optional[Tuple] = None):
+    &#34;&#34;&#34;Plot the LED area histogram for all the available light levels.&#34;&#34;&#34;
 
     select_mask = ((led_processed_df[&#39;LEDwidth&#39;] == led_width) &amp;
-                     (led_processed_df[&#39;channel&#39;] == channel) &amp;
-                     (led_processed_df[&#39;module&#39;] == module))
+                   (led_processed_df[&#39;channel&#39;] == channel) &amp;
+                   (led_processed_df[&#39;module&#39;] == module))
     _df = led_processed_df[select_mask]
 
     if figax is None:
-        fig, axs = plt.subplots(2,1,figsize = (6,8), dpi = 60)
+        fig, axs = plt.subplots(2, 1, figsize=(6, 8), dpi=60)
     else:
         fig, axs = figax
 
@@ -327,24 +604,25 @@ def plot_light_levels(led_processed_df: pd.DataFrame,
     _std_amplitudes = []
     for _v in _ledvoltages:
         _mask = _df[&#39;LEDvoltage&#39;] == _v
-        axs[0].hist(_df[_mask][&#39;led_amplitude&#39;], 
-                bins=100, histtype=&#39;step&#39;, label = f&#39;{_v} V&#39;)
-        _amp = np.median(_df[_mask][&#39;led_amplitude&#39;])
-        _std = np.std(_df[_mask][&#39;led_amplitude&#39;])
+        axs[0].hist(_df[_mask][&#39;led_area&#39;],
+                    bins=np.linspace(-1000, 25000, 500), histtype=&#39;step&#39;, label=f&#39;{_v} V&#39;)
+        _amp = np.median(_df[_mask][&#39;led_area&#39;])
+        _std = np.std(_df[_mask][&#39;led_area&#39;])
         _median_amplitudes.append(_amp)
         _std_amplitudes.append(_std)
-    
+    axs[0].set_yscale(&#39;log&#39;)
+
     axs[1].errorbar(_ledvoltages, _median_amplitudes,
-                    yerr = _std_amplitudes, marker = &#39;o&#39;,
-                    ls = &#39;-&#39;)
+                    yerr=_std_amplitudes, marker=&#39;o&#39;,
+                    ls=&#39;-&#39;)
     axs[1].set_xlabel(&#39;LED voltage [V]&#39;)
-    axs[1].set_ylabel(&#39;Median amplitude [ADC counts]&#39;)
+    axs[1].set_ylabel(&#39;Median Area [ADC counts]&#39;)
     axs[1].grid(color=&#39;lightgray&#39;, linestyle=&#39;--&#39;, linewidth=0.5)
 
-    axs[0].set_xlabel(&#39;Amplitude [ADC counts]&#39;)
+    axs[0].set_xlabel(&#39;Area [ADC counts]&#39;)
     axs[0].set_ylabel(&#39;Counts&#39;)
-    axs[0].legend(loc = &#39;center left&#39;, bbox_to_anchor=(1., 0.5), 
-              title = &#39;LED voltage&#39;)
+    axs[0].legend(loc=&#39;center left&#39;, bbox_to_anchor=(1., 0.5),
+                  title=&#39;LED voltage&#39;)
     axs[0].grid(color=&#39;lightgray&#39;, linestyle=&#39;--&#39;, linewidth=0.5)
 
     if figax is None:
@@ -371,9 +649,13 @@ def plot_light_levels(led_processed_df: pd.DataFrame,
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
+<li><code><a title="pylars.plotting.plotfixwindow.plot_1_pe_fit_led" href="#pylars.plotting.plotfixwindow.plot_1_pe_fit_led">plot_1_pe_fit_led</a></code></li>
 <li><code><a title="pylars.plotting.plotfixwindow.plot_LED_all_channels" href="#pylars.plotting.plotfixwindow.plot_LED_all_channels">plot_LED_all_channels</a></code></li>
 <li><code><a title="pylars.plotting.plotfixwindow.plot_LED_window" href="#pylars.plotting.plotfixwindow.plot_LED_window">plot_LED_window</a></code></li>
 <li><code><a title="pylars.plotting.plotfixwindow.plot_LED_window_from_file" href="#pylars.plotting.plotfixwindow.plot_LED_window_from_file">plot_LED_window_from_file</a></code></li>
+<li><code><a title="pylars.plotting.plotfixwindow.plot_gain_evolution" href="#pylars.plotting.plotfixwindow.plot_gain_evolution">plot_gain_evolution</a></code></li>
+<li><code><a title="pylars.plotting.plotfixwindow.plot_gains_occ" href="#pylars.plotting.plotfixwindow.plot_gains_occ">plot_gains_occ</a></code></li>
+<li><code><a title="pylars.plotting.plotfixwindow.plot_gains_occ_ledvoltage" href="#pylars.plotting.plotfixwindow.plot_gains_occ_ledvoltage">plot_gains_occ_ledvoltage</a></code></li>
 <li><code><a title="pylars.plotting.plotfixwindow.plot_light_levels" href="#pylars.plotting.plotfixwindow.plot_light_levels">plot_light_levels</a></code></li>
 </ul>
 </li>

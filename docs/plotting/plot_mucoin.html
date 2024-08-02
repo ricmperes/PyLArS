@@ -1,0 +1,579 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.9.2" />
+<title>pylars.plotting.plot_mucoin API documentation</title>
+<meta name="description" content="" />
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
+<link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/highlight.min.js" integrity="sha256-Uv3H6lx7dJmRfRvH8TH6kJD1TSK1aFcwgx+mdg3epi8=" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => hljs.initHighlighting())</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>pylars.plotting.plot_mucoin</code></h1>
+</header>
+<section id="section-intro">
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import pylars
+
+
+def plot_rates():
+    fig, ax = plt.subplots(
+        1, 1, figsize=(
+            6, 4), facecolor=&#39;white&#39;, gridspec_kw={
+            &#39;hspace&#39;: 0, &#39;wspace&#39;: 0})
+
+    ax.bar(
+        np.arange(25),
+        200 /
+        result_df[&#39;livetime&#39;].dt.total_seconds(),
+        alpha=1,
+        label=&#39;Double coin (2xPMT)&#39;)
+    ax.bar(
+        np.arange(25),
+        result_df[&#39;rate&#39;],
+        alpha=1,
+        label=&#39;Triple coin (2xPMT + SiPM)&#39;)
+    ax.set_ylabel(&#39;Rate [Hz]&#39;)
+    ax.set_xlabel(&#39;Run #&#39;)
+    ax.ticklabel_format(axis=&#39;y&#39;, style=&#39;sci&#39;, scilimits=(0, 0))
+    ax.set_yscale(&#39;log&#39;)
+    ax.legend(loc=&#39;lower left&#39;, bbox_to_anchor=(0, 1, 1, 0.5))
+
+    #ax_histx = ax.inset_axes([0, 1.05, 1, 0.25], sharex=ax)
+    ax_histy = ax.inset_axes([1., 0, 0.25, 1], sharey=ax)
+    ax_histy.hist(200 / result_df[&#39;livetime&#39;].dt.total_seconds(), bins=np.logspace(-5, -
+                                                                                2, 20), alpha=1, histtype=&#39;step&#39;, color=&#39;C0&#39;, orientation=&#39;horizontal&#39;)
+    ax_histy.hist(result_df[&#39;rate&#39;], bins=np.logspace(-5, -2, 20),
+                alpha=1, histtype=&#39;step&#39;, color=&#39;C1&#39;, orientation=&#39;horizontal&#39;)
+
+    med_2coin = np.median(200 / result_df[&#39;livetime&#39;].dt.total_seconds())
+    med_3coin = np.median(result_df[&#39;rate&#39;])
+    ax_histy.axhline(med_2coin, ls=&#39;--&#39;, color=&#39;C0&#39;,
+                    label=f&#39;2coin median: {med_2coin:.2e} Hz&#39;)
+    ax_histy.axhline(np.median(result_df[&#39;rate&#39;]), ls=&#39;--&#39;, color=&#39;C1&#39;,
+                    label=f&#39;3coin median: {med_3coin:.2e} Hz&#39;)
+    #ax_histx.tick_params(axis=&#34;x&#34;, labelbottom=False)
+    ax_histy.tick_params(axis=&#34;y&#34;, labelleft=False)
+    ax_histy.set_xlabel(&#39;Rate [Hz]&#39;)
+    ax_histy.legend(loc=&#39;lower right&#39;, bbox_to_anchor=(0, 1, 1, 0.5))
+    # plt.subplot(122)
+    # plt.hist(result_df[&#39;rate&#39;], bins = 10, alpha = 1, histtype=&#39;step&#39;, color = &#39;C1&#39;)
+    # plt.ticklabel_format(axis=&#39;x&#39;, style=&#39;sci&#39;, scilimits=(0, 0))
+    # plt.xlabel(&#39;Rate [Hz]&#39;)
+    plt.subplots_adjust(
+        left=None,
+        bottom=None,
+        right=None,
+        top=None,
+        wspace=0,
+        hspace=0)
+    plt.savefig(
+        &#39;coin_rates.jpeg&#39;,
+        dpi=120,
+        bbox_inches=&#39;tight&#39;,
+        pad_inches=0.1)
+    plt.show()
+
+
+def plot_baseline_all_runs():
+    fig, ax = plt.subplots(4, 3, figsize=(20, 10), sharey=True, sharex=True,
+                           gridspec_kw={&#39;hspace&#39;: 0, &#39;wspace&#39;: 0},
+                           constrained_layout=False)
+    ax = ax.flatten()
+    ax[0].set_ylim(14750, 15300)
+    for i, ch in enumerate([&#39;wf1&#39;, &#39;wf2&#39;, &#39;wf3&#39;, &#39;wf4&#39;, &#39;wf5&#39;]):
+        ax[i].errorbar(np.arange(25), baseline_all_runs[f&#39;0_{ch}&#39;],
+                       yerr=std_all_runs[f&#39;0_{ch}&#39;],
+                       ls=&#39;-&#39;, marker=&#39;o&#39;, capsize=2, label=labels[&#39;mod0&#39;][ch])
+        ax[i].text(0.05, 0.95, s=f&#39;Mod 0 | &#39; + labels[f&#39;mod0&#39;][ch],
+                   transform=ax[i].transAxes, va=&#39;top&#39;, ha=&#39;left&#39;,
+                   bbox=dict(facecolor=&#39;white&#39;, alpha=0.5))
+
+    for j, ch in enumerate([&#39;wf1&#39;, &#39;wf2&#39;, &#39;wf3&#39;, &#39;wf4&#39;, &#39;wf5&#39;, &#39;wf6&#39;, &#39;wf7&#39;]):
+        ax[i + j + 1].errorbar(np.arange(25), baseline_all_runs[f&#39;1_{ch}&#39;],
+                               yerr=std_all_runs[f&#39;1_{ch}&#39;],
+                               ls=&#39;-&#39;, marker=&#39;o&#39;, capsize=2, label=labels[&#39;mod1&#39;][ch])
+        ax[i + j + 1].text(0.05, 0.95, s=f&#39;Mod 1 | &#39; + labels[f&#39;mod1&#39;][ch],
+                           transform=ax[i + j + 1].transAxes, va=&#39;top&#39;, ha=&#39;left&#39;,
+                           bbox=dict(facecolor=&#39;white&#39;, alpha=0.5))
+
+    plt.subplots_adjust(
+        left=None,
+        bottom=None,
+        right=None,
+        top=None,
+        wspace=0,
+        hspace=0)
+
+    # Put x and y label in the center
+    big_ax = fig.add_subplot(111, frameon=False)
+    # hide tick and tick label of the big subplot
+    big_ax.tick_params(
+        labelcolor=&#39;none&#39;,
+        top=False,
+        bottom=False,
+        left=False,
+        right=False)
+
+    big_ax.set_xlabel(
+        &#39;Number of dataset&#39;,
+        labelpad=10,
+    )  # set the common x label
+    big_ax.set_ylabel(
+        &#39;Baseline [ADCcounts]&#39;,
+        labelpad=25)  # set the common y label
+
+    plt.savefig(
+        &#39;baselines_all_runs.jpeg&#39;,
+        dpi=120,
+        bbox_inches=&#39;tight&#39;,
+        pad_inches=0.1)
+    plt.show()
+
+
+def plot_baseline_channel(data_dict, mod, ch, figax=None):
+    if figax is None:
+        fig, ax = plt.subplots(1, 1, figsize=(8, 3))
+    else:
+        fig, ax = figax
+    baselines, std = get_baseline_channel(data_dict, mod, ch)
+
+    ax.errorbar(np.arange(200), baselines, yerr=std, ls=&#39;&#39;,
+                marker=&#39;o&#39;, capsize=2)
+    # ax.set_xlabel(&#39;Waveform #&#39;)
+    #ax.set_ylabel(&#39;Baseline [ADC]&#39;)
+    ax.text(0.05, 0.95, s=f&#39;Mod {mod} | &#39; + labels[f&#39;mod{mod}&#39;][ch],
+            transform=ax.transAxes, va=&#39;top&#39;, ha=&#39;left&#39;,
+            bbox=dict(facecolor=&#39;white&#39;, alpha=0.5))
+    if figax is None:
+        plt.show()
+    else:
+        return fig, ax
+
+
+def plot_baseline_all_channels(data_dict, figax=None):
+    if figax is None:
+        fig, axs = plt.subplots(3, 4, figsize=(20, 10),
+                                sharey=True, sharex=True,
+                                gridspec_kw={&#39;hspace&#39;: 0, &#39;wspace&#39;: 0},
+                                constrained_layout=False)
+        axs = axs.flatten()
+    else:
+        fig, axs = figax
+
+    for i, ch in enumerate([&#39;wf1&#39;, &#39;wf2&#39;, &#39;wf3&#39;, &#39;wf4&#39;, &#39;wf5&#39;]):
+        fig, axs[i] = plot_baseline_channel(data_dict, 0, ch,
+                                            figax=(fig, axs[i]))  # type: ignore
+
+    for j, ch in enumerate([&#39;wf1&#39;, &#39;wf2&#39;, &#39;wf3&#39;, &#39;wf4&#39;, &#39;wf5&#39;, &#39;wf6&#39;, &#39;wf7&#39;]):
+        fig, axs[i + j + 1] = plot_baseline_channel(data_dict, 1, ch,
+                                                    figax=(fig, axs[i + j + 1]))  # type: ignore
+    axs[0].set_ylim(14750, 15300)
+    plt.subplots_adjust(left=None, bottom=None, right=None,
+                        top=None, wspace=0, hspace=0)
+
+    # Put x and y label in the center
+    big_ax = fig.add_subplot(111, frameon=False)
+    # hide tick and tick label of the big subplot
+    big_ax.tick_params(
+        labelcolor=&#39;none&#39;,
+        top=False,
+        bottom=False,
+        left=False,
+        right=False)
+
+    big_ax.set_xlabel(
+        &#39;Waveform number&#39;,
+        labelpad=10,
+    )  # set the common x label
+    big_ax.set_ylabel(
+        &#39;Baseline [ADCcounts]&#39;,
+        labelpad=25)  # set the common y label
+
+    if figax is None:
+        plt.savefig(
+            &#39;baselines_run001.jpeg&#39;,
+            dpi=120,
+            bbox_inches=&#39;tight&#39;,
+            pad_inches=0.1)
+        plt.show()
+    else:
+        return fig, axs
+
+    def plot_mu_waveform_array(data_dict, n_wf, plot=True, save_fig=False):
+        labels = {&#39;mod0&#39;: {&#39;wf1&#39;: &#39;wf1 | Tile H&#39;, &#39;wf2&#39;: &#39;wf2 | Tile J&#39;,
+                           &#39;wf3&#39;: &#39;wf3 | Tile K&#39;, &#39;wf4&#39;: &#39;wf4 | Tile L&#39;,
+                           &#39;wf5&#39;: &#39;wf5 | Tile M&#39;,
+                           &#39;wf6&#39;: &#39;wf6 | Muon detector 1&#39;,
+                           &#39;wf7&#39;: &#39;wf7 | Muon detector 2&#39;},
+                  &#39;mod1&#39;: {&#39;wf1&#39;: &#39;wf1 | Tile A&#39;, &#39;wf2&#39;: &#39; wf2 | Tile B&#39;,
+                           &#39;wf3&#39;: &#39;wf3 | Tile C&#39;, &#39;wf4&#39;: &#39;wf4 | Tile D&#39;,
+                           &#39;wf5&#39;: &#39;wf5 | Tile E&#39;, &#39;wf6&#39;: &#39;wf6 | Tile F&#39;,
+                           &#39;wf7&#39;: &#39;wf7 | Tile G&#39;}
+                  }
+
+        fig, axs = plt.subplots(3, 1, sharex=True, figsize=(8, 8))
+        _x = np.arange(process.raw_data.n_samples)
+        plt.subplots_adjust(hspace=0)
+
+        for _ch in [&#39;wf6&#39;, &#39;wf7&#39;]:
+            axs[0].plot(_x, data_dict[&#39;mod0&#39;][_ch][n_wf],
+                        label=labels[&#39;mod0&#39;][_ch])
+        # axs[0].legend()
+
+        for _ch in [&#39;wf1&#39;, &#39;wf2&#39;, &#39;wf3&#39;, &#39;wf4&#39;, &#39;wf5&#39;, ]:
+            axs[2].plot(_x, data_dict[&#39;mod0&#39;][_ch][n_wf],
+                        label=labels[&#39;mod0&#39;][_ch])
+        # axs[1].legend()
+
+        for _ch in [&#39;wf1&#39;, &#39;wf2&#39;, &#39;wf3&#39;, &#39;wf4&#39;, &#39;wf5&#39;, &#39;wf6&#39;, &#39;wf7&#39;]:
+            axs[1].plot(_x, data_dict[&#39;mod1&#39;][_ch][n_wf],
+                        label=labels[&#39;mod1&#39;][_ch])
+        # axs[2].legend()
+
+        fig.suptitle(f&#39;Evt # {n_wf}&#39;, y=1.5, x=0.5, horizontalalignment=&#39;center&#39;,
+                     verticalalignment=&#39;center&#39;, transform=axs[0].transAxes)
+        axs[1].set_xlabel(&#39;Sample #&#39;)
+        #axs[0].set_xlim(400, 600)
+        #axs[1].set_xlim(400, 600)
+        fig.legend(ncol=5, loc=&#39;lower center&#39;,
+                   bbox_to_anchor=(0, 0.9, 1, 0))
+        if save_fig != False:
+            if isinstance(save_fig, str):
+                os.makedirs(f&#39;figures/{save_fig}&#39;, exist_ok=True)
+                plt.savefig(
+                    f&#39;figures/{save_fig}/{save_fig}_{n_wf}.png&#39;, dpi=80)
+            else:
+                plt.savefig(f&#39;figures/{n_wf}_{int(time.time())}.png&#39;, dpi=80)
+
+        if plot:
+            plt.show()
+        plt.close()</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="pylars.plotting.plot_mucoin.plot_baseline_all_channels"><code class="name flex">
+<span>def <span class="ident">plot_baseline_all_channels</span></span>(<span>data_dict, figax=None)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plot_baseline_all_channels(data_dict, figax=None):
+    if figax is None:
+        fig, axs = plt.subplots(3, 4, figsize=(20, 10),
+                                sharey=True, sharex=True,
+                                gridspec_kw={&#39;hspace&#39;: 0, &#39;wspace&#39;: 0},
+                                constrained_layout=False)
+        axs = axs.flatten()
+    else:
+        fig, axs = figax
+
+    for i, ch in enumerate([&#39;wf1&#39;, &#39;wf2&#39;, &#39;wf3&#39;, &#39;wf4&#39;, &#39;wf5&#39;]):
+        fig, axs[i] = plot_baseline_channel(data_dict, 0, ch,
+                                            figax=(fig, axs[i]))  # type: ignore
+
+    for j, ch in enumerate([&#39;wf1&#39;, &#39;wf2&#39;, &#39;wf3&#39;, &#39;wf4&#39;, &#39;wf5&#39;, &#39;wf6&#39;, &#39;wf7&#39;]):
+        fig, axs[i + j + 1] = plot_baseline_channel(data_dict, 1, ch,
+                                                    figax=(fig, axs[i + j + 1]))  # type: ignore
+    axs[0].set_ylim(14750, 15300)
+    plt.subplots_adjust(left=None, bottom=None, right=None,
+                        top=None, wspace=0, hspace=0)
+
+    # Put x and y label in the center
+    big_ax = fig.add_subplot(111, frameon=False)
+    # hide tick and tick label of the big subplot
+    big_ax.tick_params(
+        labelcolor=&#39;none&#39;,
+        top=False,
+        bottom=False,
+        left=False,
+        right=False)
+
+    big_ax.set_xlabel(
+        &#39;Waveform number&#39;,
+        labelpad=10,
+    )  # set the common x label
+    big_ax.set_ylabel(
+        &#39;Baseline [ADCcounts]&#39;,
+        labelpad=25)  # set the common y label
+
+    if figax is None:
+        plt.savefig(
+            &#39;baselines_run001.jpeg&#39;,
+            dpi=120,
+            bbox_inches=&#39;tight&#39;,
+            pad_inches=0.1)
+        plt.show()
+    else:
+        return fig, axs
+
+    def plot_mu_waveform_array(data_dict, n_wf, plot=True, save_fig=False):
+        labels = {&#39;mod0&#39;: {&#39;wf1&#39;: &#39;wf1 | Tile H&#39;, &#39;wf2&#39;: &#39;wf2 | Tile J&#39;,
+                           &#39;wf3&#39;: &#39;wf3 | Tile K&#39;, &#39;wf4&#39;: &#39;wf4 | Tile L&#39;,
+                           &#39;wf5&#39;: &#39;wf5 | Tile M&#39;,
+                           &#39;wf6&#39;: &#39;wf6 | Muon detector 1&#39;,
+                           &#39;wf7&#39;: &#39;wf7 | Muon detector 2&#39;},
+                  &#39;mod1&#39;: {&#39;wf1&#39;: &#39;wf1 | Tile A&#39;, &#39;wf2&#39;: &#39; wf2 | Tile B&#39;,
+                           &#39;wf3&#39;: &#39;wf3 | Tile C&#39;, &#39;wf4&#39;: &#39;wf4 | Tile D&#39;,
+                           &#39;wf5&#39;: &#39;wf5 | Tile E&#39;, &#39;wf6&#39;: &#39;wf6 | Tile F&#39;,
+                           &#39;wf7&#39;: &#39;wf7 | Tile G&#39;}
+                  }
+
+        fig, axs = plt.subplots(3, 1, sharex=True, figsize=(8, 8))
+        _x = np.arange(process.raw_data.n_samples)
+        plt.subplots_adjust(hspace=0)
+
+        for _ch in [&#39;wf6&#39;, &#39;wf7&#39;]:
+            axs[0].plot(_x, data_dict[&#39;mod0&#39;][_ch][n_wf],
+                        label=labels[&#39;mod0&#39;][_ch])
+        # axs[0].legend()
+
+        for _ch in [&#39;wf1&#39;, &#39;wf2&#39;, &#39;wf3&#39;, &#39;wf4&#39;, &#39;wf5&#39;, ]:
+            axs[2].plot(_x, data_dict[&#39;mod0&#39;][_ch][n_wf],
+                        label=labels[&#39;mod0&#39;][_ch])
+        # axs[1].legend()
+
+        for _ch in [&#39;wf1&#39;, &#39;wf2&#39;, &#39;wf3&#39;, &#39;wf4&#39;, &#39;wf5&#39;, &#39;wf6&#39;, &#39;wf7&#39;]:
+            axs[1].plot(_x, data_dict[&#39;mod1&#39;][_ch][n_wf],
+                        label=labels[&#39;mod1&#39;][_ch])
+        # axs[2].legend()
+
+        fig.suptitle(f&#39;Evt # {n_wf}&#39;, y=1.5, x=0.5, horizontalalignment=&#39;center&#39;,
+                     verticalalignment=&#39;center&#39;, transform=axs[0].transAxes)
+        axs[1].set_xlabel(&#39;Sample #&#39;)
+        #axs[0].set_xlim(400, 600)
+        #axs[1].set_xlim(400, 600)
+        fig.legend(ncol=5, loc=&#39;lower center&#39;,
+                   bbox_to_anchor=(0, 0.9, 1, 0))
+        if save_fig != False:
+            if isinstance(save_fig, str):
+                os.makedirs(f&#39;figures/{save_fig}&#39;, exist_ok=True)
+                plt.savefig(
+                    f&#39;figures/{save_fig}/{save_fig}_{n_wf}.png&#39;, dpi=80)
+            else:
+                plt.savefig(f&#39;figures/{n_wf}_{int(time.time())}.png&#39;, dpi=80)
+
+        if plot:
+            plt.show()
+        plt.close()</code></pre>
+</details>
+</dd>
+<dt id="pylars.plotting.plot_mucoin.plot_baseline_all_runs"><code class="name flex">
+<span>def <span class="ident">plot_baseline_all_runs</span></span>(<span>)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plot_baseline_all_runs():
+    fig, ax = plt.subplots(4, 3, figsize=(20, 10), sharey=True, sharex=True,
+                           gridspec_kw={&#39;hspace&#39;: 0, &#39;wspace&#39;: 0},
+                           constrained_layout=False)
+    ax = ax.flatten()
+    ax[0].set_ylim(14750, 15300)
+    for i, ch in enumerate([&#39;wf1&#39;, &#39;wf2&#39;, &#39;wf3&#39;, &#39;wf4&#39;, &#39;wf5&#39;]):
+        ax[i].errorbar(np.arange(25), baseline_all_runs[f&#39;0_{ch}&#39;],
+                       yerr=std_all_runs[f&#39;0_{ch}&#39;],
+                       ls=&#39;-&#39;, marker=&#39;o&#39;, capsize=2, label=labels[&#39;mod0&#39;][ch])
+        ax[i].text(0.05, 0.95, s=f&#39;Mod 0 | &#39; + labels[f&#39;mod0&#39;][ch],
+                   transform=ax[i].transAxes, va=&#39;top&#39;, ha=&#39;left&#39;,
+                   bbox=dict(facecolor=&#39;white&#39;, alpha=0.5))
+
+    for j, ch in enumerate([&#39;wf1&#39;, &#39;wf2&#39;, &#39;wf3&#39;, &#39;wf4&#39;, &#39;wf5&#39;, &#39;wf6&#39;, &#39;wf7&#39;]):
+        ax[i + j + 1].errorbar(np.arange(25), baseline_all_runs[f&#39;1_{ch}&#39;],
+                               yerr=std_all_runs[f&#39;1_{ch}&#39;],
+                               ls=&#39;-&#39;, marker=&#39;o&#39;, capsize=2, label=labels[&#39;mod1&#39;][ch])
+        ax[i + j + 1].text(0.05, 0.95, s=f&#39;Mod 1 | &#39; + labels[f&#39;mod1&#39;][ch],
+                           transform=ax[i + j + 1].transAxes, va=&#39;top&#39;, ha=&#39;left&#39;,
+                           bbox=dict(facecolor=&#39;white&#39;, alpha=0.5))
+
+    plt.subplots_adjust(
+        left=None,
+        bottom=None,
+        right=None,
+        top=None,
+        wspace=0,
+        hspace=0)
+
+    # Put x and y label in the center
+    big_ax = fig.add_subplot(111, frameon=False)
+    # hide tick and tick label of the big subplot
+    big_ax.tick_params(
+        labelcolor=&#39;none&#39;,
+        top=False,
+        bottom=False,
+        left=False,
+        right=False)
+
+    big_ax.set_xlabel(
+        &#39;Number of dataset&#39;,
+        labelpad=10,
+    )  # set the common x label
+    big_ax.set_ylabel(
+        &#39;Baseline [ADCcounts]&#39;,
+        labelpad=25)  # set the common y label
+
+    plt.savefig(
+        &#39;baselines_all_runs.jpeg&#39;,
+        dpi=120,
+        bbox_inches=&#39;tight&#39;,
+        pad_inches=0.1)
+    plt.show()</code></pre>
+</details>
+</dd>
+<dt id="pylars.plotting.plot_mucoin.plot_baseline_channel"><code class="name flex">
+<span>def <span class="ident">plot_baseline_channel</span></span>(<span>data_dict, mod, ch, figax=None)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plot_baseline_channel(data_dict, mod, ch, figax=None):
+    if figax is None:
+        fig, ax = plt.subplots(1, 1, figsize=(8, 3))
+    else:
+        fig, ax = figax
+    baselines, std = get_baseline_channel(data_dict, mod, ch)
+
+    ax.errorbar(np.arange(200), baselines, yerr=std, ls=&#39;&#39;,
+                marker=&#39;o&#39;, capsize=2)
+    # ax.set_xlabel(&#39;Waveform #&#39;)
+    #ax.set_ylabel(&#39;Baseline [ADC]&#39;)
+    ax.text(0.05, 0.95, s=f&#39;Mod {mod} | &#39; + labels[f&#39;mod{mod}&#39;][ch],
+            transform=ax.transAxes, va=&#39;top&#39;, ha=&#39;left&#39;,
+            bbox=dict(facecolor=&#39;white&#39;, alpha=0.5))
+    if figax is None:
+        plt.show()
+    else:
+        return fig, ax</code></pre>
+</details>
+</dd>
+<dt id="pylars.plotting.plot_mucoin.plot_rates"><code class="name flex">
+<span>def <span class="ident">plot_rates</span></span>(<span>)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plot_rates():
+    fig, ax = plt.subplots(
+        1, 1, figsize=(
+            6, 4), facecolor=&#39;white&#39;, gridspec_kw={
+            &#39;hspace&#39;: 0, &#39;wspace&#39;: 0})
+
+    ax.bar(
+        np.arange(25),
+        200 /
+        result_df[&#39;livetime&#39;].dt.total_seconds(),
+        alpha=1,
+        label=&#39;Double coin (2xPMT)&#39;)
+    ax.bar(
+        np.arange(25),
+        result_df[&#39;rate&#39;],
+        alpha=1,
+        label=&#39;Triple coin (2xPMT + SiPM)&#39;)
+    ax.set_ylabel(&#39;Rate [Hz]&#39;)
+    ax.set_xlabel(&#39;Run #&#39;)
+    ax.ticklabel_format(axis=&#39;y&#39;, style=&#39;sci&#39;, scilimits=(0, 0))
+    ax.set_yscale(&#39;log&#39;)
+    ax.legend(loc=&#39;lower left&#39;, bbox_to_anchor=(0, 1, 1, 0.5))
+
+    #ax_histx = ax.inset_axes([0, 1.05, 1, 0.25], sharex=ax)
+    ax_histy = ax.inset_axes([1., 0, 0.25, 1], sharey=ax)
+    ax_histy.hist(200 / result_df[&#39;livetime&#39;].dt.total_seconds(), bins=np.logspace(-5, -
+                                                                                2, 20), alpha=1, histtype=&#39;step&#39;, color=&#39;C0&#39;, orientation=&#39;horizontal&#39;)
+    ax_histy.hist(result_df[&#39;rate&#39;], bins=np.logspace(-5, -2, 20),
+                alpha=1, histtype=&#39;step&#39;, color=&#39;C1&#39;, orientation=&#39;horizontal&#39;)
+
+    med_2coin = np.median(200 / result_df[&#39;livetime&#39;].dt.total_seconds())
+    med_3coin = np.median(result_df[&#39;rate&#39;])
+    ax_histy.axhline(med_2coin, ls=&#39;--&#39;, color=&#39;C0&#39;,
+                    label=f&#39;2coin median: {med_2coin:.2e} Hz&#39;)
+    ax_histy.axhline(np.median(result_df[&#39;rate&#39;]), ls=&#39;--&#39;, color=&#39;C1&#39;,
+                    label=f&#39;3coin median: {med_3coin:.2e} Hz&#39;)
+    #ax_histx.tick_params(axis=&#34;x&#34;, labelbottom=False)
+    ax_histy.tick_params(axis=&#34;y&#34;, labelleft=False)
+    ax_histy.set_xlabel(&#39;Rate [Hz]&#39;)
+    ax_histy.legend(loc=&#39;lower right&#39;, bbox_to_anchor=(0, 1, 1, 0.5))
+    # plt.subplot(122)
+    # plt.hist(result_df[&#39;rate&#39;], bins = 10, alpha = 1, histtype=&#39;step&#39;, color = &#39;C1&#39;)
+    # plt.ticklabel_format(axis=&#39;x&#39;, style=&#39;sci&#39;, scilimits=(0, 0))
+    # plt.xlabel(&#39;Rate [Hz]&#39;)
+    plt.subplots_adjust(
+        left=None,
+        bottom=None,
+        right=None,
+        top=None,
+        wspace=0,
+        hspace=0)
+    plt.savefig(
+        &#39;coin_rates.jpeg&#39;,
+        dpi=120,
+        bbox_inches=&#39;tight&#39;,
+        pad_inches=0.1)
+    plt.show()</code></pre>
+</details>
+</dd>
+</dl>
+</section>
+<section>
+</section>
+</article>
+<nav id="sidebar">
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="pylars.plotting" href="index.html">pylars.plotting</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="pylars.plotting.plot_mucoin.plot_baseline_all_channels" href="#pylars.plotting.plot_mucoin.plot_baseline_all_channels">plot_baseline_all_channels</a></code></li>
+<li><code><a title="pylars.plotting.plot_mucoin.plot_baseline_all_runs" href="#pylars.plotting.plot_mucoin.plot_baseline_all_runs">plot_baseline_all_runs</a></code></li>
+<li><code><a title="pylars.plotting.plot_mucoin.plot_baseline_channel" href="#pylars.plotting.plot_mucoin.plot_baseline_channel">plot_baseline_channel</a></code></li>
+<li><code><a title="pylars.plotting.plot_mucoin.plot_rates" href="#pylars.plotting.plot_mucoin.plot_rates">plot_rates</a></code></li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.9.2</a>.</p>
+</footer>
+</body>
+</html>

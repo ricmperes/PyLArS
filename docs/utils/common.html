@@ -33,7 +33,8 @@ import json
 from typing import Dict, List, Union, Tuple
 
 import numpy as np
-import pylars.utils.input
+import pandas as pd
+import pylars
 from scipy.signal import find_peaks
 import scipy.ndimage
 
@@ -240,7 +241,36 @@ def get_peak_rough_positions(area_array: np.ndarray,
         plot_found_area_peaks(
             area_x, area_y, area_filt, area_peaks_x)
 
-    return area_x[area_peaks_x], peak_properties</code></pre>
+    return area_x[area_peaks_x], peak_properties
+
+
+def apply_tile_labels(df: pd.DataFrame, label_map: dict):
+    &#34;&#34;&#34;Adds a column with the tile. Requires a label map of the form:
+    {&#39;mod#&#39; : {&#39;wf#&#39; : [tile]}.
+
+    Args:
+        label_map (dict): tile label map
+
+    Returns:
+        pd.dataframe: the dataframe with a column for the tile
+    &#34;&#34;&#34;
+
+    def map_label(row, label_map=label_map):
+        return label_map[f&#34;mod{row[&#39;module&#39;]}&#34;][row[&#39;channel&#39;]]
+
+    df[&#39;tile&#39;] = df.apply(map_label, axis=1)
+    df = df.sort_values(&#39;tile&#39;, ignore_index=True)
+    return df
+
+
+def get_summary_info(summary_path):
+    with open(summary_path, &#39;r&#39;) as _summ_file:
+        _summary = _summ_file.readlines()
+    _t_stop = np.datetime64(int(_summary[0].strip().split(&#39; &#39;)[-1]), &#39;s&#39;)
+    _duration = np.timedelta64(int(_summary[1].strip().split(&#39; &#39;)[3]), &#39;s&#39;)
+    _n_events = int(_summary[2].strip().split(&#39; &#39;)[-1])
+
+    return _t_stop, _duration, _n_events</code></pre>
 </details>
 </section>
 <section>
@@ -262,6 +292,45 @@ def get_peak_rough_positions(area_array: np.ndarray,
 <pre><code class="python">def Gaussian(x, A, mu, sigma):
     y = A * np.exp(-((x - mu) / sigma)**2 / 2) / np.sqrt(2 * np.pi * sigma**2)
     return y</code></pre>
+</details>
+</dd>
+<dt id="pylars.utils.common.apply_tile_labels"><code class="name flex">
+<span>def <span class="ident">apply_tile_labels</span></span>(<span>df: pandas.core.frame.DataFrame, label_map: dict)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Adds a column with the tile. Requires a label map of the form:
+{'mod#' : {'wf#' : [tile]}.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>label_map</code></strong> :&ensp;<code>dict</code></dt>
+<dd>tile label map</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>pd.dataframe</code></dt>
+<dd>the dataframe with a column for the tile</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def apply_tile_labels(df: pd.DataFrame, label_map: dict):
+    &#34;&#34;&#34;Adds a column with the tile. Requires a label map of the form:
+    {&#39;mod#&#39; : {&#39;wf#&#39; : [tile]}.
+
+    Args:
+        label_map (dict): tile label map
+
+    Returns:
+        pd.dataframe: the dataframe with a column for the tile
+    &#34;&#34;&#34;
+
+    def map_label(row, label_map=label_map):
+        return label_map[f&#34;mod{row[&#39;module&#39;]}&#34;][row[&#39;channel&#39;]]
+
+    df[&#39;tile&#39;] = df.apply(map_label, axis=1)
+    df = df.sort_values(&#39;tile&#39;, ignore_index=True)
+    return df</code></pre>
 </details>
 </dd>
 <dt id="pylars.utils.common.find_minmax"><code class="name flex">
@@ -521,6 +590,25 @@ Optional plot feature:
     return area_x[area_peaks_x], peak_properties</code></pre>
 </details>
 </dd>
+<dt id="pylars.utils.common.get_summary_info"><code class="name flex">
+<span>def <span class="ident">get_summary_info</span></span>(<span>summary_path)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_summary_info(summary_path):
+    with open(summary_path, &#39;r&#39;) as _summ_file:
+        _summary = _summ_file.readlines()
+    _t_stop = np.datetime64(int(_summary[0].strip().split(&#39; &#39;)[-1]), &#39;s&#39;)
+    _duration = np.timedelta64(int(_summary[1].strip().split(&#39; &#39;)[3]), &#39;s&#39;)
+    _n_events = int(_summary[2].strip().split(&#39; &#39;)[-1])
+
+    return _t_stop, _duration, _n_events</code></pre>
+</details>
+</dd>
 <dt id="pylars.utils.common.load_ADC_config"><code class="name flex">
 <span>def <span class="ident">load_ADC_config</span></span>(<span>model: str, F_amp: float) ‑> Dict[str, Union[int, float]]</span>
 </code></dt>
@@ -656,12 +744,14 @@ implemented</dd>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
 <li><code><a title="pylars.utils.common.Gaussian" href="#pylars.utils.common.Gaussian">Gaussian</a></code></li>
+<li><code><a title="pylars.utils.common.apply_tile_labels" href="#pylars.utils.common.apply_tile_labels">apply_tile_labels</a></code></li>
 <li><code><a title="pylars.utils.common.find_minmax" href="#pylars.utils.common.find_minmax">find_minmax</a></code></li>
 <li><code><a title="pylars.utils.common.func_linear" href="#pylars.utils.common.func_linear">func_linear</a></code></li>
 <li><code><a title="pylars.utils.common.get_channel_list" href="#pylars.utils.common.get_channel_list">get_channel_list</a></code></li>
 <li><code><a title="pylars.utils.common.get_deterministic_hash" href="#pylars.utils.common.get_deterministic_hash">get_deterministic_hash</a></code></li>
 <li><code><a title="pylars.utils.common.get_gain" href="#pylars.utils.common.get_gain">get_gain</a></code></li>
 <li><code><a title="pylars.utils.common.get_peak_rough_positions" href="#pylars.utils.common.get_peak_rough_positions">get_peak_rough_positions</a></code></li>
+<li><code><a title="pylars.utils.common.get_summary_info" href="#pylars.utils.common.get_summary_info">get_summary_info</a></code></li>
 <li><code><a title="pylars.utils.common.load_ADC_config" href="#pylars.utils.common.load_ADC_config">load_ADC_config</a></code></li>
 <li><code><a title="pylars.utils.common.wstd" href="#pylars.utils.common.wstd">wstd</a></code></li>
 </ul>

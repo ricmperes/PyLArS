@@ -29,18 +29,19 @@
 <pre><code class="python">import numpy as np
 from typing import Tuple
 
+
 class fixed_window_processing():
-    &#34;&#34;&#34;Functions for LED window analysis. Since no peak finding is required, 
+    &#34;&#34;&#34;Functions for LED window analysis. Since no peak finding is required,
     all the waveforms can be computed in a single step for each channel.
     &#34;&#34;&#34;
-    
+
     @classmethod
-    def process_all_waveforms(cls, waveforms: np.ndarray, 
+    def process_all_waveforms(cls, waveforms: np.ndarray,
                               baseline_samples: int,
                               led_window: Tuple[int, int],
-                              dt:int = 10,
-                              negative_polarity:bool = True):
-        &#34;&#34;&#34;Main process function on the waveform level for LED window 
+                              dt: int = 10,
+                              negative_polarity: bool = True):
+        &#34;&#34;&#34;Main process function on the waveform level for LED window
         analysis. All wfs are processed in a single step.
 
         Args:
@@ -53,31 +54,30 @@ class fixed_window_processing():
             tuple: amplitudes, areas, ADCcounts of max/min
         &#34;&#34;&#34;
 
-        baselines = np.median(waveforms[:,:baseline_samples], axis = 1)
+        baselines = np.median(waveforms[:, :baseline_samples], axis=1)
 
         if negative_polarity:
             polarity = -1
-            ADCcounts = np.min(waveforms[:,led_window[0]:led_window[1]],
-                            axis = 1)
-            amplitudes = polarity * np.min(waveforms[:,led_window[0]:led_window[1]]
-                                           -baselines[:, np.newaxis], 
-                                           axis = 1)
+            ADCcounts = np.min(waveforms[:, led_window[0]:led_window[1]],
+                               axis=1)
+            amplitudes = polarity * np.min(waveforms[:, led_window[0]:led_window[1]]
+                                           - baselines[:, np.newaxis],
+                                           axis=1)
         else:
             polarity = 1
-            ADCcounts = np.max(waveforms[:,led_window[0]:led_window[1]],
-                            axis = 1)
-            amplitudes = np.max(waveforms[:,led_window[0]:led_window[1]]
-                            -baselines[:, np.newaxis], 
-                            axis = 1)
-    
-        sum = np.sum(waveforms[:,led_window[0]:led_window[1]]
-                     -baselines[:, np.newaxis], 
-                     axis = 1)
-        
+            ADCcounts = np.max(waveforms[:, led_window[0]:led_window[1]],
+                               axis=1)
+            amplitudes = np.max(waveforms[:, led_window[0]:led_window[1]]
+                                - baselines[:, np.newaxis],
+                                axis=1)
+
+        sum = np.sum(waveforms[:, led_window[0]:led_window[1]]
+                     - baselines[:, np.newaxis],
+                     axis=1)
+
         areas = (polarity * dt * sum)
 
-        return amplitudes, areas, ADCcounts
-    </code></pre>
+        return amplitudes, areas, ADCcounts</code></pre>
 </details>
 </section>
 <section>
@@ -100,17 +100,17 @@ all the waveforms can be computed in a single step for each channel.</p></div>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class fixed_window_processing():
-    &#34;&#34;&#34;Functions for LED window analysis. Since no peak finding is required, 
+    &#34;&#34;&#34;Functions for LED window analysis. Since no peak finding is required,
     all the waveforms can be computed in a single step for each channel.
     &#34;&#34;&#34;
-    
+
     @classmethod
-    def process_all_waveforms(cls, waveforms: np.ndarray, 
+    def process_all_waveforms(cls, waveforms: np.ndarray,
                               baseline_samples: int,
                               led_window: Tuple[int, int],
-                              dt:int = 10,
-                              negative_polarity:bool = True):
-        &#34;&#34;&#34;Main process function on the waveform level for LED window 
+                              dt: int = 10,
+                              negative_polarity: bool = True):
+        &#34;&#34;&#34;Main process function on the waveform level for LED window
         analysis. All wfs are processed in a single step.
 
         Args:
@@ -123,27 +123,27 @@ all the waveforms can be computed in a single step for each channel.</p></div>
             tuple: amplitudes, areas, ADCcounts of max/min
         &#34;&#34;&#34;
 
-        baselines = np.median(waveforms[:,:baseline_samples], axis = 1)
+        baselines = np.median(waveforms[:, :baseline_samples], axis=1)
 
         if negative_polarity:
             polarity = -1
-            ADCcounts = np.min(waveforms[:,led_window[0]:led_window[1]],
-                            axis = 1)
-            amplitudes = polarity * np.min(waveforms[:,led_window[0]:led_window[1]]
-                                           -baselines[:, np.newaxis], 
-                                           axis = 1)
+            ADCcounts = np.min(waveforms[:, led_window[0]:led_window[1]],
+                               axis=1)
+            amplitudes = polarity * np.min(waveforms[:, led_window[0]:led_window[1]]
+                                           - baselines[:, np.newaxis],
+                                           axis=1)
         else:
             polarity = 1
-            ADCcounts = np.max(waveforms[:,led_window[0]:led_window[1]],
-                            axis = 1)
-            amplitudes = np.max(waveforms[:,led_window[0]:led_window[1]]
-                            -baselines[:, np.newaxis], 
-                            axis = 1)
-    
-        sum = np.sum(waveforms[:,led_window[0]:led_window[1]]
-                     -baselines[:, np.newaxis], 
-                     axis = 1)
-        
+            ADCcounts = np.max(waveforms[:, led_window[0]:led_window[1]],
+                               axis=1)
+            amplitudes = np.max(waveforms[:, led_window[0]:led_window[1]]
+                                - baselines[:, np.newaxis],
+                                axis=1)
+
+        sum = np.sum(waveforms[:, led_window[0]:led_window[1]]
+                     - baselines[:, np.newaxis],
+                     axis=1)
+
         areas = (polarity * dt * sum)
 
         return amplitudes, areas, ADCcounts</code></pre>
@@ -175,12 +175,12 @@ led_window (tuple, optional): LED window in samples to consider.</p>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">@classmethod
-def process_all_waveforms(cls, waveforms: np.ndarray, 
+def process_all_waveforms(cls, waveforms: np.ndarray,
                           baseline_samples: int,
                           led_window: Tuple[int, int],
-                          dt:int = 10,
-                          negative_polarity:bool = True):
-    &#34;&#34;&#34;Main process function on the waveform level for LED window 
+                          dt: int = 10,
+                          negative_polarity: bool = True):
+    &#34;&#34;&#34;Main process function on the waveform level for LED window
     analysis. All wfs are processed in a single step.
 
     Args:
@@ -193,27 +193,27 @@ def process_all_waveforms(cls, waveforms: np.ndarray,
         tuple: amplitudes, areas, ADCcounts of max/min
     &#34;&#34;&#34;
 
-    baselines = np.median(waveforms[:,:baseline_samples], axis = 1)
+    baselines = np.median(waveforms[:, :baseline_samples], axis=1)
 
     if negative_polarity:
         polarity = -1
-        ADCcounts = np.min(waveforms[:,led_window[0]:led_window[1]],
-                        axis = 1)
-        amplitudes = polarity * np.min(waveforms[:,led_window[0]:led_window[1]]
-                                       -baselines[:, np.newaxis], 
-                                       axis = 1)
+        ADCcounts = np.min(waveforms[:, led_window[0]:led_window[1]],
+                           axis=1)
+        amplitudes = polarity * np.min(waveforms[:, led_window[0]:led_window[1]]
+                                       - baselines[:, np.newaxis],
+                                       axis=1)
     else:
         polarity = 1
-        ADCcounts = np.max(waveforms[:,led_window[0]:led_window[1]],
-                        axis = 1)
-        amplitudes = np.max(waveforms[:,led_window[0]:led_window[1]]
-                        -baselines[:, np.newaxis], 
-                        axis = 1)
+        ADCcounts = np.max(waveforms[:, led_window[0]:led_window[1]],
+                           axis=1)
+        amplitudes = np.max(waveforms[:, led_window[0]:led_window[1]]
+                            - baselines[:, np.newaxis],
+                            axis=1)
 
-    sum = np.sum(waveforms[:,led_window[0]:led_window[1]]
-                 -baselines[:, np.newaxis], 
-                 axis = 1)
-    
+    sum = np.sum(waveforms[:, led_window[0]:led_window[1]]
+                 - baselines[:, np.newaxis],
+                 axis=1)
+
     areas = (polarity * dt * sum)
 
     return amplitudes, areas, ADCcounts</code></pre>
