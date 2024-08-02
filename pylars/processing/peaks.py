@@ -140,7 +140,27 @@ class peak_processing():
                              gains: np.ndarray,
                              ADC_config:dict,
                              baseline_samples: int = 50,
-                             ):
+                             ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Prepare a set of waveforms for processing by:
+          - determining and subtracting baseline;
+          - inverting polarity to positive peak
+          - applying gains, converting to PE/s
+          - computing the std of the waveform
+          - computing the sum waveform
+
+
+        Args:
+            waveforms (np.ndarray): all the waveforms of a file, from all the channels
+            gains (np.ndarray): gains for each channel **in alphabetical order**
+            ADC_config (dict): ADCconfig dictionary
+            baseline_samples (int, optional): How many samples used to 
+                calculate the baseline. Defaults to 50.
+
+        Returns:
+            Tuple[np.ndarray, np.ndarray, np.ndarray]: waveforms_pe, stds_pe, 
+                sum_waveform
+        """
+        
         
         baselines = np.apply_along_axis(
             func1d=waveform_processing.get_baseline_rough,
@@ -166,7 +186,7 @@ class peak_processing():
                                                  single_waveforms_pe: np.ndarray,
                                                  peak_start: int, 
                                                  peak_end: int, 
-                                                 dt :int = 10):
+                                                 dt :int = 10) -> np.ndarray:
         """Get the area of identified peak in each channel.
         """
 
@@ -299,6 +319,7 @@ class peak_processing():
 
 class peak():
     """This is a peak (gipfel).
+    #TODO, NOT IN USE
     """
 
     def __init__(self, timestamp: int,
