@@ -9,6 +9,9 @@ Check the [docs](https://ricmperes.github.io/PyLArS/) and the example
 notebooks for a quick start!
 
 ## Instalation
+Regular instalation through PyPi: `pip install pylars-sipm`
+
+For a development installation:
 ```bash
 git clone git@github.com:ricmperes/PyLArS.git
 cd PyLArs 
