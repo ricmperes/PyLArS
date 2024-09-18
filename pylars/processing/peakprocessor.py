@@ -36,7 +36,7 @@ class peak_processor():
         'M']
 
     def __init__(self, sigma_level: float, baseline_samples: int,
-                 gains_tag: str, gains_path: str) -> None:
+                 gains_tag: str, gains_path: str, layout_path: str) -> None:
 
         self.sigma_level = sigma_level
         self.baseline_samples = baseline_samples
@@ -49,17 +49,36 @@ class peak_processor():
 
         self.gains_tag = gains_tag
         self.gains_path = gains_path
-        """Path to where the gains are saved.
+        """Path to where the gains and layout are saved.
 
         In the future this should be defined in a config file.
         """
         self.gains = self.load_gains()
+        self.load_layout(layout_path)
         """Dictionary of gains [e/pe] for each channel.
         """
 
     def __hash__(self) -> str:
         return self.hash
 
+    def load_layout(self, path: str) -> None:
+        """Load the layout of the photosensor array.
+
+        Args:
+            path (str): path to the layout file.
+        """
+        array_layout = np.loadtxt(path)
+        array_labels = ['A', 'B', 'C', 'D', 'E', 'F',
+                        'G', 'H', 'J', 'K', 'L', 'M']
+        layout_centers_x = (array_layout[:,0] + array_layout[:,1])/2
+        layout_centers_y = (array_layout[:,2] + array_layout[:,3])/2
+        array_centers = np.vstack([layout_centers_x, layout_centers_y])
+
+        self.array_layout = array_layout
+        self.array_centers = array_centers
+        self.array_labels = array_labels
+
+        
     def load_gains(self) -> np.ndarray:
         """Load gains of photosensors based on the defined path and tag.
 
@@ -218,6 +237,8 @@ class peak_processor():
                    'length': [],
                    'position': [],
                    'amplitude': [],
+                   'rec_x': [],
+                   'rec_y': [],
                    }
 
         areas_individual_channels_results = {
@@ -258,6 +279,14 @@ class peak_processor():
             results['length'] += list(lengths)
             results['position'] += list(positions)
             results['amplitude'] += list(amplitudes)
+
+            cog_pos = peak_processing.reconstruct_xy_position(
+                area_per_sensor=np.array(areas_individual_channels),
+                sensor_layout=self.array_centers)
+
+            results['rec_x'] += list(cog_pos[0,:])
+            results['rec_y'] += list(cog_pos[1,:])
+
 
             areas_individual_channels_results['wf_number'] += list(wf_number)
             areas_individual_channels_results['peak_number'] += list(
