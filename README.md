@@ -2,7 +2,8 @@
 
 Comprehensive processing and analysis of SiPM data. Adapted for the [XenoDAQ](https://github.com/Physik-Institut-UZH/AutoXenoDAQ) data acquistion software.
 
-[![PyPI version shields.io](https://img.shields.io/pypi/v/sipmarray.svg)](https://pypi.org/project/pylars-sipm/) [![Static Badge](https://img.shields.io/badge/Docs-%235F9EA0)](https://ricmperes.github.io/PyLArS/)
+[![PyPI version shields.io](https://img.shields.io/pypi/v/sipmarray.svg)](https://pypi.org/project/pylars-sipm/) [![Static Badge](https://img.shields.io/badge/Docs-%235F9EA0)](https://ricmperes.github.io/PyLArS/) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.13756803.svg)](https://doi.org/10.5281/zenodo.13756803)
+
 
 
 Check the [docs](https://ricmperes.github.io/PyLArS/) and the example 
