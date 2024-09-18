@@ -9,8 +9,8 @@ def open_requirements(path):
 
 requires = open_requirements('requirements.txt')
 setup(
-    name='pylars',
-    version='0.3.0',
+    name='pylars-sipm',
+    version='0.3.1',
     packages=find_packages(exclude=['tests*']),
     license='none',
     description='A python-based simple processor for data acquired with XenoDAQ',

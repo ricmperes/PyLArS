@@ -1,0 +1,2 @@
+# Have the notebooks directory be ignored for language stats
+notebooks/** linguist-vendored
