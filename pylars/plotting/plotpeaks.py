@@ -138,17 +138,18 @@ def plot_identified_peaks_individual_single(_area: float,
     ax.plot(np.arange(_start, _end),
             sum_waveform[_start: _end], label='Sum waveform')
 
-    ax.plot(sum_waveform, color='C0')
+    
     # ax.fill_between(y1 = 0,
     #                 y2 = sum_waveform[_position: _position+_length],
     #                 x=np.arange(_position, _position+_length),
     #                 color='C4',
     #                 alpha = 0.3,
     #                 linestyle='--')
-    ax.axvline(x=_position, color='C1', linestyle='--')
-    ax.axvline(x=_position + _length, color='C1', linestyle='--')
+    #ax.axvline(x=_position, color='C1', linestyle='--', alpha = 0.4,
+    #          label='Peak boundaries')
+    #ax.axvline(x=_position + _length, color='C1', linestyle='--', alpha = 0.4)
 
-    ax.set_ylabel('PE/ns')
+    ax.set_ylabel('Amplitude [PE/ns]')
     ax.set_xlabel('# Sample')
     if x_unit == 'time':
         ax.set_xticks(ax.get_xticks(), ax.get_xticks() * 10 / 1000)
@@ -298,6 +299,7 @@ def plot_identified_peaks_each_channel_waveforms(
     ax.set_yticks(range(1, 13),
                   ['M', 'L', 'K', 'J', 'H', 'G', 'F', 'E', 'D', 'C', 'B', 'A'])
 
+    ax.set_ylabel('Channel amplitude')
     if x_unit == 'time':
         ax.set_xticks(ax.get_xticks(), ax.get_xticks() * 10 / 1000)
         ax.set_xlabel('Time [µs]')
@@ -331,7 +333,7 @@ def plot_full_waveform_peaks(areas: list,
     """
 
     fig = plt.figure(figsize=(14, 6))
-    gs = GridSpec(2, 2, width_ratios=[1, 0.5], height_ratios=[1, 1])
+    gs = GridSpec(2, 2, width_ratios=[1, 1], height_ratios=[1, 1])
 
     ax_sumwf = fig.add_subplot(gs[0, 0])
     ax_individual_ch = fig.add_subplot(gs[1, 0], sharex=ax_sumwf)
@@ -396,6 +398,8 @@ def plot_peak_info(peak_id: int, areas: list, lengths: list,
                    areas_individual_channels: list,
                    array_layout: np.ndarray, array_labels: list,
                    waveforms_pe_single_event: Optional[np.ndarray] = None,
+                   mucoin: Optional[int] = None,
+                   pos_rec: Optional[np.ndarray] = None,
                    save_fig: Optional[str] = None):
     """Fancy plot of the peak information, i.e., the sum waveform, the
     hitpattern, the individual channel waveforms and the peak information.
@@ -417,14 +421,14 @@ def plot_peak_info(peak_id: int, areas: list, lengths: list,
             extension). Defaults to None.
     """
 
-    fig = plt.figure(figsize=(14, 6), dpi=100)
+    fig = plt.figure(figsize=(10, 5), dpi=120)
     gs = GridSpec(2, 2, width_ratios=[1, 0.5], height_ratios=[1, 0.8])
 
     ax_sumwf = fig.add_subplot(gs[0, 0])
     ax_individual_ch = fig.add_subplot(gs[1, 0], sharex=ax_sumwf)
     ax_hitp = fig.add_subplot(gs[0, 1])
     ax_text = fig.add_subplot(gs[1, 1])
-    fig.subplots_adjust(hspace=0, wspace=0.1)
+    fig.subplots_adjust(hspace=0, wspace=0.25)
 
     _area = areas[peak_id]
     _length = lengths[peak_id]
@@ -442,6 +446,12 @@ def plot_peak_info(peak_id: int, areas: list, lengths: list,
     _start = _position - 200 if _position - 200 > 0 else 0
     _end = _position + _length + 200 if _position + _length + \
         200 < len(sum_waveform_single) else len(sum_waveform_single)
+
+    if mucoin is not None:
+        ax_sumwf.axvline(x=mucoin, color='C1', linestyle='--',
+                         label = 'Muon coin trigger', 
+                         zorder = -10)
+        ax_sumwf.legend()
 
     if waveforms_pe_single_event is not None:
         fig, ax_individual_ch = plot_identified_peaks_each_channel_waveforms(
@@ -470,6 +480,14 @@ def plot_peak_info(peak_id: int, areas: list, lengths: list,
         cmap='coolwarm',
         log=False,
         ax=ax_hitp,)
+    
+    if pos_rec is not None:
+        ax_hitp.scatter(pos_rec[0], pos_rec[1], 
+                        c='C2', marker='X', s=100, 
+                        lw = 1,edgecolor='k', zorder = 10,
+                        label = 'Rec. pos.', alpha = 0.8)
+        ax_hitp.legend(fontsize=8, ncol=2)
+        
     ax_hitp.set_xlim(-100, 100)
     ax_hitp.set_ylim(-100, 100)
     ax_hitp.set_aspect('equal')
@@ -486,13 +504,13 @@ def plot_peak_info(peak_id: int, areas: list, lengths: list,
     # cbar.set_ticks(new_ticks)
     # cbar.set_ticklabels(new_ticklabels) # type: ignore
 
-    text_for_box = (f'Area: {areas[peak_id]:.2f} PE\n'
+    text_for_box = (f'Area: {areas[peak_id]:.2e} PE\n'
                     f'Length: {lengths[peak_id]/100:.2f} µs\n'
                     f'Position: {positions[peak_id]/100:.2f} µs\n'
                     f'Amplitude: {amplitudes[peak_id]:.2f} PE/ns')
 
     ax_text.text(
-        0.5,
+        0.4,
         0.4,
         s=text_for_box,
         ha='center',
@@ -500,5 +518,5 @@ def plot_peak_info(peak_id: int, areas: list, lengths: list,
         fontsize=12)
     ax_text.axis('off')
     if save_fig:
-        plt.savefig(save_fig)
+        plt.savefig(save_fig, tight_layout=True, bbox_inches='tight')
     plt.show()
