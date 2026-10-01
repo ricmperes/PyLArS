@@ -211,6 +211,9 @@ class run():
                         dataset(path, _kind, _module, _temp, _vbias))
                 except BaseException:
                     print('Ignoring file: ', file)
+        else:
+            raise NotImplementedError("Run not implemented yet.")
+        return datasets
 
     def get_run_df(self) -> pd.DataFrame:
         """Get a frienly pandas dataframe with all the datasets available,
