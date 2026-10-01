@@ -60,7 +60,7 @@ class processed_dataset():
 
         if type == 'hdf5':
             file_name = f'{file_config}-{self.process_hash}.h5'
-            file_path = f'{self.path_processed}run{self.run.run_number}/'
+            file_path = f'{self.path_processed}'#run{self.run.run_number}/'
             self.data.to_hdf(
                 file_path + file_name,
                 key='data',
@@ -69,7 +69,8 @@ class processed_dataset():
 
         elif type == 'csv':
             file_name = f'{file_config}-{self.process_hash}.csv'
-            file_path = f'{self.path_processed}run{self.run.run_number}/'
+            file_path = f'{self.path_processed}'#run{self.run.run_number}/'
+            #commented the line above as it is commented in get_run_path (input)
             self.data.to_csv(file_path + file_name)
             print('Saved file to:', file_path + file_name)
 

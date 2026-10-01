@@ -208,9 +208,10 @@ class run():
                     m = re.match(pattern, name)
                     if m:
                         path, _kind, _module, _temp, _vbias = m.groups()
+                        path = file # needs the complete path + file name for load_raw()
                         datasets.append(
                             dataset(
-                                path, _kind, _module, _temp, _vbias))
+                                path, _kind, int(_module), float(_temp), float(_vbias)))
                     else:
                         print('Ignoring file: ', file)
 
