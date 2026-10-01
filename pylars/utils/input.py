@@ -197,7 +197,22 @@ class run():
         """
         all_root_files = self.root_files
         datasets = []
-        if self.run_number == 9:
+        if self.run_number == 0: # fixed standard implementation before deleting the others
+            pattern = r"^(.*/)?([A-Za-z]+)_M([^_]+)_T([^_]+)_V([^_]+)\.root$"
+            for file in all_root_files:
+                try:
+                    m = re.match(pattern, file)
+                    if m:
+                        path, _kind, _module, _temp, _vbias = m.groups()
+                    else:
+                        print('Ignoring file: ', file)
+                        continue
+                    datasets.append(
+                        dataset(path, _kind, _module, _temp, _vbias))
+                except BaseException:
+                    print('Ignoring file: ', file)
+
+        elif self.run_number == 9:
             self.root_files = []
             temps = [190, 195, 200, 205, 210]
             for t in temps:
@@ -223,7 +238,7 @@ class run():
                     v = float(f'{f[0]}.{f[1][:-1]}')
                     datasets.append(dataset(path, 'DCR', 0, t, v))
 
-        if self.run_number >= 6:
+        elif self.run_number >= 6:
 
             for file in all_root_files:
                 try:
