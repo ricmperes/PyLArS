@@ -132,11 +132,16 @@ class run():
         Returns:
             str: path to run raw data.
         """
-        if self.run_number < 6:
-            main_run_path = self.main_data_path + \
-                f'run{self.run_number}/'
-        else:
-            main_run_path = self.main_data_path + \
+        main_run_path = self.main_data_path
+
+        #in the future this should create something like
+
+        #main_run_path = self.main_data_path + /f'run{self.run_number}/data/'
+
+        #but right now this makes no sense since the run_number is re-purposed
+
+
+main_run_path = self.main_data_path + \
                 f'run{self.run_number}/data/'
         return main_run_path
 
