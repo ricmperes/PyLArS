@@ -2,6 +2,7 @@ from glob import glob
 from typing import Tuple, Union
 
 import numpy as np
+import re
 import pandas as pd
 import uproot
 from pylars.utils.common import load_ADC_config, get_summary_info
@@ -12,7 +13,7 @@ class raw_data():
     '''
     General raw data class to define paths to raw and processed data,
     acquisition conditions, ...
-    '''
+    # '''
 
     def __init__(self, raw_path: str, V: float, T: float, module: int):
 
@@ -138,11 +139,8 @@ class run():
 
         #main_run_path = self.main_data_path + /f'run{self.run_number}/data/'
 
-        #but right now this makes no sense since the run_number is re-purposed
+        # #again, but right now this makes no sense since the run_number is re-purposed
 
-
-main_run_path = self.main_data_path + \
-                f'run{self.run_number}/data/'
         return main_run_path
 
     def read_layout(self):
@@ -205,17 +203,20 @@ main_run_path = self.main_data_path + \
         if self.run_number == 0: # fixed standard implementation before deleting the others
             pattern = r"^(.*/)?([A-Za-z]+)_M([^_]+)_T([^_]+)_V([^_]+)\.root$"
             for file in all_root_files:
+                name = file.replace('p','.')
                 try:
-                    m = re.match(pattern, file)
+                    m = re.match(pattern, name)
                     if m:
                         path, _kind, _module, _temp, _vbias = m.groups()
+                        datasets.append(
+                            dataset(
+                                path, _kind, _module, _temp, _vbias))
                     else:
                         print('Ignoring file: ', file)
-                        continue
-                    datasets.append(
-                        dataset(path, _kind, _module, _temp, _vbias))
-                except BaseException:
+
+                except BaseException as e:
                     print('Ignoring file: ', file)
+                    print('Error: ', type(e).__name__, e)
         else:
             raise NotImplementedError("Run not implemented yet.")
         return datasets
