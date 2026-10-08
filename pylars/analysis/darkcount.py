@@ -80,12 +80,13 @@ class DCR_analysis():
         area_hist_y = area_hist[0]
 
         (A, mu, sigma), cov = curve_fit(Gaussian, area_hist_x, area_hist_y,
+                                        #p0=(area_hist_y.max(), min_area_x, 0.05 * min_area_x), maxfev=80)
                                         p0=(2000, min_area_x, 0.05 * min_area_x))
-
+        import matplotlib.pyplot as plt
         if plot != False:
             pylars.plotting.plotanalysis.plot_SPE_fit(
                 df, length_cut_min, length_cut_max, plot, area_hist_x, min_area_x, A, mu, sigma)
-
+            plt.show()
         return (A, mu, sigma), cov
 
     @classmethod
