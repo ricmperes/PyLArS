@@ -87,8 +87,7 @@ class BV_dataset():
                     kind='BV',
                     vbias=_voltage,
                     temp=self.temp,
-                    path_processed=('/disk/gfs_atp/xenoscope/SiPMs/char_campaign/'
-                                    'processed_data/'),
+                    path_processed=('processed_data_'), # changed for new file tree
                     process_hash=self.process.hash)
                 processed_data.load_data(force=force_processing)
 
