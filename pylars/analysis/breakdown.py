@@ -123,7 +123,7 @@ class BV_dataset():
 
             # For very low bias voltage the SiPM shows a pulse when the LED
             # shines but it could be not yet in Geiger-Mode.
-            if v < 48:
+            if v < 45: # changed for our data sets
                 continue
 
             _df = self.data[v]
@@ -138,7 +138,7 @@ class BV_dataset():
                 bins=np.linspace(0, np.percentile(_df['area'], 99), 1500),
                 plot=False)
 
-            if len(peaks > 5):
+            if len(peaks) > 5:
                 # likely there is a nice LED fingerplot dominating everything
                 first_good_peak = np.median(_df[_cuts]['area'])
 
