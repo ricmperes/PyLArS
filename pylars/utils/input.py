@@ -133,13 +133,7 @@ class run():
         Returns:
             str: path to run raw data.
         """
-        main_run_path = self.main_data_path
-
-        #in the future this should create something like
-
-        #main_run_path = self.main_data_path + /f'run{self.run_number}/data/'
-
-        # #again, but right now this makes no sense since the run_number is re-purposed
+        main_run_path = self.main_data_path + f'/run{self.run_number}/data/'
 
         return main_run_path
 
