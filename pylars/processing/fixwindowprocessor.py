@@ -40,7 +40,7 @@ class window_processor():
         self.show_tqdm_channel = show
 
     # General functions for I/O
-    def load_raw_data(self, path_to_raw: str, module: int):
+    def load_raw_data(self, path_to_raw: str, module: int, V=-1, T=-1):
         """Raw data loader to pass to the processing scripts.
 
         Args:
@@ -49,8 +49,8 @@ class window_processor():
         Returns:
             raw_data: the raw data object
         """
-        raw = raw_data(raw_path=path_to_raw, V=-1,
-                       T=-1, module=module)
+        raw = raw_data(raw_path=path_to_raw, V=V,
+                       T=T, module=module)
         raw.load_root()
         raw.get_available_channels()
 

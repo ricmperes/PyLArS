@@ -194,26 +194,25 @@ class run():
         """
         all_root_files = self.root_files
         datasets = []
-        if self.run_number == 0: # fixed standard implementation before deleting the others
-            pattern = r"^(.*/)?([A-Za-z]+)_M([^_]+)_T([^_]+)_V([^_]+)\.root$"
-            for file in all_root_files:
-                name = file.replace('p','.')
-                try:
-                    m = re.match(pattern, name)
-                    if m:
-                        path, _kind, _module, _temp, _vbias = m.groups()
-                        path = file # needs the complete path + file name for load_raw()
-                        datasets.append(
-                            dataset(
-                                path, _kind, int(_module), float(_temp), float(_vbias)))
-                    else:
-                        print('Ignoring file: ', file)
-
-                except BaseException as e:
+        # fixed standard implementation before deleting the others
+        pattern = r"^(.*/)?([A-Za-z]+)_M([^_]+)_T([^_]+)_V([^_]+)\.root$"
+        for file in all_root_files:
+            name = file.replace('p','.')
+            try:
+                m = re.match(pattern, name)
+                if m:
+                    path, _kind, _module, _temp, _vbias = m.groups()
+                    path = file # needs the complete path + file name for load_raw()
+                    datasets.append(
+                        dataset(
+                            path, _kind, int(_module), float(_temp), float(_vbias)))
+                else:
                     print('Ignoring file: ', file)
-                    print('Error: ', type(e).__name__, e)
-        else:
-            raise NotImplementedError("Run not implemented yet.")
+
+            except BaseException as e:
+                print('Ignoring file: ', file)
+                print('Error: ', type(e).__name__, e)
+
         return datasets
 
     def get_run_df(self) -> pd.DataFrame:
