@@ -87,7 +87,7 @@ class BV_dataset():
                     kind='BV',
                     vbias=_voltage,
                     temp=self.temp,
-                    path_processed=('processed_data_'), # changed for new file tree
+                    path_processed=(self.run.main_data_path),
                     process_hash=self.process.hash)
                 processed_data.load_data(force=force_processing)
 
@@ -162,7 +162,7 @@ class BV_dataset():
         linres = stats.linregress(good_peaks, bias_voltage)
 
         if plot != False:
-            pylars.plotting.plotanalysis.plot_BV_fit(
+            pylars.plotting.plotanalysis.plot_BV_fit_simple(
                 plot=f'{self.module}_{self.channel}',
                 temperature=self.temp,
                 voltages=bias_voltage,

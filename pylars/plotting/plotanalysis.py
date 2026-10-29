@@ -65,6 +65,36 @@ def plot_LED_all_voltages(bv_dataset, cmap='winter', ax=None,):
     plt.show()
 
 
+def plot_BV_fit_simple(plot, temperature, voltages, gains,
+                a, b, _breakdown_v, _breakdown_v_error, ax=None):
+
+    if ax is None:
+        fig, ax = plt.subplots(1, 1, figsize=(6, 3), facecolor='white')
+
+    ax.plot(gains, voltages,
+            ls='', marker='x', c='k',
+            label=(f'{temperature}K: ({_breakdown_v:.2f}'
+                   f'$\\pm${_breakdown_v_error:.2f}) V')  # type: ignore
+            )
+    _offset_gains = min(gains) * 0.15
+    _x = np.linspace(min(gains) - _offset_gains,
+                     max(gains) + _offset_gains,
+                     100)
+    ax.plot(_x, func_linear(_x, a, b), c='r', alpha=0.9)
+    ax.set_xlabel('Mean Area as Gain Proxy')
+    ax.set_ylabel('Voltage [V]')
+    ax.legend()
+    ax.set_title(plot)
+    ax.ticklabel_format(style='sci', axis='x', scilimits=(0, 0),
+                        useMathText=True)
+
+    if isinstance(plot, str):
+        plt.tight_layout()
+        plt.savefig(f'figures/{plot}_{temperature}_BV_fit_simple.png')
+        plt.close()
+    else:
+        return ax
+
 def plot_BV_fit(plot, temperature, voltages, gains,
                 a, b, _breakdown_v, _breakdown_v_error, ax=None):
 
