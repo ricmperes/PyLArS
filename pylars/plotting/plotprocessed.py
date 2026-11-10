@@ -31,7 +31,7 @@ def plot_hist_position(df_results, bins=200, ax=None, color=None):
         fig, ax = plt.subplots(1, 1)
 
     ax.hist(df_results['position'], bins=bins, color=color)
-    ax.set_xlabel('Position [sample #]')
+    ax.set_xlabel('Position [# samples]')
     ax.set_ylabel('# events')
 
     return ax
