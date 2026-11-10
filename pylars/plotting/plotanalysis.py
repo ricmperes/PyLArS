@@ -74,7 +74,7 @@ def plot_BV_fit_simple(plot, temperature, voltages, gains,
     ax.plot(gains, voltages,
             ls='', marker='x', c='k',
             label=(f'{temperature}K: ({_breakdown_v:.2f}'
-                   f'$\\pm${_breakdown_v_error:.2f}) V')  # type: ignore
+                   f'$\\; \\pm \\;${_breakdown_v_error:.2f}) V')  # type: ignore
             )
     _offset_gains = min(gains) * 0.15
     _x = np.linspace(min(gains) - _offset_gains,
@@ -104,7 +104,7 @@ def plot_BV_fit(plot, temperature, voltages, gains,
     ax.plot(gains, voltages,
             ls='', marker='x', c='k',
             label=(f'{temperature}K: ({_breakdown_v:.2f}'
-                   f'$\\pm${_breakdown_v_error:.2f}) V')  # type: ignore
+                   f'$\\; \\pm \\;${_breakdown_v_error:.2f}) V')  # type: ignore
             )
     _offset_gains = min(gains) * 0.15
     _x = np.linspace(min(gains) - _offset_gains,
