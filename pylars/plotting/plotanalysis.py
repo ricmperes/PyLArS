@@ -91,9 +91,9 @@ def plot_BV_fit_simple(plot, temperature, voltages, gains,
     if isinstance(plot, str):
         plt.tight_layout()
         plt.savefig(f'figures/{plot}_{temperature}_BV_fit_simple.png')
-        plt.close()
+        plt.show()
     else:
-        return ax
+        return ax   # with the above call definition isinstance(plot) should always return true and this never happens, or was the idea to pass a non-str quantity to plot in order to trigger plot/ safe?
 
 def plot_BV_fit(plot, temperature, voltages, gains,
                 a, b, _breakdown_v, _breakdown_v_error, ax=None):
