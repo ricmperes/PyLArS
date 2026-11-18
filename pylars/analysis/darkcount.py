@@ -890,7 +890,7 @@ class DCR_run():
             self.results_df, pd.DataFrame), ("Trying to save results that do "
                                              "not exist in the object, c'mon"
                                              ", you know better.")
-        assert len(self.results_df) > 0, ("Results df is empty, please compute"
+        assert len(self.results_df) > 0, ("Results df is empty, please compute "
                                           "something before trying to save, "
                                           "otherwire it's just a waste of "
                                           "disk space")
