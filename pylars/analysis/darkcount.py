@@ -481,7 +481,7 @@ class DCR_dataset(DCR_analysis):
                 vbias=_voltage,
                 temp=self.temp,
                 path_processed=('/disk/gfs_atp/xenoscope/SiPMs/char_campaign/'
-                                'processed_data/'),
+                                'processed_data/'),                             # fixed path has to be changed to a variable one!!
                 process_hash=self.process.hash)
             processed_data.load_data(force=force_processing)
 
