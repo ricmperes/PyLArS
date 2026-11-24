@@ -268,10 +268,14 @@ class DCR_analysis():
 
         DC_0_5 = len(df[(df['length'] > length_cut_min) &
                         (df['length'] < length_cut_max) &
-                        (df['amplitude'] < pe_p5sigma)])
+                        (df['amplitude'] < pe_p5sigma)])    # this collects below pe + 5 sig so includes pedestal, shouldnt it be > pe_m5sigma ???
+                        #(df['amplitude'] > pe_0_5) &       # I propose
+                        #(df['amplitude'] > pe_m5sigma)])   # apply amplitude cuts AND 5 sigma cuts (assuming 5 sigma cut is smaller)
         DC_1_5 = len(df[(df['length'] > length_cut_min) &
                         (df['length'] < length_cut_max) &
-                        (df['area'] < pe_m5sigma)])
+                        (df['area'] < pe_m5sigma)])         # this collects below pe - 5 sig so literally only the pedestal ??, shouldnt it be > pe_p5sigma ??? also why area not amplitude?
+                        #(df['amplitude'] > pe_1_5) &       # I propose
+                        #(df['amplitude'] > pe_p5sigma)])
 
         DC_0_5_error = np.sqrt(DC_0_5)
         DC_1_5_error = np.sqrt(DC_1_5)
@@ -280,9 +284,13 @@ class DCR_analysis():
         DCR_error = DC_0_5_error / sensor_area / t
 
         CTP = DC_1_5 / DC_0_5
-        CTP_error = np.sqrt((DC_0_5_error / DC_1_5)**2 +
+        CTP_error = np.sqrt((DC_0_5_error / DC_1_5)**2 +                    # this is wrong?
                             (DC_0_5 * DC_1_5_error / (DC_1_5)**2)**2)
 
+
+        #shouldnt it be like above?:
+        #CTP_error = np.sqrt((DC_1_5_error / DC_0_5)**2 +
+        #                    (DC_1_5 * DC_0_5_error / (DC_0_5)**2)**2)
         return DCR, DCR_error, CTP, CTP_error
 
     @staticmethod
